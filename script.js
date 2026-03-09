@@ -1,8 +1,13 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // ====================== 全局变量 ======================
+  // ====================== 全局变量（新增分页变量） ======================
   let gameDatabase = [];
   let originalGameDatabase = [];
   let updateRecords = [];
+  
+  // 新增：分页核心变量
+  let filteredGameList = []; // 存储筛选后的全量结果
+  let currentPage = 1;       // 当前页码
+  const PAGE_SIZE = 15;      // 每页显示15条
 
   // 核心元素
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -15,6 +20,25 @@ document.addEventListener('DOMContentLoaded', function() {
   const resultContent = document.getElementById('resultContent');
   const closeBtn = document.getElementById('closeBtn');
   const selectedTagWrapper = document.getElementById('selectedTagWrapper');
+
+  // 新增：创建加载更多按钮
+  const loadMoreBtn = document.createElement('div');
+  loadMoreBtn.id = 'loadMoreBtn';
+  loadMoreBtn.style.cssText = `
+    margin: 20px auto;
+    padding: 10px 20px;
+    width: 120px;
+    background: #f5f5f5;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    color: #666;
+    display: none;
+    transition: all 0.2s;
+  `;
+  loadMoreBtn.textContent = '加载更多';
+  resultBox.appendChild(loadMoreBtn);
 
   // 二维码弹窗
   const qrcodeModal = document.getElementById('qrcodeModal');
@@ -220,13 +244,14 @@ document.addEventListener('DOMContentLoaded', function() {
     openQrcodeModal(img.src, title);
   };
 
-  // ====================== 批量初始化二维码（彻底修复版） ======================
-  function initAllQrcodes(gameList) {
-    gameList.forEach((g, i) => {
-      // 唯一ID
-      const qkId = `qrcode-quark-${i}`;
-      const bdId = `qrcode-baidu-${i}`;
-      const xlId = `qrcode-xunlei-${i}`;
+  // ====================== 批量初始化二维码（修复懒加载ID重复问题） ======================
+  function initAllQrcodes(gameList, startIndex) {
+    gameList.forEach((g, idx) => {
+      // 使用全局索引生成唯一ID
+      const globalIdx = startIndex + idx;
+      const qkId = `qrcode-quark-${globalIdx}`;
+      const bdId = `qrcode-baidu-${globalIdx}`;
+      const xlId = `qrcode-xunlei-${globalIdx}`;
       
       // 分别初始化，确保上下文独立
       initSingleQrcode(qkId, g.quarkPan, `${g.name} 夸克网盘`);
@@ -278,6 +303,70 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
+  // ====================== 分页渲染核心函数（新增） ======================
+  function renderCurrentPage() {
+    // 计算当前页数据范围
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = currentPage * PAGE_SIZE;
+    const currentPageData = filteredGameList.slice(startIndex, endIndex);
+
+    // 无数据处理
+    if (currentPage === 1 && currentPageData.length === 0) {
+      resultContent.innerHTML = `<div class="empty-state">未找到相关资源</div>`;
+      loadMoreBtn.style.display = 'none';
+      return;
+    }
+
+    // 拼接当前页HTML
+    let pageHtml = '';
+    currentPageData.forEach((game, idx) => {
+      const globalIdx = startIndex + idx;
+      const color = ['#d857e8','#f06292','#9333ea'][globalIdx % 3];
+      const qkId = `qrcode-quark-${globalIdx}`;
+      const bdId = `qrcode-baidu-${globalIdx}`;
+      const xlId = `qrcode-xunlei-${globalIdx}`;
+
+      const displayCategory = Array.isArray(game.category) ? game.category[0] : game.category;
+      const displaySubCategory = Array.isArray(game.subCategory) ? game.subCategory[0] : game.subCategory;
+      
+      pageHtml += `
+        <div class="result-item" data-category="${displayCategory}">
+          <div class="qrcode-area">
+            <div class="qrcode-box" id="${qkId}" data-link="${game.quarkPan || ''}" data-title="${game.name} 夸克网盘"></div>
+            <div class="qrcode-box" id="${bdId}" data-link="${game.baiduPan || ''}" data-title="${game.name} 百度网盘"></div>
+            <div class="qrcode-box" id="${xlId}" data-link="${game.thunderPan || ''}" data-title="${game.name} 迅雷网盘"></div>
+          </div>
+          <div class="result-content-wrap">
+            <span style="color:${color}">${globalIdx + 1}. ${game.name}</span>
+            <span>（${displayCategory} - ${displaySubCategory}）</span><br>
+            <div class="code-row">
+              <div class="code-item"><label>提取码：</label><span>${game.code||'无'}</span></div>
+              ${game.unzipCode && game.unzipCode!='无'?`<div class="code-item"><label>解压密码：</label><span>${game.unzipCode}</span></div>`:''}
+            </div>
+            <div class="pan-links">
+              <div class="pan-link-item"><label>夸克：</label><a href="${game.quarkPan}" target="_blank">${game.quarkPan||'无'}</a></div>
+              <div class="pan-link-item"><label>百度：</label><a href="${game.baiduPan}" target="_blank">${game.baiduPan||'无'}</a></div>
+              ${game.thunderPan?`<div class="pan-link-item"><label>迅雷：</label><a href="${game.thunderPan}" target="_blank">${game.thunderPan}</a></div>`:''}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    // 第一页覆盖，后续页追加
+    if (currentPage === 1) {
+      resultContent.innerHTML = pageHtml;
+    } else {
+      resultContent.innerHTML += pageHtml;
+    }
+
+    // 初始化当前页二维码
+    initAllQrcodes(currentPageData, startIndex);
+
+    // 控制加载更多按钮显示
+    loadMoreBtn.style.display = endIndex >= filteredGameList.length ? 'none' : 'block';
+  }
+
   // ====================== 标签栏 ======================
   tabBtns.forEach(btn => {
     btn.addEventListener('click', function(e) {
@@ -298,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // ====================== 子标签（核心修改：选中自动搜索） ======================
+  // ====================== 子标签（核心修改：选中自动搜索+重置分页） ======================
   function renderSelected() {
     if (!selectedTagWrapper) return;
     if (!selectedTag) {
@@ -322,12 +411,15 @@ document.addEventListener('DOMContentLoaded', function() {
     tagItems.forEach(t => t.classList.remove('active'));
     selectedTag = null;
     renderSelected();
-    // 新增：清空选中标签时隐藏结果框
     resultBox.style.display = 'none';
     resultContent.innerHTML = '';
+    // 重置分页
+    filteredGameList = [];
+    currentPage = 1;
+    loadMoreBtn.style.display = 'none';
   }
   
-  // 核心修改：子标签点击事件 - 选中后自动触发搜索
+  // 核心修改：子标签点击事件 - 选中后自动触发搜索+重置分页
   tagItems.forEach(item => {
     item.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -338,93 +430,60 @@ document.addEventListener('DOMContentLoaded', function() {
       tabBtns.forEach(b => b.classList.remove('active'));
       tabPanels.forEach(p => p.classList.remove('show'));
       
+      // 重置分页
+      filteredGameList = [];
+      currentPage = 1;
       // 关键新增：选中标签后自动执行搜索
       search();
     });
   });
 
-  // ====================== 搜索（支持多分类） ======================
+  // ====================== 搜索（重构为懒加载版本） ======================
   function search() {
-    // 修改：移除"必须选择分类或输入关键词"的提示（因为选中标签就会触发）
+    // 无筛选条件时隐藏结果框
     if (!selectedTag && !gameSearch.value.trim()) {
-      resultBox.style.display = 'none'; // 无条件时隐藏结果框
+      resultBox.style.display = 'none';
       return;
     }
     
     resultBox.style.display = 'block';
     loading.style.display = 'flex';
     resultContent.innerHTML = '';
+    loadMoreBtn.style.display = 'none';
 
     setTimeout(() => {
       loading.style.display = 'none';
-      let list = gameDatabase;
       
-      // ===== 核心修改：支持多分类筛选 =====
+      // 筛选全量数据
+      let allFilteredData = gameDatabase;
       if (selectedTag) {
-        list = list.filter(g => {
-          // 确保分类字段是数组（兼容旧数据）
+        allFilteredData = allFilteredData.filter(g => {
           const gameCategories = Array.isArray(g.category) ? g.category : [g.category];
           const gameSubCategories = Array.isArray(g.subCategory) ? g.subCategory : [g.subCategory];
-          
-          // 判断是否包含选中的母分类和子分类
-          return gameCategories.includes(selectedTag.category) && 
-                 gameSubCategories.includes(selectedTag.value);
+          return gameCategories.includes(selectedTag.category) && gameSubCategories.includes(selectedTag.value);
         });
       }
-      
       const kw = gameSearch.value.trim().toLowerCase();
-      if (kw) list = list.filter(g => g.name.toLowerCase().includes(kw));
-
-      if (!list.length) {
-        resultContent.innerHTML = `<div class="empty-state">未找到相关资源</div>`;
-        return;
+      if (kw) {
+        allFilteredData = allFilteredData.filter(g => g.name.toLowerCase().includes(kw));
       }
 
-      let html = '';
-      list.forEach((g, i) => {
-        const color = ['#d857e8','#f06292','#9333ea'][i%3];
-        // 为每个二维码生成唯一ID，避免冲突
-        const qkId = `qrcode-quark-${i}`;
-        const bdId = `qrcode-baidu-${i}`;
-        const xlId = `qrcode-xunlei-${i}`;
-        
-        // ===== 适配多分类显示 =====
-        // 优先显示第一个分类，或拼接所有分类
-        const displayCategory = Array.isArray(g.category) ? g.category[0] : g.category;
-        const displaySubCategory = Array.isArray(g.subCategory) ? g.subCategory[0] : g.subCategory;
-        // 显示所有分类（可选）：const allCategories = `${g.category.join('/')} - ${g.subCategory.join('/')}`;
-        
-        html += `
-          <div class="result-item" data-category="${displayCategory}">
-            <div class="qrcode-area">
-              <div class="qrcode-box" id="${qkId}" data-link="${g.quarkPan || ''}" data-title="${g.name} 夸克网盘"></div>
-              <div class="qrcode-box" id="${bdId}" data-link="${g.baiduPan || ''}" data-title="${g.name} 百度网盘"></div>
-              <div class="qrcode-box" id="${xlId}" data-link="${g.thunderPan || ''}" data-title="${g.name} 迅雷网盘"></div>
-            </div>
-            <div class="result-content-wrap">
-              <span style="color:${color}">${i+1}. ${g.name}</span>
-              <span>（${displayCategory} - ${displaySubCategory}）</span><br>
-              <!-- 可选：显示所有分类 -->
-              <!-- <small style="color:#999">全部分类：${g.category.join('/')} - ${g.subCategory.join('/')}</small><br> -->
-              <div class="code-row">
-                <div class="code-item"><label>提取码：</label><span>${g.code||'无'}</span></div>
-                ${g.unzipCode && g.unzipCode!='无'?`<div class="code-item"><label>解压密码：</label><span>${g.unzipCode}</span></div>`:''}
-              </div>
-              <div class="pan-links">
-                <div class="pan-link-item"><label>夸克：</label><a href="${g.quarkPan}" target="_blank">${g.quarkPan||'无'}</a></div>
-                <div class="pan-link-item"><label>百度：</label><a href="${g.baiduPan}" target="_blank">${g.baiduPan||'无'}</a></div>
-                ${g.thunderPan?`<div class="pan-link-item"><label>迅雷：</label><a href="${g.thunderPan}" target="_blank">${g.thunderPan}</a></div>`:''}
-              </div>
-            </div>
-          </div>
-        `;
-      });
-      resultContent.innerHTML = html;
-
-      // 单独初始化二维码，避免循环上下文问题
-      initAllQrcodes(list);
+      // 保存全量筛选结果并重置分页
+      filteredGameList = allFilteredData;
+      currentPage = 1;
+      
+      // 渲染第一页
+      renderCurrentPage();
     }, 600);
   }
+
+  // ====================== 加载更多按钮事件（新增） ======================
+  loadMoreBtn.addEventListener('click', function() {
+    currentPage++;
+    renderCurrentPage();
+    // 平滑滚动到按钮位置
+    loadMoreBtn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 
   // ====================== 弹窗 ======================
   const popBtns = document.querySelectorAll('.popup-btn');
@@ -454,10 +513,17 @@ document.addEventListener('DOMContentLoaded', function() {
     mask.addEventListener('click', e => e.target === mask && (mask.style.display = 'none', document.body.style.overflow = 'auto'));
   });
 
-  // ====================== 全局事件 ======================
+  // ====================== 全局事件（修改回车/关闭逻辑） ======================
   function bindEvents() {
     searchBtn.addEventListener('click', search);
-    gameSearch.addEventListener('keydown', e => e.key === 'Enter' && search());
+    gameSearch.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        // 回车搜索重置分页
+        filteredGameList = [];
+        currentPage = 1;
+        search();
+      }
+    });
     closeBtn.addEventListener('click', () => {
       resultBox.style.opacity = 0;
       resultBox.style.transform = 'translateY(10px)';
@@ -466,6 +532,10 @@ document.addEventListener('DOMContentLoaded', function() {
         resultBox.style.opacity = 1;
         resultBox.style.transform = 'translateY(0)';
         gameSearch.value = '';
+        // 关闭结果重置分页
+        filteredGameList = [];
+        currentPage = 1;
+        loadMoreBtn.style.display = 'none';
       }, 300);
     });
     selectedTagWrapper.parentElement.addEventListener('click', clearSelected);
