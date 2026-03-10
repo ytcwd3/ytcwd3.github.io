@@ -79,20 +79,46 @@ document.addEventListener('DOMContentLoaded', function() {
       originalGameDatabase = JSON.parse(JSON.stringify(gameDatabase));
       console.log('✅ 加载成功', gameDatabase.length);
     } catch (e) {
-      console.error('❌ 加载失败', e);
+      console.error('❌ 加载失败，使用测试数据', e);
       // 测试数据也改为数组格式
-      gameDatabase = [{ 
-        name: "备用测试游戏", 
-        category: ["PC及安卓"],  // 数组格式
-        subCategory: ["网游单机"], // 数组格式
-        link: "#", 
-        code: "test123", 
-        unzipCode: "test456",
-        quarkPan: "https://pan.quark.cn/s/123456", 
-        baiduPan: "https://pan.baidu.com/s/123456", 
-        thunderPan: "https://pan.xunlei.com/s/123456", 
-        updateDate: "2026.03.07" 
-      }];
+      gameDatabase = [
+        { 
+          name: "测试游戏1-NS", 
+          category: ["任天堂"],  
+          subCategory: ["NS"], 
+          link: "#", 
+          code: "test123", 
+          unzipCode: "test456",
+          quarkPan: "https://pan.quark.cn/s/123456", 
+          baiduPan: "https://pan.baidu.com/s/123456", 
+          thunderPan: "https://pan.xunlei.com/s/123456", 
+          updateDate: "2026.03.07" 
+        },
+        { 
+          name: "测试游戏2-PS4", 
+          category: ["索尼"],  
+          subCategory: ["PS4"], 
+          link: "#", 
+          code: "ps4test", 
+          unzipCode: "ps4123",
+          quarkPan: "https://pan.quark.cn/s/654321", 
+          baiduPan: "https://pan.baidu.com/s/654321", 
+          thunderPan: "", 
+          updateDate: "2026.03.08" 
+        },
+        { 
+          name: "测试游戏3-安卓RPG", 
+          category: ["PC及安卓"],  
+          subCategory: ["RPG"], 
+          link: "#", 
+          code: "andrpg", 
+          unzipCode: "无",
+          quarkPan: "https://pan.quark.cn/s/789012", 
+          baiduPan: "", 
+          thunderPan: "https://pan.xunlei.com/s/789012", 
+          updateDate: "2026.03.09" 
+        }
+      ];
       originalGameDatabase = JSON.parse(JSON.stringify(gameDatabase));
     }
 
@@ -235,11 +261,13 @@ document.addEventListener('DOMContentLoaded', function() {
     qrcodeModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
+  
   function closeQrcodeModal() {
     qrcodeModal.style.display = 'none';
     qrcodeBigContainer.innerHTML = '';
     document.body.style.overflow = 'auto';
   }
+  
   window.openBigQrcode = function(img, title) {
     openQrcodeModal(img.src, title);
   };
@@ -396,10 +424,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     let color = '';
     switch(selectedTag.category) {
-      case '任天堂': color = 'var(--nintendo-rgb)'; break;
-      case '索尼': color = 'var(--sony-rgb)'; break;
-      case 'PC及安卓': color = 'var(--pc-android-rgb)'; break;
-      case '其他平台': color = 'var(--other-rgb)'; break;
+      case '任天堂': color = '229, 57, 53'; break; // 修复：使用具体RGB值
+      case '索尼': color = '33, 150, 243'; break;
+      case 'PC及安卓': color = '251, 192, 45'; break;
+      case '其他平台': color = '67, 160, 71'; break;
     }
     selectedTagWrapper.innerHTML = `<div class="selected-tag-chip" style="--category-color-rgb:${color}"><span>${selectedTag.category} - ${selectedTag.value}</span><span class="tag-close">×</span></div>`;
     document.querySelector('.tag-close')?.addEventListener('click', () => {
@@ -477,12 +505,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 600);
   }
 
-  // ====================== 加载更多按钮事件（新增） ======================
+  // ====================== 加载更多按钮事件（修复：解决滚动跳转问题） ======================
   loadMoreBtn.addEventListener('click', function() {
+    // 1. 记录点击前的滚动位置（关键修复）
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+    
+    // 2. 加载下一页
     currentPage++;
     renderCurrentPage();
-    // 平滑滚动到按钮位置
-    loadMoreBtn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    // 3. 恢复滚动位置（延迟执行确保DOM更新完成）
+    setTimeout(() => {
+      window.scrollTo({
+        top: scrollTop,
+        left: scrollLeft,
+        behavior: 'smooth' // 平滑滚动，提升体验
+      });
+    }, 100);
   });
 
   // ====================== 弹窗 ======================
@@ -546,11 +586,139 @@ document.addEventListener('DOMContentLoaded', function() {
     qrcodeModalMask?.addEventListener('click', closeQrcodeModal);
   }
 
+  // ====================== 留言板功能（弹窗版） ======================
+  function initMessageBoard() {
+    // 常量定义：7天的毫秒数（7*24*60*60*1000）
+    const EXPIRY_DAYS = 7 * 86400000;
+    
+    // DOM元素（弹窗内的元素）
+    const msgName = document.getElementById('msgName');
+    const msgContent = document.getElementById('msgContent');
+    const submitMsg = document.getElementById('submitMsg');
+    const messageList = document.getElementById('messageList');
+
+    // 初始化加载留言
+    loadMessages();
+
+    // 提交留言事件
+    submitMsg.addEventListener('click', function() {
+      const name = msgName.value.trim();
+      const content = msgContent.value.trim();
+      if (!name) {
+        alert('请输入昵称！');
+        return;
+      }
+      if (!content) {
+        alert('请输入留言内容！');
+        return;
+      }
+
+      // 创建留言对象
+      const message = {
+        id: Date.now(),
+        name: name,
+        content: content,
+        createTime: Date.now(),
+        createTimeStr: formatDate(new Date())
+      };
+
+      // 保存留言
+      saveMessage(message);
+      // 清空输入
+      msgName.value = '';
+      msgContent.value = '';
+      // 重新加载
+      loadMessages();
+      alert('留言提交成功！');
+    });
+
+    // 保存留言到localStorage
+    function saveMessage(msg) {
+      let messages = JSON.parse(localStorage.getItem('messageBoard')) || [];
+      messages.unshift(msg);
+      localStorage.setItem('messageBoard', JSON.stringify(messages));
+    }
+
+    // 加载并展示留言（自动清理过期）
+    function loadMessages() {
+      let messages = JSON.parse(localStorage.getItem('messageBoard')) || [];
+      const now = Date.now();
+
+      // 过滤过期留言
+      const validMessages = messages.filter(msg => (now - msg.createTime) < EXPIRY_DAYS);
+      
+      // 更新存储（清理过期）
+      if (validMessages.length !== messages.length) {
+        localStorage.setItem('messageBoard', JSON.stringify(validMessages));
+      }
+
+      // 渲染
+      if (validMessages.length === 0) {
+        messageList.innerHTML = '<div class="empty-tip">暂无留言</div>';
+        return;
+      }
+
+      let html = '';
+      validMessages.forEach(msg => {
+        html += `
+          <div class="message-item">
+            <div class="msg-name">
+              ${msg.name}
+              <span class="msg-time">${msg.createTimeStr}</span>
+            </div>
+            <div class="msg-content">${escapeHtml(msg.content)}</div>
+            <button class="delete-msg" data-id="${msg.id}">删除</button>
+          </div>
+        `;
+      });
+
+      messageList.innerHTML = html;
+
+      // 绑定删除事件
+      document.querySelectorAll('.delete-msg').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const msgId = parseInt(this.dataset.id);
+          deleteMessage(msgId);
+          loadMessages();
+        });
+      });
+    }
+
+    // 删除指定留言
+    function deleteMessage(id) {
+      let messages = JSON.parse(localStorage.getItem('messageBoard')) || [];
+      messages = messages.filter(msg => msg.id !== id);
+      localStorage.setItem('messageBoard', JSON.stringify(messages));
+    }
+
+    // 格式化日期
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hour = String(date.getHours()).padStart(2, '0');
+      const minute = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    }
+
+    // XSS防护
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  }
+
   // ====================== 初始化 ======================
   loadGameData().then(() => {
     bindEvents();
     checkGameChanges();
     generateUpdateRecords();
     setTimeout(() => document.body.classList.add('loaded'), 200);
+    // 初始化留言板
+    initMessageBoard();
   });
 });
