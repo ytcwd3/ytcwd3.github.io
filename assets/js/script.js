@@ -695,22 +695,22 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!giscusContainer) return;
 
     // 暂时显示提示信息，等待配置
-    giscusContainer.innerHTML = `
-      <div style="padding: 40px; text-align: center; color: #666;">
-        <h3>留言板功能正在配置中...</h3>
-        <p>请按照以下步骤配置Giscus：</p>
-        <ol style="text-align: left; max-width: 500px; margin: 20px auto;">
-          <li>访问 <a href="https://github.com/apps/giscus" target="_blank">https://github.com/apps/giscus</a></li>
-          <li>点击 Install 安装到你的仓库</li>
-          <li>在仓库设置中启用 Discussions 功能</li>
-          <li>访问 <a href="https://giscus.app/zh-CN" target="_blank">https://giscus.app/zh-CN</a> 获取配置参数</li>
-          <li>更新 script.js 中的配置</li>
-        </ol>
-        <p style="margin-top: 20px;">
-          <a href="Giscus配置指南.md" target="_blank" style="color: #d857e8;">查看详细配置指南 →</a>
-        </p>
-      </div>
-    `;
+// giscusContainer.innerHTML = `
+//   <div style="padding: 40px; text-align: center; color: #666;">
+//     <h3>留言板功能正在配置中...</h3>
+//     <p>请按照以下步骤配置Giscus：</p>
+//     <ol style="text-align: left; max-width: 500px; margin: 20px auto;">
+//       <li>访问 <a href="https://github.com/apps/giscus" target="_blank">https://github.com/apps/giscus</a></li>
+//       <li>点击 Install 安装到你的仓库</li>
+//       <li>在仓库设置中启用 Discussions 功能</li>
+//       <li>访问 <a href="https://giscus.app/zh-CN" target="_blank">https://giscus.app/zh-CN</a> 获取配置参数</li>
+//       <li>更新 script.js 中的配置</li>
+//     </ol>
+//     <p style="margin-top: 20px;">
+//       <a href="Giscus配置指南.md" target="_blank" style="color: #d857e8;">查看详细配置指南 →</a>
+//     </p>
+//   </div>
+// `;
     return;
 
     // 等待页面加载完成后执行
