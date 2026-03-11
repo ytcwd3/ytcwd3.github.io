@@ -1645,3 +1645,38 @@ body.loaded {
     max-height: 200px;
   }
 }
+
+/* ====================== Giscus留言板样式 ====================== */
+.giscus-popup {
+  max-width: 900px !important;
+  max-height: 85vh !important;
+  overflow-y: auto;
+}
+
+.giscus-wrapper {
+  min-height: 400px;
+  padding: 20px;
+}
+
+#giscus-container {
+  width: 100%;
+}
+
+/* Giscus主题适配 */
+.giscus-frame {
+  width: 100%;
+  border: none;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .giscus-popup {
+    max-width: 95% !important;
+    padding: 15px !important;
+  }
+  
+  .giscus-wrapper {
+    padding: 10px;
+    min-height: 300px;
+  }
+}

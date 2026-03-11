@@ -538,6 +538,8 @@ document.addEventListener('DOMContentLoaded', function() {
         mask.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         if (id === 'popup5') generateUpdateRecords();
+        // 当打开留言板弹窗时，初始化Giscus
+        if (id === 'popup1') initGiscus();
       }
     });
   });
@@ -584,6 +586,59 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', e => e.key === 'Escape' && (popMasks.forEach(m => m.style.display = 'none'), closeQrcodeModal(), document.body.style.overflow = 'auto'));
     qrcodeModalClose?.addEventListener('click', closeQrcodeModal);
     qrcodeModalMask?.addEventListener('click', closeQrcodeModal);
+  }
+
+  // ====================== Giscus留言板功能 ======================
+  function initGiscus() {
+    // 检查是否已经加载过Giscus
+    if (document.querySelector('#giscus-container script')) {
+      return;
+    }
+
+    const giscusContainer = document.getElementById('giscus-container');
+    if (!giscusContainer) return;
+
+    // 暂时显示提示信息，等待配置
+    giscusContainer.innerHTML = `
+      <div style="padding: 40px; text-align: center; color: #666;">
+        <h3>留言板功能正在配置中...</h3>
+        <p>请按照以下步骤配置Giscus：</p>
+        <ol style="text-align: left; max-width: 500px; margin: 20px auto;">
+          <li>访问 <a href="https://github.com/apps/giscus" target="_blank">https://github.com/apps/giscus</a></li>
+          <li>点击 Install 安装到你的仓库</li>
+          <li>在仓库设置中启用 Discussions 功能</li>
+          <li>访问 <a href="https://giscus.app/zh-CN" target="_blank">https://giscus.app/zh-CN</a> 获取配置参数</li>
+          <li>更新 script.js 中的配置</li>
+        </ol>
+        <p style="margin-top: 20px;">
+          <a href="Giscus配置指南.md" target="_blank" style="color: #d857e8;">查看详细配置指南 →</a>
+        </p>
+      </div>
+    `;
+    return;
+
+    // 下面的代码在配置完成后取消注释
+    /*
+    // 创建Giscus脚本
+    const script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.setAttribute('data-repo', 'ytcwd3/ytcwd3.github.io'); // 替换为你的GitHub仓库
+    script.setAttribute('data-repo-id', 'YOUR_REPO_ID'); // 需要配置
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'YOUR_CATEGORY_ID'); // 需要配置
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'top');
+    script.setAttribute('data-theme', 'light');
+    script.setAttribute('data-lang', 'zh-CN');
+    script.setAttribute('data-loading', 'lazy');
+    script.crossOrigin = 'anonymous';
+    script.async = true;
+
+    giscusContainer.appendChild(script);
+    */
   }
 
   // ====================== 留言板功能（弹窗版） ======================
@@ -718,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function() {
     checkGameChanges();
     generateUpdateRecords();
     setTimeout(() => document.body.classList.add('loaded'), 200);
-    // 初始化留言板
-    initMessageBoard();
+    // 移除旧的留言板初始化
+    // initMessageBoard();
   });
 });

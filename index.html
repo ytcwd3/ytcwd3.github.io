@@ -116,34 +116,21 @@
 
     <!-- 底部弹出框按钮容器 -->
     <div class="footer-popup-container">
-      <button class="popup-btn" data-target="popup1">留言板-暂时未启用</button>
+      <button class="popup-btn" data-target="popup1">留言板</button>
       <button class="popup-btn" data-target="popup2">模拟器大全</button>
       <button class="popup-btn" data-target="popup3">粉丝群</button>
       <button class="popup-btn" data-target="popup4">打赏捐赠</button>
       <button class="popup-btn" data-target="popup5">资源更新记录</button>
     </div>
 
-    <!-- 弹出层1：替换为留言板 -->
+    <!-- 弹出层1：Giscus留言板 -->
     <div id="popup1" class="popup-mask">
-      <div class="popup-content message-board-popup">
+      <div class="popup-content giscus-popup">
         <span class="close-btn">&times;</span>
         <h3 class="popup-title">留言板</h3>
-        <div class="popup-text message-board-wrapper">
-          <div class="message-form">
-            <div>
-              <label>昵称</label>
-              <input type="text" id="msgName" placeholder="请输入昵称（必填）">
-            </div>
-            <div>
-              <label>留言内容</label>
-              <textarea id="msgContent" rows="3" placeholder="请输入留言内容（必填）"></textarea>
-            </div>
-            <button id="submitMsg">提交留言</button>
-            <p>留言保存7天，仅当前设备可见</p>
-          </div>
-          <div class="message-list" id="messageList">
-            <div class="empty-tip">暂无留言</div>
-          </div>
+        <div class="popup-text giscus-wrapper">
+          <!-- Giscus评论组件将在这里加载 -->
+          <div id="giscus-container"></div>
         </div>
       </div>
     </div>
