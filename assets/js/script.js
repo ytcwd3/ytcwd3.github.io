@@ -719,9 +719,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const script = document.createElement('script');
     script.src = 'https://giscus.app/client.js';
     script.setAttribute('data-repo', 'ytcwd3/ytcwd3.github.io'); // 替换为你的GitHub仓库
-    script.setAttribute('data-repo-id', 'YOUR_REPO_ID'); // 需要配置
+    script.setAttribute('data-repo-id', 'R_kgDORh25sw'); // 需要配置
     script.setAttribute('data-category', 'General');
-    script.setAttribute('data-category-id', 'YOUR_CATEGORY_ID'); // 需要配置
+    script.setAttribute('data-category-id', ' 在此输入分类 ID'); // 需要配置
     script.setAttribute('data-mapping', 'pathname');
     script.setAttribute('data-strict', '0');
     script.setAttribute('data-reactions-enabled', '1');
