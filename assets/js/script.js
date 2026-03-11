@@ -713,15 +713,20 @@ document.addEventListener("DOMContentLoaded", function () {
     `;
     return;
 
-    // 下面的代码在配置完成后取消注释
-    /*
-    // 创建Giscus脚本
+    // 等待页面加载完成后执行
+document.addEventListener('DOMContentLoaded', function() {
+    // 创建Giscus评论区容器
+    const giscusContainer = document.createElement('div');
+    giscusContainer.id = 'giscus-comment'; // 给容器加ID，方便定位
+    document.body.appendChild(giscusContainer); // 将容器添加到页面
+
+    // 取消注释后的Giscus脚本（核心代码）
     const script = document.createElement('script');
     script.src = 'https://giscus.app/client.js';
-    script.setAttribute('data-repo', 'ytcwd3/ytcwd3.github.io'); // 替换为你的GitHub仓库
-    script.setAttribute('data-repo-id', 'R_kgDORh25sw'); // 需要配置
+    script.setAttribute('data-repo', 'ytcwd3/ytcwd3.github.io'); // 你的GitHub仓库
+    script.setAttribute('data-repo-id', 'R_kgDORh25sw'); // 已配置的Repo ID
     script.setAttribute('data-category', 'General');
-    script.setAttribute('data-category-id', ' 在此输入分类 ID'); // 需要配置
+    script.setAttribute('data-category-id', ''); // 需补充你的分类ID
     script.setAttribute('data-mapping', 'pathname');
     script.setAttribute('data-strict', '0');
     script.setAttribute('data-reactions-enabled', '1');
@@ -734,8 +739,7 @@ document.addEventListener("DOMContentLoaded", function () {
     script.async = true;
 
     giscusContainer.appendChild(script);
-    */
-  }
+});
 
   // ====================== 初始化 ======================
   loadGameData().then(() => {
