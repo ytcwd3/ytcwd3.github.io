@@ -711,7 +711,7 @@ document.addEventListener("DOMContentLoaded", function () {
 //     </p>
 //   </div>
 // `;
-    return;
+//    return;
 
     // 等待页面加载完成后执行
 document.addEventListener('DOMContentLoaded', function() {
