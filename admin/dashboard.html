@@ -312,17 +312,29 @@
         <h3>总数据量</h3>
         <div class="value" id="totalCount">-</div>
       </div>
-      <div class="stat-card nintendo">
-        <h3>任天堂</h3>
-        <div class="value" id="nintendoCount">-</div>
+      <div class="stat-card">
+        <h3>PC</h3>
+        <div class="value" id="pcCount">-</div>
       </div>
-      <div class="stat-card sony">
+      <div class="stat-card">
+        <h3>NS</h3>
+        <div class="value" id="nsCount">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>任天堂掌机</h3>
+        <div class="value" id="handheldCount">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>任天堂主机</h3>
+        <div class="value" id="consoleCount">-</div>
+      </div>
+      <div class="stat-card">
         <h3>索尼</h3>
         <div class="value" id="sonyCount">-</div>
       </div>
-      <div class="stat-card pc">
-        <h3>PC及安卓</h3>
-        <div class="value" id="pcCount">-</div>
+      <div class="stat-card">
+        <h3>Other</h3>
+        <div class="value" id="otherCount">-</div>
       </div>
     </div>
 
@@ -548,17 +560,72 @@
     function updateStats() {
       document.getElementById('totalCount').textContent = allGames.length;
 
-      let nintendo = 0, sony = 0, pc = 0;
+      let pc = 0, ns = 0, handheld = 0, console = 0, sony = 0, other = 0;
+
       allGames.forEach(g => {
         const cats = g.category || [];
-        if (cats.includes('任天堂')) nintendo++;
-        if (cats.includes('索尼')) sony++;
-        if (cats.includes('PC及安卓')) pc++;
+        const subcats = g.subcategory || [];
+
+        // Other：其他平台
+        if (cats.includes('其他平台')) {
+          other++;
+          return;
+        }
+
+        // 索尼
+        if (cats.includes('索尼')) {
+          sony++;
+          return;
+        }
+
+        // 任天堂和PC的分类
+        if (cats.includes('任天堂') || cats.includes('PC及安卓')) {
+          // NS：子分类包含 NS
+          if (subcats.includes('NS')) {
+            ns++;
+            return;
+          }
+
+          // PC：主分类是PC及安卓，且不是NS
+          if (cats.includes('PC及安卓') && !subcats.includes('NS')) {
+            pc++;
+            return;
+          }
+
+          // 任天堂掌机：GB, GBA, 3DS, PSP(如果属于任天堂)
+          const handheldKeywords = ['GB', 'GBA', '3DS', 'PSP', 'NDS'];
+          const isHandheld = subcats.some(s => handheldKeywords.some(k => s.includes(k)));
+
+          // 任天堂主机：Wii, Wii U, NGC, GameCube
+          const consoleKeywords = ['Wii U', 'Wii', 'NGC', 'NGC', 'GameCube'];
+          const isConsole = subcats.some(s => consoleKeywords.some(k => s.includes(k)));
+
+          if (isHandheld) {
+            handheld++;
+            return;
+          }
+          if (isConsole) {
+            console++;
+            return;
+          }
+
+          // 默认归为 PC
+          if (cats.includes('PC及安卓')) {
+            pc++;
+            return;
+          }
+
+          // 剩下的任天堂归为掌机
+          handheld++;
+        }
       });
 
-      document.getElementById('nintendoCount').textContent = nintendo;
-      document.getElementById('sonyCount').textContent = sony;
       document.getElementById('pcCount').textContent = pc;
+      document.getElementById('nsCount').textContent = ns;
+      document.getElementById('handheldCount').textContent = handheld;
+      document.getElementById('consoleCount').textContent = console;
+      document.getElementById('sonyCount').textContent = sony;
+      document.getElementById('otherCount').textContent = other;
     }
 
     // 搜索
