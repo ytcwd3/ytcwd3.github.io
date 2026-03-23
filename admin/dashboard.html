@@ -597,6 +597,8 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script>
+    console.log('Dashboard script loaded');
+
     // Supabase 配置
     const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA';
@@ -612,8 +614,11 @@
 
     // 检查登录
     function checkAuth() {
+      console.log('checkAuth called');
       const loggedIn = localStorage.getItem('admin_logged_in');
+      console.log('loggedIn:', loggedIn);
       if (!loggedIn) {
+        console.log('Redirecting to login...');
         window.location.href = 'login.html';
         return;
       }
@@ -1219,12 +1224,17 @@
 
     // 选择文件
     function selectFile() {
+      console.log('selectFile called');
       const fileInput = document.getElementById('excelFile');
       fileInput.click();
 
       fileInput.onchange = async function(e) {
+        console.log('File input changed');
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+          console.log('No file selected');
+          return;
+        }
 
         document.getElementById('selectFileBtn').textContent = '读取中...';
         document.getElementById('selectFileBtn').disabled = true;
@@ -1567,12 +1577,15 @@
     }
 
     // 初始化
+    console.log('Starting initialization...');
     checkAuth();
+    console.log('Loading data...');
     loadData();
 
     // 默认选中PC分类
     setTimeout(() => {
-      document.querySelector('.stat-card.pc').classList.add('active');
+      const pcCard = document.querySelector('.stat-card.pc');
+      if (pcCard) pcCard.classList.add('active');
     }, 100);
 
     // ESC 关闭模态框
