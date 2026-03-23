@@ -331,6 +331,7 @@
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="搜索游戏名称..." onkeyup="handleSearch(event)">
       </div>
+      <button class="btn btn-success" onclick="openImportModal()">📥 导入Excel</button>
       <button class="btn btn-primary" onclick="openAddModal()">+ 添加游戏</button>
       <button class="btn btn-secondary" onclick="refreshData()">刷新数据</button>
     </div>
@@ -446,7 +447,48 @@
     </div>
   </div>
 
+  <!-- 导入Excel模态框 -->
+  <div class="modal" id="importModal">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2>📥 导入Excel数据</h2>
+        <button class="modal-close" onclick="closeImportModal()">&times;</button>
+      </div>
+
+      <div style="padding: 20px 0;">
+        <div class="form-group">
+          <label>选择Excel文件（.xlsx）</label>
+          <input type="file" id="excelFile" accept=".xlsx" style="padding: 10px; border: 2px dashed #ddd; border-radius: 8px; width: 100%;">
+        </div>
+
+        <div id="importPreview" style="display: none; margin-top: 20px;">
+          <h4 style="margin-bottom: 10px;">差异预览：</h4>
+          <div id="diffStats" style="display: flex; gap: 15px; margin-bottom: 15px;"></div>
+          <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
+            <table style="width: 100%; font-size: 13px;">
+              <thead id="diffTableHead"></thead>
+              <tbody id="diffTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeImportModal()">取消</button>
+        <button type="button" class="btn btn-primary" id="selectFileBtn" onclick="selectFile()">选择文件</button>
+        <button type="button" class="btn btn-success" id="importBtn" onclick="doImport()" disabled>确认导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-overlay" id="importLoading" style="display: none;">
+    <div class="spinner"></div>
+    <p id="importLoadingText" style="margin-top: 15px; color: #666;">处理中...</p>
+  </div>
+
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script>
     // Supabase 配置
     const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabase.co';
@@ -778,6 +820,332 @@
       } else {
         if (overlay) overlay.style.display = 'none';
       }
+    }
+
+    // ==================== Excel导入功能 ====================
+
+    let excelData = [];
+    let diffResult = { added: [], modified: [], unchanged: [], deleted: [] };
+
+    // 打开导入模态框
+    function openImportModal() {
+      document.getElementById('importModal').classList.add('show');
+      document.getElementById('excelFile').value = '';
+      document.getElementById('importPreview').style.display = 'none';
+      document.getElementById('importBtn').disabled = true;
+      document.getElementById('selectFileBtn').textContent = '选择文件';
+    }
+
+    // 关闭导入模态框
+    function closeImportModal() {
+      document.getElementById('importModal').classList.remove('show');
+    }
+
+    // 选择文件
+    function selectFile() {
+      const fileInput = document.getElementById('excelFile');
+      fileInput.click();
+
+      fileInput.onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        document.getElementById('selectFileBtn').textContent = '读取中...';
+        document.getElementById('selectFileBtn').disabled = true;
+
+        try {
+          excelData = await readExcelFile(file);
+          compareData();
+          showDiffPreview();
+          document.getElementById('selectFileBtn').textContent = '重新选择';
+          document.getElementById('selectFileBtn').disabled = false;
+        } catch (err) {
+          showToast('读取Excel失败: ' + err.message, 'error');
+          document.getElementById('selectFileBtn').textContent = '选择文件';
+          document.getElementById('selectFileBtn').disabled = false;
+        }
+      };
+    }
+
+    // 读取Excel文件
+    async function readExcelFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const allGames = [];
+
+            // 遍历所有sheet
+            workbook.SheetNames.forEach(sheetName => {
+              const sheet = workbook.Sheets[sheetName];
+              const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+              // 跳过表头，找到数据起始行
+              let startRow = 0;
+              for (let i = 0; i < Math.min(5, json.length); i++) {
+                if (json[i] && json[i][0] && String(json[i][0]).includes('游戏名')) {
+                  startRow = i + 1;
+                  break;
+                }
+                // 检查是否是NS表那种没有标题的
+                if (i === 0 && json[i] && json[i][0] && json[i][1] === undefined) {
+                  startRow = 1;
+                  break;
+                }
+              }
+
+              // 设置默认分类
+              let defaultCategory = [];
+              let defaultSubcategory = [];
+              if (sheetName.includes('NS')) {
+                defaultCategory = ['任天堂'];
+                defaultSubcategory = ['NS'];
+              } else if (sheetName.toLowerCase().includes('other')) {
+                defaultCategory = ['其他平台'];
+              }
+
+              // 读取数据行
+              for (let i = startRow; i < json.length; i++) {
+                const row = json[i];
+                if (!row || !row[0]) continue;
+
+                const name = String(row[0] || '').trim();
+                if (!name) continue;
+
+                // 构建分类
+                const category = [];
+                const p1 = String(row[1] || '').trim();
+                const p2 = String(row[2] || '').trim();
+                if (p1) category.push(p1);
+                else if (defaultCategory.length) category.push(...defaultCategory);
+                if (p2) category.push(p2);
+
+                // 构建子分类
+                const subcategory = [];
+                const s1 = String(row[3] || '').trim();
+                const s2 = String(row[4] || '').trim();
+                if (s1) subcategory.push(s1);
+                else if (defaultSubcategory.length) subcategory.push(...defaultSubcategory);
+                if (s2) subcategory.push(s2);
+
+                // 提取码处理
+                let code = row[5];
+                if (typeof code === 'number') code = String(code);
+                else if (!code) code = '';
+                else code = String(code).trim();
+
+                allGames.push({
+                  name: name,
+                  category: category,
+                  subcategory: subcategory,
+                  code: code,
+                  unzipcode: String(row[9] || '').trim(),
+                  quarkpan: String(row[6] || '').trim(),
+                  baidupan: String(row[7] || '').trim(),
+                  thunderpan: String(row[8] || '').trim(),
+                  updatedate: String(row[10] || '').trim()
+                });
+              }
+            });
+
+            resolve(allGames);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    // 对比数据
+    function compareData() {
+      const existingMap = new Map();
+      allGames.forEach(g => {
+        existingMap.set(g.name, g);
+      });
+
+      diffResult = { added: [], modified: [], unchanged: [], deleted: [] };
+
+      // 检查新增和修改
+      excelData.forEach(excelGame => {
+        const existing = existingMap.get(excelGame.name);
+        if (!existing) {
+          // 新增
+          diffResult.added.push(excelGame);
+        } else {
+          // 检查是否修改
+          const changed = checkIfModified(excelGame, existing);
+          if (changed) {
+            diffResult.modified.push({ new: excelGame, old: existing });
+          } else {
+            diffResult.unchanged.push(excelGame);
+          }
+        }
+      });
+
+      // 检查删除的（数据库有但Excel没有）
+      // 简化处理：只显示新增和修改
+    }
+
+    // 检查是否修改
+    function checkIfModified(newData, oldData) {
+      return newData.quarkpan !== oldData.quarkpan ||
+             newData.baidupan !== oldData.baidupan ||
+             newData.thunderpan !== oldData.thunderpan ||
+             newData.code !== oldData.code ||
+             JSON.stringify(newData.category) !== JSON.stringify(oldData.category) ||
+             JSON.stringify(newData.subcategory) !== JSON.stringify(oldData.subcategory);
+    }
+
+    // 显示差异预览
+    function showDiffPreview() {
+      const preview = document.getElementById('importPreview');
+      const diffStats = document.getElementById('diffStats');
+      const tableHead = document.getElementById('diffTableHead');
+      const tableBody = document.getElementById('diffTableBody');
+
+      preview.style.display = 'block';
+
+      const total = diffResult.added.length + diffResult.modified.length;
+      diffStats.innerHTML = `
+        <span style="color: #22c55e;">🆕 新增: ${diffResult.added.length}</span>
+        <span style="color: #f59e0b;">✏️ 修改: ${diffResult.modified.length}</span>
+        <span style="color: #666;">无变化: ${diffResult.unchanged.length}</span>
+      `;
+
+      // 表头
+      tableHead.innerHTML = `
+        <tr style="background: #f8f9fa;">
+          <th style="padding: 10px;">类型</th>
+          <th style="padding: 10px;">游戏名称</th>
+          <th style="padding: 10px;">夸克链接</th>
+          <th style="padding: 10px;">百度链接</th>
+        </tr>
+      `;
+
+      // 表格内容（只显示前20条）
+      let rows = [];
+
+      diffResult.added.slice(0, 10).forEach(g => {
+        rows.push(`
+          <tr style="background: #dcfce7;">
+            <td style="padding: 8px;"><span style="color: #22c55e;">🆕新增</span></td>
+            <td style="padding: 8px;">${g.name}</td>
+            <td style="padding: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${g.quarkpan || '-'}</td>
+            <td style="padding: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${g.baidupan || '-'}</td>
+          </tr>
+        `);
+      });
+
+      diffResult.modified.slice(0, 10).forEach(item => {
+        const g = item.new;
+        const old = item.old;
+        let changes = [];
+        if (g.quarkpan !== old.quarkpan) changes.push('夸克');
+        if (g.baidupan !== old.baidupan) changes.push('百度');
+        if (g.thunderpan !== old.thunderpan) changes.push('迅雷');
+        if (g.code !== old.code) changes.push('提取码');
+
+        rows.push(`
+          <tr style="background: #fef3c7;">
+            <td style="padding: 8px;"><span style="color: #f59e0b;">✏️修改</span><br><small>${changes.join(',')}</small></td>
+            <td style="padding: 8px;">${g.name}</td>
+            <td style="padding: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${g.quarkpan || '-'}</td>
+            <td style="padding: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${g.baidupan || '-'}</td>
+          </tr>
+        `);
+      });
+
+      tableBody.innerHTML = rows.join('');
+
+      if (diffResult.added.length + diffResult.modified.length > 20) {
+        tableBody.innerHTML += `<tr><td colspan="4" style="padding: 10px; text-align: center; color: #999;">...还有 ${total - 20} 条变更未显示</td></tr>`;
+      }
+
+      // 启用导入按钮
+      document.getElementById('importBtn').disabled = total === 0;
+    }
+
+    // 执行导入
+    async function doImport() {
+      const total = diffResult.added.length + diffResult.modified.length;
+      if (total === 0) {
+        showToast('没有需要导入的数据', 'error');
+        return;
+      }
+
+      if (!confirm(`确定要导入 ${total} 条数据吗？\n新增: ${diffResult.added.length}, 修改: ${diffResult.modified.length}`)) {
+        return;
+      }
+
+      const loading = document.getElementById('importLoading');
+      const loadingText = document.getElementById('importLoadingText');
+      loading.style.display = 'flex';
+
+      let success = 0;
+      let failed = 0;
+
+      // 先处理修改
+      for (const item of diffResult.modified) {
+        const game = item.new;
+        loadingText.textContent = `正在更新... ${success + failed + 1}/${total}`;
+
+        const { error } = await supabaseClient
+          .from('games')
+          .update({
+            category: game.category,
+            subcategory: game.subcategory,
+            code: game.code,
+            unzipcode: game.unzipcode,
+            quarkpan: game.quarkpan,
+            baidupan: game.baidupan,
+            thunderpan: game.thunderpan,
+            updatedate: game.updatedate
+          })
+          .eq('name', game.name);
+
+        if (error) {
+          failed++;
+        } else {
+          success++;
+        }
+      }
+
+      // 再处理新增
+      for (const game of diffResult.added) {
+        loadingText.textContent = `正在添加... ${success + failed + 1}/${total}`;
+
+        const { error } = await supabaseClient
+          .from('games')
+          .insert([{
+            name: game.name,
+            category: game.category,
+            subcategory: game.subcategory,
+            code: game.code,
+            unzipcode: game.unzipcode,
+            quarkpan: game.quarkpan,
+            baidupan: game.baidupan,
+            thunderpan: game.thunderpan,
+            updatedate: game.updatedate
+          }]);
+
+        if (error) {
+          failed++;
+        } else {
+          success++;
+        }
+      }
+
+      loading.style.display = 'none';
+      closeImportModal();
+
+      showToast(`导入完成！成功: ${success}, 失败: ${failed}`, failed > 0 ? 'error' : 'success');
+
+      // 刷新数据
+      loadData();
     }
 
     // 初始化
