@@ -322,10 +322,12 @@
       font-size: 12px;
       margin: 2px;
     }
-    .category-tag.nintendo { background: #fee; color: #e60012; }
-    .category-tag.sony { background: #e8f0fe; color: #003791; }
-    .category-tag.pc { background: #fef3c7; color: #f5a623; }
-    .category-tag.other { background: #d1fae5; color: #059669; }
+    .category-tag.pc { background: #fef3c7; color: #b45309; }
+    .category-tag.ns { background: #fee2e2; color: #dc2626; }
+    .category-tag.handheld { background: #d1fae5; color: #047857; }
+    .category-tag.console { background: #ede9fe; color: #7c3aed; }
+    .category-tag.sony { background: #dbeafe; color: #1d4ed8; }
+    .category-tag.other { background: #f3f4f6; color: #374151; }
   </style>
 </head>
 <body>
@@ -745,13 +747,51 @@
       tbody.innerHTML = pageData.map((g, idx) => {
         const cats = g.category || [];
         const subcats = g.subcategory || [];
-        const catHtml = cats.map(c => {
-          let cls = 'other';
-          if (c === '任天堂') cls = 'nintendo';
-          else if (c === '索尼') cls = 'sony';
-          else if (c === 'PC及安卓') cls = 'pc';
-          return `<span class="category-tag ${cls}">${c}</span>`;
-        }).join('');
+
+        // 根据subcategory判断主分类
+        let mainCat = 'PC';
+        let mainCatClass = 'pc';
+
+        // NS
+        if (subcats.includes('NS')) {
+          mainCat = 'NS';
+          mainCatClass = 'ns';
+        }
+        // 任天堂掌机：GB, GBA, 3DS, NDS
+        else if (cats.includes('任天堂')) {
+          const handheldKeywords = ['GB', 'GBA', '3DS', 'NDS', 'PSP'];
+          if (subcats.some(s => handheldKeywords.some(k => s.includes(k)))) {
+            mainCat = '任天堂掌机';
+            mainCatClass = 'handheld';
+          }
+          // 任天堂主机：Wii, Wii U, NGC, GameCube
+          else {
+            const consoleKeywords = ['Wii U', 'Wii', 'NGC', 'GameCube'];
+            if (subcats.some(s => consoleKeywords.some(k => s.includes(k)))) {
+              mainCat = '任天堂主机';
+              mainCatClass = 'console';
+            } else {
+              // 其他任天堂的默认归为掌机
+              mainCat = '任天堂掌机';
+              mainCatClass = 'handheld';
+            }
+          }
+        }
+        // 索尼
+        else if (cats.includes('索尼')) {
+          mainCat = '索尼';
+          mainCatClass = 'sony';
+        }
+        // 其他平台
+        else if (cats.includes('其他平台')) {
+          mainCat = 'Other';
+          mainCatClass = 'other';
+        }
+        // PC及安卓
+        else if (cats.includes('PC及安卓')) {
+          mainCat = 'PC';
+          mainCatClass = 'pc';
+        }
 
         const subcatHtml = subcats.map(s => `<span>${s}</span>`).join(', ');
 
@@ -759,7 +799,7 @@
           <tr>
             <td>${start + idx + 1}</td>
             <td><strong>${g.name}</strong></td>
-            <td>${catHtml}</td>
+            <td><span class="category-tag ${mainCatClass}">${mainCat}</span></td>
             <td>${subcatHtml}</td>
             <td>${g.code || '-'}</td>
             <td>${g.quarkpan ? '<a href="' + g.quarkpan + '" target="_blank">查看</a>' : '-'}</td>
