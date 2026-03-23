@@ -1226,10 +1226,12 @@
     function selectFile() {
       console.log('selectFile called');
       const fileInput = document.getElementById('excelFile');
+      console.log('fileInput element:', fileInput);
       fileInput.click();
 
       fileInput.onchange = async function(e) {
         console.log('File input changed');
+        console.log('e.target.files:', e.target.files);
         const file = e.target.files[0];
         if (!file) {
           console.log('No file selected');
