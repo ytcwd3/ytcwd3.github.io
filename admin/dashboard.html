@@ -1231,7 +1231,10 @@
 
         try {
           excelData = await readExcelFile(file);
+          console.log('读取到Excel数据条数:', excelData.length);
+          console.log('Excel数据示例:', excelData.slice(0, 3));
           compareData();
+          console.log('对比结果:', diffResult);
           showDiffPreview();
           document.getElementById('selectFileBtn').textContent = '重新选择';
           document.getElementById('selectFileBtn').disabled = false;
@@ -1367,10 +1370,14 @@
 
     // 对比数据
     function compareData() {
+      console.log('开始对比...');
+      console.log('数据库现有数据条数:', allGames.length);
+
       const existingMap = new Map();
       allGames.forEach(g => {
         existingMap.set(g.name, g);
       });
+      console.log('数据库游戏名列表:', Array.from(existingMap.keys()).slice(0, 5));
 
       diffResult = { added: [], modified: [], unchanged: [], deleted: [] };
 
@@ -1391,8 +1398,7 @@
         }
       });
 
-      // 检查删除的（数据库有但Excel没有）
-      // 简化处理：只显示新增和修改
+      console.log('新增:', diffResult.added.length, '修改:', diffResult.modified.length, '无变化:', diffResult.unchanged.length);
     }
 
     // 检查是否修改
