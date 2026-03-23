@@ -48,7 +48,7 @@
   <script>
     const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA';
-    const ALLOWED_GITHUB_USER = 'anyebojue';
+    const ALLOWED_GITHUB_USERS = ['anyebojue', 'ytcwd3'];
 
     const { createClient } = supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -71,7 +71,7 @@
           if (user.app_metadata?.provider === 'github') {
             const githubUsername = user.user_metadata?.user_name || user.user_metadata?.preferred_username;
 
-            if (githubUsername === ALLOWED_GITHUB_USER) {
+            if (ALLOWED_GITHUB_USERS.includes(githubUsername)) {
               // 验证通过
               localStorage.setItem('admin_logged_in', 'true');
               localStorage.setItem('admin_user', JSON.stringify({
