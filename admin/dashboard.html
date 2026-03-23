@@ -896,13 +896,30 @@
                 }
               }
 
-              // 设置默认分类
+              // 设置默认分类（根据Sheet名称）
               let defaultCategory = [];
               let defaultSubcategory = [];
-              if (sheetName.includes('NS')) {
+              const sheetNameUpper = sheetName.toUpperCase();
+
+              if (sheetNameUpper.includes('PC') && !sheetNameUpper.includes('NS')) {
+                // PC表：默认PC及安卓
+                defaultCategory = ['PC及安卓'];
+              } else if (sheetNameUpper === 'NS' || sheetNameUpper.includes('NS')) {
+                // NS表：默认任天堂，NS
                 defaultCategory = ['任天堂'];
                 defaultSubcategory = ['NS'];
-              } else if (sheetName.toLowerCase().includes('other')) {
+              } else if (sheetNameUpper.includes('掌机')) {
+                // 任天堂掌机表：默认任天堂
+                defaultCategory = ['任天堂'];
+              } else if (sheetNameUpper.includes('主机')) {
+                // 任天堂主机表：默认任天堂，Wii U
+                defaultCategory = ['任天堂'];
+                // 子分类需要根据数据判断
+              } else if (sheetNameUpper.includes('索尼') || sheetNameUpper.includes('SONY')) {
+                // 索尼表：默认索尼
+                defaultCategory = ['索尼'];
+              } else if (sheetNameUpper === 'OTHER' || sheetNameUpper.includes('OTHER')) {
+                // Other表：默认其他平台
                 defaultCategory = ['其他平台'];
               }
 
