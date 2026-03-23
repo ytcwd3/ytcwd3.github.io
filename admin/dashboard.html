@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>游戏数据库 - 管理后台</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .header h1 { font-size: 20px; }
+    .header-right { display: flex; align-items: center; gap: 15px; }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .logout-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,0.3); }
+    .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+
+    /* 统计卡片 */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .stat-card h3 { color: #666; font-size: 14px; margin-bottom: 5px; }
+    .stat-card .value { font-size: 28px; font-weight: bold; color: #333; }
+    .stat-card.nintendo .value { color: #e60012; }
+    .stat-card.sony .value { color: #003791; }
+    .stat-card.pc .value { color: #f5a623; }
+
+    /* 操作栏 */
+    .toolbar {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.3s;
+    }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover { background: #5a6fd6; }
+    .btn-success { background: #22c55e; color: white; }
+    .btn-success:hover { background: #16a34a; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-secondary { background: #6b7280; color: white; }
+    .btn-secondary:hover { background: #4b5563; }
+
+    /* 表格 */
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #333;
+      font-size: 14px;
+    }
+    td { font-size: 14px; color: #666; }
+    tr:hover { background: #f8f9fa; }
+    .actions { display: flex; gap: 5px; }
+    .actions button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .actions .edit { background: #e8f0fe; color: #1a73e8; }
+    .actions .delete { background: #fee; color: #dc2626; }
+    .actions .edit:hover { background: #d4e5fc; }
+    .actions .delete:hover { background: #fdd; }
+
+    /* 分页 */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 20px;
+    }
+    .pagination button {
+      padding: 8px 15px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .pagination button:hover:not(:disabled) { background: #f5f5f5; }
+    .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pagination span { color: #666; }
+
+    /* 模态框 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .modal-header h2 { font-size: 18px; color: #333; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+    }
+    .modal-close:hover { color: #333; }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #666;
+      font-weight: 500;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .form-row { display: flex; gap: 15px; }
+    .form-row .form-group { flex: 1; }
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 15px 25px;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.success { background: #22c55e; }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn {
+      from { transform: translateX(100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+    }
+    .loading-overlay .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    .category-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin: 2px;
+    }
+    .category-tag.nintendo { background: #fee; color: #e60012; }
+    .category-tag.sony { background: #e8f0fe; color: #003791; }
+    .category-tag.pc { background: #fef3c7; color: #f5a623; }
+    .category-tag.other { background: #d1fae5; color: #059669; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>游戏数据库管理后台</h1>
+    <div class="header-right">
+      <div class="user-info">
+        <span id="userDisplay"></span>
+      </div>
+      <button class="logout-btn" onclick="logout()">退出登录</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- 统计 -->
+    <div class="stats" id="stats">
+      <div class="stat-card">
+        <h3>总数据量</h3>
+        <div class="value" id="totalCount">-</div>
+      </div>
+      <div class="stat-card nintendo">
+        <h3>任天堂</h3>
+        <div class="value" id="nintendoCount">-</div>
+      </div>
+      <div class="stat-card sony">
+        <h3>索尼</h3>
+        <div class="value" id="sonyCount">-</div>
+      </div>
+      <div class="stat-card pc">
+        <h3>PC及安卓</h3>
+        <div class="value" id="pcCount">-</div>
+      </div>
+    </div>
+
+    <!-- 操作栏 -->
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜索游戏名称..." onkeyup="handleSearch(event)">
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">+ 添加游戏</button>
+      <button class="btn btn-secondary" onclick="refreshData()">刷新数据</button>
+    </div>
+
+    <!-- 表格 -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>游戏名称</th>
+            <th>主分类</th>
+            <th>子分类</th>
+            <th>提取码</th>
+            <th>夸克链接</th>
+            <th>更新日期</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 分页 -->
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <!-- 编辑/添加模态框 -->
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">添加游戏</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="gameForm" onsubmit="handleSubmit(event)">
+        <input type="hidden" id="gameId">
+
+        <div class="form-group">
+          <label>游戏名称 *</label>
+          <input type="text" id="gameName" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>主分类 1</label>
+            <select id="category1">
+              <option value="">选择分类</option>
+              <option value="任天堂">任天堂</option>
+              <option value="索尼">索尼</option>
+              <option value="PC及安卓">PC及安卓</option>
+              <option value="其他平台">其他平台</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>主分类 2</label>
+            <select id="category2">
+              <option value="">无</option>
+              <option value="任天堂">任天堂</option>
+              <option value="索尼">索尼</option>
+              <option value="PC及安卓">PC及安卓</option>
+              <option value="其他平台">其他平台</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>子分类 1</label>
+            <input type="text" id="subcategory1" placeholder="如: NS, PS4, RPG">
+          </div>
+          <div class="form-group">
+            <label>子分类 2</label>
+            <input type="text" id="subcategory2" placeholder="如: 动作, 冒险">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>提取码</label>
+            <input type="text" id="gameCode">
+          </div>
+          <div class="form-group">
+            <label>解压密码</label>
+            <input type="text" id="unzipCode">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>夸克网盘链接</label>
+          <input type="url" id="quarkPan" placeholder="https://pan.quark.cn/s/...">
+        </div>
+
+        <div class="form-group">
+          <label>百度网盘链接</label>
+          <input type="url" id="baiduPan" placeholder="https://pan.baidu.com/s/...">
+        </div>
+
+        <div class="form-group">
+          <label>迅雷网盘链接</label>
+          <input type="url" id="thunderPan" placeholder="https://pan.xunlei.com/s/...">
+        </div>
+
+        <div class="form-group">
+          <label>更新日期</label>
+          <input type="text" id="updateDate" placeholder="2026.3.23">
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+          <button type="submit" class="btn btn-success">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase 配置
+    const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA';
+
+    const { createClient } = supabase;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 状态
+    let allGames = [];
+    let filteredGames = [];
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
+
+    // 检查登录
+    function checkAuth() {
+      const loggedIn = localStorage.getItem('admin_logged_in');
+      if (!loggedIn) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+      document.getElementById('userDisplay').textContent = '👤 ' + (user.github || user.email);
+    }
+
+    // 登出
+    async function logout() {
+      await supabase.auth.signOut();
+      localStorage.removeItem('admin_logged_in');
+      localStorage.removeItem('admin_user');
+      window.location.href = 'login.html';
+    }
+
+    // 加载数据
+    async function loadData() {
+      showLoading(true);
+
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (error) {
+        showToast('加载数据失败: ' + error.message, 'error');
+        showLoading(false);
+        return;
+      }
+
+      allGames = data || [];
+      updateStats();
+      handleSearch();
+      showLoading(false);
+    }
+
+    // 更新统计
+    function updateStats() {
+      document.getElementById('totalCount').textContent = allGames.length;
+
+      let nintendo = 0, sony = 0, pc = 0;
+      allGames.forEach(g => {
+        const cats = g.category || [];
+        if (cats.includes('任天堂')) nintendo++;
+        if (cats.includes('索尼')) sony++;
+        if (cats.includes('PC及安卓')) pc++;
+      });
+
+      document.getElementById('nintendoCount').textContent = nintendo;
+      document.getElementById('sonyCount').textContent = sony;
+      document.getElementById('pcCount').textContent = pc;
+    }
+
+    // 搜索
+    function handleSearch(event) {
+      if (event && event.key !== 'Enter') return;
+
+      const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+
+      if (!keyword) {
+        filteredGames = [...allGames];
+      } else {
+        filteredGames = allGames.filter(g =>
+          g.name.toLowerCase().includes(keyword)
+        );
+      }
+
+      currentPage = 1;
+      renderTable();
+      renderPagination();
+    }
+
+    // 渲染表格
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const pageData = filteredGames.slice(start, end);
+
+      if (pageData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">暂无数据</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = pageData.map((g, idx) => {
+        const cats = g.category || [];
+        const subcats = g.subcategory || [];
+        const catHtml = cats.map(c => {
+          let cls = 'other';
+          if (c === '任天堂') cls = 'nintendo';
+          else if (c === '索尼') cls = 'sony';
+          else if (c === 'PC及安卓') cls = 'pc';
+          return `<span class="category-tag ${cls}">${c}</span>`;
+        }).join('');
+
+        const subcatHtml = subcats.map(s => `<span>${s}</span>`).join(', ');
+
+        return `
+          <tr>
+            <td>${start + idx + 1}</td>
+            <td><strong>${g.name}</strong></td>
+            <td>${catHtml}</td>
+            <td>${subcatHtml}</td>
+            <td>${g.code || '-'}</td>
+            <td>${g.quarkpan ? '<a href="' + g.quarkpan + '" target="_blank">查看</a>' : '-'}</td>
+            <td>${g.updatedate || '-'}</td>
+            <td class="actions">
+              <button class="edit" onclick="editGame(${g.id})">编辑</button>
+              <button class="delete" onclick="deleteGame(${g.id})">删除</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 渲染分页
+    function renderPagination() {
+      const totalPages = Math.ceil(filteredGames.length / PAGE_SIZE) || 1;
+      const pagination = document.getElementById('pagination');
+
+      if (totalPages <= 1) {
+        pagination.innerHTML = `<span>共 ${filteredGames.length} 条</span>`;
+        return;
+      }
+
+      let html = `
+        <button onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
+        <span>第 ${currentPage} / ${totalPages} 页</span>
+        <span>共 ${filteredGames.length} 条</span>
+        <button onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>下一页</button>
+      `;
+
+      pagination.innerHTML = html;
+    }
+
+    function goPage(page) {
+      const totalPages = Math.ceil(filteredGames.length / PAGE_SIZE);
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      renderTable();
+      renderPagination();
+    }
+
+    // 刷新
+    function refreshData() {
+      loadData();
+      showToast('数据已刷新', 'success');
+    }
+
+    // 打开添加模态框
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = '添加游戏';
+      document.getElementById('gameForm').reset();
+      document.getElementById('gameId').value = '';
+
+      // 设置默认日期
+      const today = new Date();
+      document.getElementById('updateDate').value =
+        `${today.getFullYear()}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getDate().toString().padStart(2, '0')}`;
+
+      document.getElementById('editModal').classList.add('show');
+    }
+
+    // 编辑游戏
+    async function editGame(id) {
+      const game = allGames.find(g => g.id === id);
+      if (!game) return;
+
+      document.getElementById('modalTitle').textContent = '编辑游戏';
+      document.getElementById('gameId').value = id;
+      document.getElementById('gameName').value = game.name || '';
+      document.getElementById('gameCode').value = game.code || '';
+      document.getElementById('unzipCode').value = game.unzipcode || '';
+      document.getElementById('quarkPan').value = game.quarkpan || '';
+      document.getElementById('baiduPan').value = game.baidupan || '';
+      document.getElementById('thunderPan').value = game.thunderpan || '';
+      document.getElementById('updateDate').value = game.updatedate || '';
+
+      // 设置分类
+      const cats = game.category || [];
+      document.getElementById('category1').value = cats[0] || '';
+      document.getElementById('category2').value = cats[1] || '';
+
+      const subcats = game.subcategory || [];
+      document.getElementById('subcategory1').value = subcats[0] || '';
+      document.getElementById('subcategory2').value = subcats[1] || '';
+
+      document.getElementById('editModal').classList.add('show');
+    }
+
+    // 关闭模态框
+    function closeModal() {
+      document.getElementById('editModal').classList.remove('show');
+    }
+
+    // 提交表单
+    async function handleSubmit(event) {
+      event.preventDefault();
+
+      const id = document.getElementById('gameId').value;
+      const name = document.getElementById('gameName').value.trim();
+
+      if (!name) {
+        showToast('请输入游戏名称', 'error');
+        return;
+      }
+
+      // 构建分类数组
+      const category = [];
+      const cat1 = document.getElementById('category1').value;
+      const cat2 = document.getElementById('category2').value;
+      if (cat1) category.push(cat1);
+      if (cat2) category.push(cat2);
+
+      // 构建子分类数组
+      const subcategory = [];
+      const sub1 = document.getElementById('subcategory1').value.trim();
+      const sub2 = document.getElementById('subcategory2').value.trim();
+      if (sub1) subcategory.push(sub1);
+      if (sub2) subcategory.push(sub2);
+
+      const gameData = {
+        name: name,
+        category: category,
+        subcategory: subcategory,
+        code: document.getElementById('gameCode').value.trim(),
+        unzipcode: document.getElementById('unzipCode').value.trim(),
+        quarkpan: document.getElementById('quarkPan').value.trim(),
+        baidupan: document.getElementById('baiduPan').value.trim(),
+        thunderpan: document.getElementById('thunderPan').value.trim(),
+        updatedate: document.getElementById('updateDate').value.trim()
+      };
+
+      showLoading(true);
+
+      if (id) {
+        // 更新
+        const { error } = await supabase
+          .from('games')
+          .update(gameData)
+          .eq('id', parseInt(id));
+
+        if (error) {
+          showToast('更新失败: ' + error.message, 'error');
+        } else {
+          showToast('更新成功', 'success');
+          closeModal();
+          loadData();
+        }
+      } else {
+        // 添加
+        const { error } = await supabase
+          .from('games')
+          .insert([gameData]);
+
+        if (error) {
+          showToast('添加失败: ' + error.message, 'error');
+        } else {
+          showToast('添加成功', 'success');
+          closeModal();
+          loadData();
+        }
+      }
+
+      showLoading(false);
+    }
+
+    // 删除游戏
+    async function deleteGame(id) {
+      if (!confirm('确定要删除这条数据吗？')) return;
+
+      showLoading(true);
+
+      const { error } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        showToast('删除失败: ' + error.message, 'error');
+      } else {
+        showToast('删除成功', 'success');
+        loadData();
+      }
+
+      showLoading(false);
+    }
+
+    // Toast 提示
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Loading
+    function showLoading(show) {
+      let overlay = document.querySelector('.loading-overlay');
+      if (show) {
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.className = 'loading-overlay';
+          overlay.innerHTML = '<div class="spinner"></div>';
+          document.body.appendChild(overlay);
+        }
+        overlay.style.display = 'flex';
+      } else {
+        if (overlay) overlay.style.display = 'none';
+      }
+    }
+
+    // 初始化
+    checkAuth();
+    loadData();
+
+    // ESC 关闭模态框
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>游戏数据库 - 后台登录</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-box {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+    .login-box h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    .login-box p {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .github-btn {
+      background: #24292e;
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.3s;
+      width: 100%;
+      justify-content: center;
+    }
+    .github-btn:hover { background: #333; }
+    .github-btn svg { width: 20px; height: 20px; }
+    .error {
+      background: #fee;
+      color: #c00;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .info {
+      background: #e8f0fe;
+      color: #1a73e8;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      text-align: left;
+    }
+    .logout-info {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #999;
+    }
+    .logout-info a {
+      color: #666;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h1>游戏数据库管理系统</h1>
+    <p>使用 GitHub 账号登录</p>
+
+    <div id="error" class="error"></div>
+    <div class="info">
+      <strong>授权用户：</strong> anyebojue<br><br>
+      <small>只有授权的 GitHub 用户才能登录管理后台</small>
+    </div>
+
+    <button class="github-btn" id="githubBtn">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+      <span id="btnText">使用 GitHub 登录</span>
+    </button>
+
+    <div class="logout-info">
+      <a href="../index.html">返回首页</a>
+    </div>
+  </div>
+
+  <!-- GitHub OAuth -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase 配置
+    const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA';
+
+    // 允许的用户 GitHub 用户名
+    const ALLOWED_GITHUB_USER = 'anyebojue';
+
+    const { createClient } = supabase;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const btn = document.getElementById('githubBtn');
+    const btnText = document.getElementById('btnText');
+    const errorDiv = document.getElementById('error');
+
+    // 检查是否已登录
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await validateUser(session.user);
+      }
+    }
+
+    // 验证用户
+    async function validateUser(user) {
+      // 检查是否是 GitHub 用户
+      if (user.app_metadata?.provider === 'github') {
+        const githubUsername = user.user_metadata?.user_name || user.user_metadata?.preferred_username;
+
+        if (githubUsername === ALLOWED_GITHUB_USER) {
+          // 保存登录状态
+          localStorage.setItem('admin_logged_in', 'true');
+          localStorage.setItem('admin_user', JSON.stringify({
+            email: user.email,
+            name: user.user_metadata?.full_name || user.user_metadata?.name,
+            github: githubUsername
+          }));
+          window.location.href = 'dashboard.html';
+        } else {
+          errorDiv.textContent = '您没有权限访问管理后台';
+          errorDiv.style.display = 'block';
+          await supabase.auth.signOut();
+        }
+      } else {
+        errorDiv.textContent = '请使用 GitHub 账号登录';
+        errorDiv.style.display = 'block';
+      }
+    }
+
+    // GitHub 登录
+    btn.addEventListener('click', async () => {
+      btnText.textContent = '跳转中...';
+      btn.disabled = true;
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: window.location.origin + '/admin/callback.html'
+        }
+      });
+
+      if (error) {
+        errorDiv.textContent = '登录失败: ' + error.message;
+        errorDiv.style.display = 'block';
+        btnText.textContent = '使用 GitHub 登录';
+        btn.disabled = false;
+      }
+    });
+
+    checkSession();
+  </script>
+</body>
+</html>

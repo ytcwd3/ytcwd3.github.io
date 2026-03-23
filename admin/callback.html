@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>验证中...</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .loading {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .success { color: #22c55e; }
+    .error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="loading" id="loadingBox">
+    <div class="spinner" id="spinner"></div>
+    <p id="statusText">正在验证登录...</p>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA';
+    const ALLOWED_GITHUB_USER = 'anyebojue';
+
+    const { createClient } = supabase;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const spinner = document.getElementById('spinner');
+    const statusText = document.getElementById('statusText');
+    const loadingBox = document.getElementById('loadingBox');
+
+    async function handleCallback() {
+      try {
+        // 处理 OAuth 回调
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) throw error;
+
+        if (data.session) {
+          const user = data.session.user;
+
+          // 验证是否是 GitHub 用户
+          if (user.app_metadata?.provider === 'github') {
+            const githubUsername = user.user_metadata?.user_name || user.user_metadata?.preferred_username;
+
+            if (githubUsername === ALLOWED_GITHUB_USER) {
+              // 验证通过
+              localStorage.setItem('admin_logged_in', 'true');
+              localStorage.setItem('admin_user', JSON.stringify({
+                email: user.email,
+                name: user.user_metadata?.full_name || user.user_metadata?.name,
+                github: githubUsername
+              }));
+
+              spinner.className = 'spinner success';
+              statusText.textContent = '登录成功！正在跳转...';
+
+              setTimeout(() => {
+                window.location.href = 'dashboard.html';
+              }, 1000);
+            } else {
+              // 没有权限
+              await supabase.auth.signOut();
+              spinner.className = 'spinner error';
+              spinner.style.borderTopColor = '#ef4444';
+              statusText.textContent = '您没有权限访问管理后台';
+              statusText.className = 'error';
+
+              setTimeout(() => {
+                window.location.href = 'login.html';
+              }, 2000);
+            }
+          } else {
+            spinner.className = 'spinner error';
+            statusText.textContent = '请使用 GitHub 账号登录';
+            statusText.className = 'error';
+
+            setTimeout(() => {
+              window.location.href = 'login.html';
+            }, 2000);
+          }
+        } else {
+          // 没有 session，跳转回登录页
+          window.location.href = 'login.html';
+        }
+      } catch (err) {
+        console.error('验证失败:', err);
+        spinner.className = 'spinner error';
+        spinner.style.borderTopColor = '#ef4444';
+        statusText.textContent = '验证失败: ' + err.message;
+        statusText.className = 'error';
+
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 3000);
+      }
+    }
+
+    handleCallback();
+  </script>
+</body>
+</html>
