@@ -446,14 +446,14 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/@supabaseClient/supabaseClient-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
     // Supabase 配置
-    const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabaseClient.co';
+    const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA';
 
-    const { createClient } = window.supabaseClient || supabaseClient;
-    const supabaseClientClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // 状态
     let allGames = [];

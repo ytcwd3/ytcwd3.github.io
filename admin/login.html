@@ -110,7 +110,7 @@
     // 允许的用户 GitHub 用户名
     const ALLOWED_GITHUB_USER = 'anyebojue';
 
-    const { createClient } = window.supabase || supabase;
+    const { createClient } = supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const btn = document.getElementById('githubBtn');
