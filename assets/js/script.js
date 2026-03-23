@@ -77,78 +77,84 @@ document.addEventListener("DOMContentLoaded", function () {
     alert(msg);
   }
 
-  // ====================== 加载JSON数据 ======================
-  async function loadGameData() {
+  // ====================== Supabase 配置 ======================
+const SUPABASE_URL = "https://mjrqvffiinflzdwnzvte.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA";
+
+// ====================== 加载JSON数据（从Supabase） ======================
+async function loadGameData() {
+  try {
+    const headers = {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json"
+    };
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/games?select=*&order=id.asc`, {
+      headers: headers
+    });
+
+    if (!res.ok) throw new Error("加载失败");
+    const data = await res.json();
+
+    // 转换数据格式以兼容现有代码
+    gameDatabase = data.map(game => ({
+      name: game.name || "",
+      category: game.category || [],
+      subCategory: game.subcategory || [],  // 注意：Supabase是subcategory，前端是subCategory
+      code: game.code || "",
+      unzipCode: game.unzipcode || "",
+      quarkPan: game.quarkpan || "",
+      baiduPan: game.baidupan || "",
+      thunderPan: game.thunderpan || "",
+      updateDate: game.updatedate || ""
+    }));
+
+    originalGameDatabase = JSON.parse(JSON.stringify(gameDatabase));
+    console.log("✅ Supabase加载成功", gameDatabase.length);
+  } catch (e) {
+    console.error("❌ Supabase加载失败，尝试本地JSON", e);
+    // 降级：尝试加载本地JSON
     try {
       const res = await fetch("data/gameData.json");
-      if (!res.ok) throw new Error("加载失败");
-      gameDatabase = await res.json();
-
-      // 数据格式化
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}.${(today.getMonth() + 1).toString().padStart(2, "0")}.${today.getDate().toString().padStart(2, "0")}`;
-
-      gameDatabase = gameDatabase.map((game) => {
-        if (!game.updateDate || game.updateDate.trim() === "")
-          game.updateDate = todayStr;
-        if (!Array.isArray(game.category)) game.category = [game.category];
-        if (!Array.isArray(game.subCategory))
-          game.subCategory = [game.subCategory];
-        return game;
-      });
-
-      originalGameDatabase = JSON.parse(JSON.stringify(gameDatabase));
-      console.log("✅ 加载成功", gameDatabase.length);
-    } catch (e) {
-      console.error("❌ 加载失败，使用测试数据", e);
-      // 强制使用测试数据
-      gameDatabase = [
-        {
-          name: "测试游戏1-NS",
-          category: ["任天堂"],
-          subCategory: ["NS"],
-          link: "#",
-          code: "test123",
-          unzipCode: "test456",
-          quarkPan: "https://pan.quark.cn/s/123456",
-          baiduPan: "https://pan.baidu.com/s/123456",
-          thunderPan: "https://pan.xunlei.com/s/123456",
-          updateDate: "2026.03.07",
-        },
-        {
-          name: "测试游戏2-PS4",
-          category: ["索尼"],
-          subCategory: ["PS4"],
-          link: "#",
-          code: "ps4test",
-          unzipCode: "ps4123",
-          quarkPan: "https://pan.quark.cn/s/654321",
-          baiduPan: "https://pan.baidu.com/s/654321",
-          thunderPan: "",
-          updateDate: "2026.03.08",
-        },
-        {
-          name: "测试游戏3-安卓RPG",
-          category: ["PC及安卓"],
-          subCategory: ["RPG"],
-          link: "#",
-          code: "andrpg",
-          unzipCode: "无",
-          quarkPan: "https://pan.quark.cn/s/789012",
-          baiduPan: "",
-          thunderPan: "https://pan.xunlei.com/s/789012",
-          updateDate: "2026.03.09",
-        },
-      ];
-      originalGameDatabase = JSON.parse(JSON.stringify(gameDatabase));
+      if (res.ok) {
+        gameDatabase = await res.json();
+        gameDatabase = gameDatabase.map((game) => {
+          if (!Array.isArray(game.category)) game.category = [game.category];
+          if (!Array.isArray(game.subCategory)) game.subCategory = [game.subCategory];
+          return game;
+        });
+        originalGameDatabase = JSON.parse(JSON.stringify(gameDatabase));
+        console.log("✅ 本地JSON加载成功", gameDatabase.length);
+        return;
+      }
+    } catch (localErr) {
+      console.error("❌ 本地JSON也加载失败", localErr);
     }
 
-    try {
-      updateRecords = JSON.parse(localStorage.getItem("gameUpdateRecords")) || [];
-    } catch (e) {
-      updateRecords = [];
-    }
+    // 最后的兜底：测试数据
+    gameDatabase = [
+      {
+        name: "测试游戏1-NS",
+        category: ["任天堂"],
+        subCategory: ["NS"],
+        code: "test123",
+        unzipCode: "test456",
+        quarkPan: "https://pan.quark.cn/s/123456",
+        baiduPan: "https://pan.baidu.com/s/123456",
+        thunderPan: "https://pan.xunlei.com/s/123456",
+        updateDate: "2026.03.07",
+      },
+    ];
+    originalGameDatabase = JSON.parse(JSON.stringify(gameDatabase));
   }
+
+  try {
+    updateRecords = JSON.parse(localStorage.getItem("gameUpdateRecords")) || [];
+  } catch (e) {
+    updateRecords = [];
+  }
+}
 
   // ====================== 检测数据变化 ======================
   function checkGameChanges() {
