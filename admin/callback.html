@@ -50,8 +50,8 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA';
     const ALLOWED_GITHUB_USER = 'anyebojue';
 
-    const { createClient } = supabase;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { createClient } = window.supabase || supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const spinner = document.getElementById('spinner');
     const statusText = document.getElementById('statusText');
@@ -60,7 +60,7 @@
     async function handleCallback() {
       try {
         // 处理 OAuth 回调
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await supabaseClient.auth.getSession();
 
         if (error) throw error;
 
@@ -88,7 +88,7 @@
               }, 1000);
             } else {
               // 没有权限
-              await supabase.auth.signOut();
+              await supabaseClient.auth.signOut();
               spinner.className = 'spinner error';
               spinner.style.borderTopColor = '#ef4444';
               statusText.textContent = '您没有权限访问管理后台';

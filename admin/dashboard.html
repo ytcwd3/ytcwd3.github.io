@@ -446,14 +446,14 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabaseClient/supabaseClient-js@2"></script>
   <script>
     // Supabase 配置
-    const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabase.co';
+    const SUPABASE_URL = 'https://mjrqvffiinflzdwnzvte.supabaseClient.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcnF2ZmZpaW5mbHpkd256dnRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMzEwNzcsImV4cCI6MjA4OTgwNzA3N30.0jg4sfLSp8jxqY5NIRupjkZHG8BjpHFBrdLNKPyCLwA';
 
-    const { createClient } = supabase;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { createClient } = window.supabaseClient || supabaseClient;
+    const supabaseClientClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // 状态
     let allGames = [];
@@ -475,7 +475,7 @@
 
     // 登出
     async function logout() {
-      await supabase.auth.signOut();
+      await supabaseClient.auth.signOut();
       localStorage.removeItem('admin_logged_in');
       localStorage.removeItem('admin_user');
       window.location.href = 'login.html';
@@ -485,7 +485,7 @@
     async function loadData() {
       showLoading(true);
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('games')
         .select('*')
         .order('id', { ascending: true });
@@ -703,7 +703,7 @@
 
       if (id) {
         // 更新
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('games')
           .update(gameData)
           .eq('id', parseInt(id));
@@ -717,7 +717,7 @@
         }
       } else {
         // 添加
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('games')
           .insert([gameData]);
 
@@ -739,7 +739,7 @@
 
       showLoading(true);
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('games')
         .delete()
         .eq('id', id);
