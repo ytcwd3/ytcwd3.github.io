@@ -1035,14 +1035,26 @@
               // 跳过表头，找到数据起始行
               let startRow = 0;
               for (let i = 0; i < Math.min(5, json.length); i++) {
-                if (json[i] && json[i][0] && String(json[i][0]).includes('游戏名')) {
-                  startRow = i + 1;
-                  break;
-                }
-                // 检查是否是NS表那种没有标题的
-                if (i === 0 && json[i] && json[i][0] && json[i][1] === undefined) {
-                  startRow = 1;
-                  break;
+                if (json[i] && json[i][0]) {
+                  const firstCell = String(json[i][0]);
+                  // 跳过标题行：包含"游戏名"、"共xxx条记录"、"子分类"的行
+                  if (firstCell.includes('游戏名') ||
+                      firstCell.includes('共') && firstCell.includes('条') ||
+                      firstCell.includes('【子分类')) {
+                    startRow = i + 1;
+                    break;
+                  }
+                  // 如果第一行只有1列有值（多数是标题），跳过
+                  const nonEmptyCells = json[i].filter(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
+                  if (i === 0 && nonEmptyCells.length <= 1) {
+                    startRow = 1;
+                    break;
+                  }
+                  // 默认从第1行开始
+                  if (i === 0) {
+                    startRow = 1;
+                    break;
+                  }
                 }
               }
 
