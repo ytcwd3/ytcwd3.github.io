@@ -71,8 +71,6 @@
     .stat-card .value { font-size: 20px; font-weight: bold; }
 
     /* 各分类颜色 */
-    .stat-card.total { color: #667eea; }
-    .stat-card.total .value { color: #667eea; }
     .stat-card.pc { color: #f59e0b; }
     .stat-card.pc .value { color: #f59e0b; }
     .stat-card.ns { color: #e60012; }
@@ -87,13 +85,82 @@
     .stat-card.other .value { color: #6b7280; }
 
     /* 选中状态的背景色 */
-    .stat-card.active.total { background: #eef2ff; }
-    .stat-card.active.pc { background: #fef3c7; }
-    .stat-card.active.ns { background: #fee2e2; }
-    .stat-card.active.handheld { background: #d1fae5; }
-    .stat-card.active.console { background: #ede9fe; }
-    .stat-card.active.sony { background: #dbeafe; }
-    .stat-card.active.other { background: #f3f4f6; }
+    .stat-card.active.pc { background: #fef3c7; border-color: #f59e0b; }
+    .stat-card.active.ns { background: #fee2e2; border-color: #e60012; }
+    .stat-card.active.handheld { background: #d1fae5; border-color: #10b981; }
+    .stat-card.active.console { background: #ede9fe; border-color: #8b5cf6; }
+    .stat-card.active.sony { background: #dbeafe; border-color: #003791; }
+    .stat-card.active.other { background: #f3f4f6; border-color: #6b7280; }
+
+    /* 主分类标签 */
+    .category-tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      margin: 2px;
+    }
+    .category-tag.pc { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .category-tag.ns { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .category-tag.handheld { background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; }
+    .category-tag.console { background: #ede9fe; color: #7c3aed; border: 1px solid #c4b5fd; }
+    .category-tag.sony { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+    .category-tag.other { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+
+    /* 子分类标签 - 使用与主分类一致的颜色 */
+    .subcategory-tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin: 2px;
+    }
+    .subcategory-tag.pc { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .subcategory-tag.ns { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .subcategory-tag.handheld { background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; }
+    .subcategory-tag.console { background: #ede9fe; color: #7c3aed; border: 1px solid #c4b5fd; }
+    .subcategory-tag.sony { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+    .subcategory-tag.other { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+
+    /* 表格中的子分类显示 */
+    td .subcategory-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      margin: 1px;
+    }
+
+    /* 子分类筛选区域 */
+    .subcategory-filter {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .subcategory-filter.show { display: block; }
+    .subcategory-filter-title {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .subcategory-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .subcategory-tag-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid;
+    }
+    .subcategory-tag-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+    .subcategory-tag-btn.active { box-shadow: 0 0 0 2px rgba(0,0,0,0.2); }
 
     /* 操作栏 */
     .toolbar {
@@ -315,19 +382,6 @@
       padding: 40px;
       color: #999;
     }
-    .category-tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      margin: 2px;
-    }
-    .category-tag.pc { background: #fef3c7; color: #b45309; }
-    .category-tag.ns { background: #fee2e2; color: #dc2626; }
-    .category-tag.handheld { background: #d1fae5; color: #047857; }
-    .category-tag.console { background: #ede9fe; color: #7c3aed; }
-    .category-tag.sony { background: #dbeafe; color: #1d4ed8; }
-    .category-tag.other { background: #f3f4f6; color: #374151; }
   </style>
 </head>
 <body>
@@ -344,11 +398,7 @@
   <div class="container">
     <!-- 统计 -->
     <div class="stats" id="stats">
-      <div class="stat-card total" onclick="filterByCategory('all')">
-        <h3>总数据</h3>
-        <div class="value" id="totalCount">-</div>
-      </div>
-      <div class="stat-card pc" onclick="filterByCategory('pc')">
+      <div class="stat-card pc active" onclick="filterByCategory('pc')">
         <h3>PC</h3>
         <div class="value" id="pcCount">-</div>
       </div>
@@ -372,6 +422,15 @@
         <h3>Other</h3>
         <div class="value" id="otherCount">-</div>
       </div>
+    </div>
+
+    <!-- 子分类筛选区域 -->
+    <div class="subcategory-filter" id="subcategoryFilter">
+      <div class="subcategory-filter-title">
+        <span>筛选子分类：</span>
+        <span id="subcategoryFilterTitle" style="font-weight: bold;"></span>
+      </div>
+      <div class="subcategory-tags" id="subcategoryTags"></div>
     </div>
 
     <!-- 操作栏 -->
@@ -588,125 +647,257 @@
 
       allGames = data || [];
       updateStats();
-      handleSearch();
+
+      // 初始化筛选
+      filteredGames = [...allGames];
+      currentPage = 1;
+      renderTable();
+      renderPagination();
+      showSubcategoryFilter('pc');
+
       showLoading(false);
     }
 
     // 更新统计
     function updateStats() {
-      document.getElementById('totalCount').textContent = allGames.length;
-
-      let pc = 0, ns = 0, handheld = 0, console = 0, sony = 0, other = 0;
+      const counts = { pc: 0, ns: 0, handheld: 0, console: 0, sony: 0, other: 0 };
 
       allGames.forEach(g => {
         const cats = g.category || [];
         const subcats = g.subcategory || [];
 
-        // Other：其他平台
-        if (cats.includes('其他平台')) {
-          other++;
-          return;
+        // NS
+        if (subcats.includes('NS')) {
+          counts.ns++;
         }
-
-        // 索尼
-        if (cats.includes('索尼')) {
-          sony++;
-          return;
+        // 索尼：PSP, PS2, PS3, PS Vita, PS1, PS4
+        else if (subcats.some(s => ['PSP', 'PS2', 'PS3', 'PS Vita', 'PS1', 'PS4'].includes(s))) {
+          counts.sony++;
         }
-
-        // 任天堂和PC的分类
-        if (cats.includes('任天堂') || cats.includes('PC及安卓')) {
-          // NS：子分类包含 NS
-          if (subcats.includes('NS')) {
-            ns++;
-            return;
-          }
-
-          // PC：主分类是PC及安卓，且不是NS
-          if (cats.includes('PC及安卓') && !subcats.includes('NS')) {
-            pc++;
-            return;
-          }
-
-          // 任天堂掌机：GB, GBA, 3DS, PSP(如果属于任天堂)
-          const handheldKeywords = ['GB', 'GBA', '3DS', 'PSP', 'NDS'];
-          const isHandheld = subcats.some(s => handheldKeywords.some(k => s.includes(k)));
-
-          // 任天堂主机：Wii, Wii U, NGC, GameCube
-          const consoleKeywords = ['Wii U', 'Wii', 'NGC', 'NGC', 'GameCube'];
-          const isConsole = subcats.some(s => consoleKeywords.some(k => s.includes(k)));
-
-          if (isHandheld) {
-            handheld++;
-            return;
-          }
-          if (isConsole) {
-            console++;
-            return;
-          }
-
-          // 默认归为 PC
-          if (cats.includes('PC及安卓')) {
-            pc++;
-            return;
-          }
-
-          // 剩下的任天堂归为掌机
-          handheld++;
+        // 任天堂掌机：GB, GBC, GBA, 3DS, NDS
+        else if (subcats.some(s => ['GB', 'GBC', 'GBA', '3DS', 'NDS'].includes(s))) {
+          counts.handheld++;
+        }
+        // 任天堂主机：FC, SFC, N64, NGC, Wii, Wii U
+        else if (subcats.some(s => ['FC', 'SFC', 'N64', 'NGC', 'Wii', 'Wii U'].includes(s))) {
+          counts.console++;
+        }
+        // Other：MD, SS, DC, 街机, Xbox, Java, Neogeo, DOS, 文曲星, J2ME, 安卓, 步步高
+        else if (subcats.some(s => ['MD', 'SS', 'DC', '街机', 'Xbox', 'Java', 'Neogeo', 'DOS', '文曲星', 'J2ME', '安卓', '步步高'].includes(s))) {
+          counts.other++;
+        }
+        // 其他都归为PC
+        else {
+          counts.pc++;
         }
       });
 
-      document.getElementById('pcCount').textContent = pc;
-      document.getElementById('nsCount').textContent = ns;
-      document.getElementById('handheldCount').textContent = handheld;
-      document.getElementById('consoleCount').textContent = console;
-      document.getElementById('sonyCount').textContent = sony;
-      document.getElementById('otherCount').textContent = other;
+      document.getElementById('pcCount').textContent = counts.pc;
+      document.getElementById('nsCount').textContent = counts.ns;
+      document.getElementById('handheldCount').textContent = counts.handheld;
+      document.getElementById('consoleCount').textContent = counts.console;
+      document.getElementById('sonyCount').textContent = counts.sony;
+      document.getElementById('otherCount').textContent = counts.other;
     }
 
     // 分类筛选
     let selectedCategory = 'all';
+    let selectedSubcategory = 'all';
+
+    // 各分类的子分类定义
+    const CATEGORY_SUBCATEGORIES = {
+      pc: ['必备软件', '各种合集', 'RPG', 'SLG', 'ACT', 'AVG', '策略', '模拟经营', 'FPS', '射击', '格斗', '赛车', '休闲益智', '塔防', '即时战略', 'MOBA', '卡牌', '音乐', '其他PC游戏', '移植PC', '安卓模拟器'],
+      ns: ['NS'],
+      handheld: ['GB', 'GBC', 'GBA', '3DS', 'NDS'],
+      console: ['FC', 'SFC', 'N64', 'NGC', 'Wii', 'Wii U'],
+      sony: ['PSP', 'PS2', 'PS3', 'PS Vita', 'PS1', 'PS4'],
+      other: ['MD', 'SS', 'DC', '街机', 'Xbox', 'Java', 'Neogeo', 'DOS', '文曲星', 'J2ME', '安卓', '步步高']
+    };
+
+    // 分类中文名
+    const CATEGORY_NAMES = {
+      pc: 'PC',
+      ns: 'NS',
+      handheld: '任天堂掌机',
+      console: '任天堂主机',
+      sony: '索尼',
+      other: 'Other'
+    };
+
+    // 显示子分类筛选
+    function showSubcategoryFilter(category) {
+      const filterEl = document.getElementById('subcategoryFilter');
+      const tagsEl = document.getElementById('subcategoryTags');
+      const titleEl = document.getElementById('subcategoryFilterTitle');
+
+      if (category === 'all' || !CATEGORY_SUBCATEGORIES[category]) {
+        filterEl.classList.remove('show');
+        return;
+      }
+
+      titleEl.textContent = CATEGORY_NAMES[category];
+      titleEl.style.color = getCategoryColor(category);
+
+      const subcats = CATEGORY_SUBCATEGORIES[category];
+
+      // 统计每个子分类的数量
+      const subcatCounts = {};
+      allGames.forEach(g => {
+        const subcats_arr = g.subcategory || [];
+        subcats_arr.forEach(s => {
+          if (subcats.includes(s)) {
+            subcatCounts[s] = (subcatCounts[s] || 0) + 1;
+          }
+        });
+      });
+
+      // 生成子分类标签
+      let html = `<button class="subcategory-tag-btn ${category} ${selectedSubcategory === 'all' ? 'active' : ''}"
+        style="background: ${getCategoryBgColor(category)}; color: ${getCategoryColor(category)}; border-color: ${getCategoryBorderColor(category)};"
+        onclick="filterBySubcategory('all', '${category}')">
+        全部 (${getTotalCount(category)})
+      </button>`;
+
+      subcats.forEach(sub => {
+        const count = subcatCounts[sub] || 0;
+        if (count > 0) {
+          html += `<button class="subcategory-tag-btn ${category} ${selectedSubcategory === sub ? 'active' : ''}"
+            style="background: ${getCategoryBgColor(category)}; color: ${getCategoryColor(category)}; border-color: ${getCategoryBorderColor(category)};"
+            onclick="filterBySubcategory('${sub}', '${category}')">
+            ${sub} (${count})
+          </button>`;
+        }
+      });
+
+      tagsEl.innerHTML = html;
+      filterEl.classList.add('show');
+    }
+
+    function getCategoryColor(category) {
+      const colors = {
+        pc: '#b45309',
+        ns: '#dc2626',
+        handheld: '#047857',
+        console: '#7c3aed',
+        sony: '#1d4ed8',
+        other: '#374151'
+      };
+      return colors[category] || '#666';
+    }
+
+    function getCategoryBgColor(category) {
+      const colors = {
+        pc: '#fef3c7',
+        ns: '#fee2e2',
+        handheld: '#d1fae5',
+        console: '#ede9fe',
+        sony: '#dbeafe',
+        other: '#f3f4f6'
+      };
+      return colors[category] || '#f5f5f5';
+    }
+
+    function getCategoryBorderColor(category) {
+      const colors = {
+        pc: '#fcd34d',
+        ns: '#fca5a5',
+        handheld: '#6ee7b7',
+        console: '#c4b5fd',
+        sony: '#93c5fd',
+        other: '#d1d5db'
+      };
+      return colors[category] || '#e5e5e5';
+    }
+
+    function getTotalCount(category) {
+      let count = 0;
+      const subcats = CATEGORY_SUBCATEGORIES[category] || [];
+      allGames.forEach(g => {
+        const subcats_arr = g.subcategory || [];
+        if (subcats_arr.some(s => subcats.includes(s))) {
+          count++;
+        }
+      });
+      return count;
+    }
+
+    function filterBySubcategory(sub, category) {
+      selectedSubcategory = sub;
+      selectedCategory = category;
+
+      // 更新子分类按钮状态
+      document.querySelectorAll('.subcategory-tag-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+
+      // 重新筛选并渲染
+      applyFilters();
+    }
 
     function filterByCategory(category) {
+      selectedSubcategory = 'all';
+
       // 更新选中状态
       selectedCategory = category;
       document.querySelectorAll('.stat-card').forEach(card => {
         card.classList.remove('active');
       });
 
-      if (category === 'all') {
-        filteredGames = [...allGames];
-        document.querySelector('.stat-card.total').classList.add('active');
-      } else {
-        const card = document.querySelector(`.stat-card.${category}`);
-        if (card) card.classList.add('active');
+      const card = document.querySelector(`.stat-card.${category}`);
+      if (card) card.classList.add('active');
 
-        filteredGames = allGames.filter(g => {
-          const cats = g.category || [];
-          const subcats = g.subcategory || [];
+      // 显示子分类筛选
+      showSubcategoryFilter(category);
 
-          switch (category) {
-            case 'pc':
-              return cats.includes('PC及安卓') && !subcats.includes('NS');
-            case 'ns':
-              return subcats.includes('NS');
-            case 'handheld':
-              if (!cats.includes('任天堂')) return false;
-              const handheldKeywords = ['GB', 'GBA', '3DS', 'NDS', 'PSP'];
-              return subcats.some(s => handheldKeywords.some(k => s.includes(k)));
-            case 'console':
-              if (!cats.includes('任天堂')) return false;
-              const consoleKeywords = ['Wii U', 'Wii', 'NGC', 'GameCube'];
-              return subcats.some(s => consoleKeywords.some(k => s.includes(k)));
-            case 'sony':
-              return cats.includes('索尼');
-            case 'other':
-              return cats.includes('其他平台');
-            default:
-              return true;
-          }
-        });
-      }
+      // 应用筛选
+      applyFilters();
+    }
+
+    function applyFilters() {
+      filteredGames = allGames.filter(g => {
+        const cats = g.category || [];
+        const subcats = g.subcategory || [];
+
+        // 主分类筛选
+        let categoryMatch = false;
+        switch (selectedCategory) {
+          case 'ns':
+            categoryMatch = subcats.includes('NS');
+            break;
+          case 'sony':
+            categoryMatch = subcats.some(s => ['PSP', 'PS2', 'PS3', 'PS Vita', 'PS1', 'PS4'].includes(s));
+            break;
+          case 'handheld':
+            categoryMatch = subcats.some(s => ['GB', 'GBC', 'GBA', '3DS', 'NDS'].includes(s));
+            break;
+          case 'console':
+            categoryMatch = subcats.some(s => ['FC', 'SFC', 'N64', 'NGC', 'Wii', 'Wii U'].includes(s));
+            break;
+          case 'other':
+            categoryMatch = subcats.some(s => ['MD', 'SS', 'DC', '街机', 'Xbox', 'Java', 'Neogeo', 'DOS', '文曲星', 'J2ME', '安卓', '步步高'].includes(s));
+            break;
+          case 'pc':
+            if (subcats.includes('NS')) return false;
+            if (subcats.some(s => ['PSP', 'PS2', 'PS3', 'PS Vita', 'PS1', 'PS4'].includes(s))) return false;
+            if (subcats.some(s => ['GB', 'GBC', 'GBA', '3DS', 'NDS'].includes(s))) return false;
+            if (subcats.some(s => ['FC', 'SFC', 'N64', 'NGC', 'Wii', 'Wii U'].includes(s))) return false;
+            if (subcats.some(s => ['MD', 'SS', 'DC', '街机', 'Xbox', 'Java', 'Neogeo', 'DOS', '文曲星', 'J2ME', '安卓', '步步高'].includes(s))) return false;
+            categoryMatch = true;
+            break;
+          default:
+            categoryMatch = true;
+        }
+
+        if (!categoryMatch) return false;
+
+        // 子分类筛选
+        if (selectedSubcategory !== 'all' && selectedCategory !== 'all') {
+          if (!subcats.includes(selectedSubcategory)) return false;
+        }
+
+        return true;
+      });
 
       currentPage = 1;
       renderTable();
@@ -752,48 +943,43 @@
         let mainCat = 'PC';
         let mainCatClass = 'pc';
 
-        // NS
+        // NS：subcategory包含NS
         if (subcats.includes('NS')) {
           mainCat = 'NS';
           mainCatClass = 'ns';
         }
-        // 任天堂掌机：GB, GBA, 3DS, NDS
-        else if (cats.includes('任天堂')) {
-          const handheldKeywords = ['GB', 'GBA', '3DS', 'NDS', 'PSP'];
-          if (subcats.some(s => handheldKeywords.some(k => s.includes(k)))) {
-            mainCat = '任天堂掌机';
-            mainCatClass = 'handheld';
-          }
-          // 任天堂主机：Wii, Wii U, NGC, GameCube
-          else {
-            const consoleKeywords = ['Wii U', 'Wii', 'NGC', 'GameCube'];
-            if (subcats.some(s => consoleKeywords.some(k => s.includes(k)))) {
-              mainCat = '任天堂主机';
-              mainCatClass = 'console';
-            } else {
-              // 其他任天堂的默认归为掌机
-              mainCat = '任天堂掌机';
-              mainCatClass = 'handheld';
-            }
-          }
-        }
-        // 索尼
-        else if (cats.includes('索尼')) {
+        // 索尼：PSP, PS2, PS3, PS Vita, PS1, PS4
+        else if (subcats.some(s => ['PSP', 'PS2', 'PS3', 'PS Vita', 'PS1', 'PS4'].includes(s))) {
           mainCat = '索尼';
           mainCatClass = 'sony';
         }
-        // 其他平台
-        else if (cats.includes('其他平台')) {
+        // 任天堂掌机：GB, GBC, GBA, 3DS, NDS
+        else if (subcats.some(s => ['GB', 'GBC', 'GBA', '3DS', 'NDS'].includes(s))) {
+          mainCat = '任天堂掌机';
+          mainCatClass = 'handheld';
+        }
+        // 任天堂主机：FC, SFC, N64, NGC, Wii, Wii U
+        else if (subcats.some(s => ['FC', 'SFC', 'N64', 'NGC', 'Wii', 'Wii U'].includes(s))) {
+          mainCat = '任天堂主机';
+          mainCatClass = 'console';
+        }
+        // Other：MD, SS, DC, 街机, Xbox, Java, Neogeo, DOS, 文曲星, J2ME, 安卓, 步步高
+        else if (subcats.some(s => ['MD', 'SS', 'DC', '街机', 'Xbox', 'Java', 'Neogeo', 'DOS', '文曲星', 'J2ME', '安卓', '步步高'].includes(s))) {
           mainCat = 'Other';
           mainCatClass = 'other';
         }
-        // PC及安卓
+        // PC及安卓：其他情况
         else if (cats.includes('PC及安卓')) {
           mainCat = 'PC';
           mainCatClass = 'pc';
         }
+        // 其他任天堂的默认归为掌机
+        else if (cats.includes('任天堂')) {
+          mainCat = '任天堂掌机';
+          mainCatClass = 'handheld';
+        }
 
-        const subcatHtml = subcats.map(s => `<span>${s}</span>`).join(', ');
+        const subcatHtml = subcats.map(s => `<span class="subcategory-tag ${mainCatClass}">${s}</span>`).join(' ');
 
         return `
           <tr>
@@ -1371,9 +1557,9 @@
     checkAuth();
     loadData();
 
-    // 默认选中"总数据"
+    // 默认选中PC分类
     setTimeout(() => {
-      document.querySelector('.stat-card.total').classList.add('active');
+      document.querySelector('.stat-card.pc').classList.add('active');
     }, 100);
 
     // ESC 关闭模态框
