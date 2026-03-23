@@ -159,7 +159,7 @@
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: window.location.origin + '/admin/callback.html'
+          redirectTo: 'https://danyoucangshu.xyz/admin/callback.html'
         }
       });
 
