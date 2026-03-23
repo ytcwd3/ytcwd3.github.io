@@ -1476,7 +1476,12 @@
 
     // 执行导入
     async function doImport() {
+      console.log('开始导入...');
+      console.log('diffResult:', diffResult);
+
       const total = diffResult.added.length + diffResult.modified.length;
+      console.log('总数据量:', total);
+
       if (total === 0) {
         showToast('没有需要导入的数据', 'error');
         return;
@@ -1513,6 +1518,7 @@
           .eq('name', game.name);
 
         if (error) {
+          console.error('更新失败:', error);
           failed++;
         } else {
           success++;
@@ -1538,6 +1544,7 @@
           }]);
 
         if (error) {
+          console.error('插入失败:', game.name, error);
           failed++;
         } else {
           success++;
