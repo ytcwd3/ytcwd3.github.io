@@ -1423,19 +1423,30 @@
 
     // 显示差异预览
     function showDiffPreview() {
+      console.log('showDiffPreview called');
+      console.log('diffResult:', diffResult);
+
       const preview = document.getElementById('importPreview');
       const diffStats = document.getElementById('diffStats');
       const tableHead = document.getElementById('diffTableHead');
       const tableBody = document.getElementById('diffTableBody');
+      const importBtn = document.getElementById('importBtn');
 
       preview.style.display = 'block';
 
       const total = diffResult.added.length + diffResult.modified.length;
+      console.log('total:', total);
+      console.log('added:', diffResult.added.length, 'modified:', diffResult.modified.length);
+
       diffStats.innerHTML = `
         <span style="color: #22c55e;">🆕 新增: ${diffResult.added.length}</span>
         <span style="color: #f59e0b;">✏️ 修改: ${diffResult.modified.length}</span>
         <span style="color: #666;">无变化: ${diffResult.unchanged.length}</span>
       `;
+
+      // 启用/禁用导入按钮
+      importBtn.disabled = total === 0;
+      console.log('importBtn disabled:', importBtn.disabled);
 
       // 表头
       tableHead.innerHTML = `
