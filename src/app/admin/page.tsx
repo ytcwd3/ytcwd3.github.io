@@ -36,11 +36,14 @@ export default function AdminDashboard() {
   const [games, setGames] = useState<Game[]>([])
   const [filteredGames, setFilteredGames] = useState<Game[]>([])
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState<string>('pc')
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
+  const [subcatCounts, setSubcatCounts] = useState<Record<string, number>>({})
 
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false)
@@ -71,7 +74,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     checkAuth()
-    loadData()
+    loadData(1)
+    loadCategoryCounts()
+    loadSubcategoryCounts('pc')
   }, [])
 
   function checkAuth() {
@@ -84,17 +89,25 @@ export default function AdminDashboard() {
     setUser(userData)
   }
 
-  async function loadData() {
+  async function loadData(page: number = 1) {
     setLoading(true)
     try {
-      const { data, error } = await supabase
+      const from = (page - 1) * PAGE_SIZE
+      const to = page * PAGE_SIZE - 1
+
+      let query = supabase
         .from('games')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('id', { ascending: true })
+        .range(from, to)
+
+      const { data, error, count } = await query
 
       if (error) throw error
       setGames(data || [])
-      applyFilters(data || [])
+      setFilteredGames(data || [])
+      setTotalCount(count || 0)
+      setCurrentPage(page)
     } catch (error: any) {
       alert('加载数据失败: ' + error.message)
     }
@@ -114,63 +127,105 @@ export default function AdminDashboard() {
     return CATEGORY_NAMES[key] || 'PC'
   }
 
-  function applyFilters(data: Game[]) {
-    let filtered = [...data]
+  async function applyFilters(page: number = 1) {
+    setLoading(true)
+    try {
+      const from = (page - 1) * PAGE_SIZE
+      const to = page * PAGE_SIZE - 1
 
-    // Category filter
-    filtered = filtered.filter(g => {
-      const subcats = g.subcategory || []
-      return getCategoryKey(subcats) === selectedCategory
-    })
+      let query = supabase
+        .from('games')
+        .select('*', { count: 'exact' })
 
-    // Subcategory filter
-    if (selectedSubcategory !== 'all') {
-      filtered = filtered.filter(g => (g.subcategory || []).includes(selectedSubcategory))
+      // Category filter
+      if (selectedCategory !== 'all') {
+        const catName = CATEGORY_NAMES[selectedCategory]
+        if (catName) {
+          query = query.contains('category', [catName])
+        }
+      }
+
+      // Subcategory filter
+      if (selectedSubcategory !== 'all') {
+        query = query.contains('subcategory', [selectedSubcategory])
+      }
+
+      // Search filter
+      if (searchKeyword) {
+        query = query.ilike('name', `%${searchKeyword}%`)
+      }
+
+      const { data, error, count } = await query
+        .order('id', { ascending: true })
+        .range(from, to)
+
+      if (error) throw error
+      setFilteredGames(data || [])
+      setTotalCount(count || 0)
+      setCurrentPage(page)
+    } catch (error: any) {
+      alert('筛选失败: ' + error.message)
     }
-
-    // Search filter
-    if (searchKeyword) {
-      filtered = filtered.filter(g => g.name.toLowerCase().includes(searchKeyword.toLowerCase()))
-    }
-
-    setFilteredGames(filtered)
-    setCurrentPage(1)
+    setLoading(false)
   }
 
   function handleCategoryClick(cat: string) {
     setSelectedCategory(cat)
     setSelectedSubcategory('all')
-    applyFilters(games)
+    setSearchKeyword('')
+    applyFilters(1)
+    loadSubcategoryCounts(cat)
   }
 
   function handleSubcategoryClick(sub: string) {
     setSelectedSubcategory(sub)
-    applyFilters(games)
+    applyFilters(1)
   }
 
   function handleSearch() {
-    applyFilters(games)
+    applyFilters(1)
   }
 
-  function getCategoryCounts() {
+  async function loadCategoryCounts() {
     const counts: Record<string, number> = {}
-    Object.keys(CATEGORY_SUBCATEGORIES).forEach(cat => {
-      counts[cat] = games.filter(g => getCategoryKey(g.subcategory || []) === cat).length
-    })
-    return counts
-  }
+    try {
+      for (const catKey of Object.keys(CATEGORY_SUBCATEGORIES)) {
+        const catName = CATEGORY_NAMES[catKey]
+        const { count, error } = await supabase
+          .from('games')
+          .select('*', { count: 'exact', head: true })
+          .contains('category', [catName])
 
-  function getSubcategoryCounts() {
-    const subcats = CATEGORY_SUBCATEGORIES[selectedCategory] || []
-    const counts: Record<string, number> = {}
-    games.filter(g => getCategoryKey(g.subcategory || []) === selectedCategory).forEach(g => {
-      (g.subcategory || []).forEach(s => {
-        if (subcats.includes(s)) {
-          counts[s] = (counts[s] || 0) + 1
+        if (!error) {
+          counts[catKey] = count || 0
         }
-      })
-    })
-    return counts
+      }
+      setCategoryCounts(counts)
+    } catch (error) {
+      console.error('加载分类总数失败:', error)
+    }
+  }
+
+  async function loadSubcategoryCounts(categoryKey: string) {
+    const subcats = CATEGORY_SUBCATEGORIES[categoryKey] || []
+    const catName = CATEGORY_NAMES[categoryKey]
+    const counts: Record<string, number> = {}
+    try {
+      for (const subcat of subcats) {
+        const { count, error } = await supabase
+          .from('games')
+          .select('*', { count: 'exact', head: true })
+          .contains('category', [catName])
+          .contains('subcategory', [subcat])
+
+        if (!error) {
+          counts[subcat] = count || 0
+        }
+      }
+      setSubcatCounts(counts)
+    } catch (error) {
+      console.error('加载子分类总数失败:', error)
+    }
   }
 
   function openAddModal() {
@@ -250,7 +305,7 @@ export default function AdminDashboard() {
         alert('添加成功')
       }
       setShowEditModal(false)
-      loadData()
+      loadData(1)
     } catch (error: any) {
       alert('操作失败: ' + error.message)
     }
@@ -262,7 +317,7 @@ export default function AdminDashboard() {
       const { error } = await supabase.from('games').delete().eq('id', id)
       if (error) throw error
       alert('删除成功')
-      loadData()
+      loadData(1)
     } catch (error: any) {
       alert('删除失败: ' + error.message)
     }
@@ -372,7 +427,7 @@ export default function AdminDashboard() {
         })
 
         setExcelData(allGames)
-        compareData(allGames)
+        await compareData(allGames)
       } catch (err: any) {
         alert('读取Excel失败: ' + err.message)
       }
@@ -381,9 +436,27 @@ export default function AdminDashboard() {
     reader.readAsArrayBuffer(file)
   }
 
-  function compareData(excelGames: any[]) {
-    const existingMap = new Map()
-    games.forEach(g => existingMap.set(g.name, g))
+  async function compareData(excelGames: any[]) {
+    // 加载所有已存在的游戏（数据库可能超过1000条，需要分页加载）
+    const allExisting: Game[] = []
+    const PAGE_SIZE_FETCH = 1000
+    let page = 0
+    while (true) {
+      const from = page * PAGE_SIZE_FETCH
+      const to = from + PAGE_SIZE_FETCH - 1
+      const { data, error } = await supabase
+        .from('games')
+        .select('id, name, category, subcategory, code, quarkpan, baidupan, thunderpan')
+        .order('id', { ascending: true })
+        .range(from, to)
+      if (error || !data || data.length === 0) break
+      allExisting.push(...data)
+      if (data.length < PAGE_SIZE_FETCH) break
+      page++
+    }
+
+    const existingMap = new Map<string, Game>()
+    allExisting.forEach(g => existingMap.set(g.name, g))
 
     const result = { added: [], modified: [], unchanged: [] }
 
@@ -477,17 +550,13 @@ export default function AdminDashboard() {
     setImportLoading(false)
     setShowImportModal(false)
     alert(`导入完成！成功: ${success}, 失败: ${failed}`)
-    loadData()
+    loadData(1)
   }
 
   // Pagination
-  const totalPages = Math.ceil(filteredGames.length / PAGE_SIZE) || 1
-  const startIndex = (currentPage - 1) * PAGE_SIZE
-  const endIndex = startIndex + PAGE_SIZE
-  const pageData = filteredGames.slice(startIndex, endIndex)
-
-  const counts = getCategoryCounts()
-  const subcatCounts = getSubcategoryCounts()
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1
+  const startIndex = (currentPage - 1) * PAGE_SIZE + 1
+  const endIndex = Math.min(currentPage * PAGE_SIZE, totalCount)
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', background: '#f5f5f5', minHeight: '100vh' }}>
@@ -536,7 +605,7 @@ export default function AdminDashboard() {
               }}
             >
               <h3 style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>{name}</h3>
-              <div style={{ fontSize: 20, fontWeight: 'bold', color: CATEGORY_COLORS[key].text }}>{counts[key] || 0}</div>
+              <div style={{ fontSize: 20, fontWeight: 'bold', color: CATEGORY_COLORS[key].text }}>{categoryCounts[key] || 0}</div>
             </div>
           ))}
         </div>
@@ -565,7 +634,7 @@ export default function AdminDashboard() {
               color: CATEGORY_COLORS[selectedCategory].text
             }}
           >
-            全部 ({filteredGames.length})
+            全部 ({totalCount})
           </button>
           {(CATEGORY_SUBCATEGORIES[selectedCategory] || []).map(sub => (
             subcatCounts[sub] > 0 && (
@@ -602,7 +671,7 @@ export default function AdminDashboard() {
           </div>
           <button onClick={openImportModal} style={{ padding: '10px 20px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>📥 导入Excel</button>
           <button onClick={openAddModal} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>+ 添加游戏</button>
-          <button onClick={loadData} style={{ padding: '10px 20px', background: '#6b7280', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>刷新数据</button>
+          <button onClick={() => loadData(1)} style={{ padding: '10px 20px', background: '#6b7280', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>刷新数据</button>
         </div>
 
         {/* Table */}
@@ -621,11 +690,11 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {pageData.map((game, idx) => {
+              {filteredGames.map((game, idx) => {
                 const catKey = getCategoryKey(game.subcategory || [])
                 return (
                   <tr key={game.id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '12px 15px', fontSize: 14 }}>{startIndex + idx + 1}</td>
+                    <td style={{ padding: '12px 15px', fontSize: 14 }}>{startIndex + idx}</td>
                     <td style={{ padding: '12px 15px', fontSize: 14 }}><strong>{game.name}</strong></td>
                     <td style={{ padding: '12px 15px', fontSize: 14 }}>
                       <span style={{
@@ -673,16 +742,16 @@ export default function AdminDashboard() {
         {/* Pagination */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, padding: 20 }}>
           <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            onClick={() => applyFilters(currentPage - 1)}
             disabled={currentPage === 1}
             style={{ padding: '8px 15px', border: '1px solid #ddd', background: 'white', borderRadius: 6, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
           >
             上一页
           </button>
           <span>第 {currentPage} / {totalPages} 页</span>
-          <span>共 {filteredGames.length} 条</span>
+          <span>共 {totalCount} 条</span>
           <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            onClick={() => applyFilters(currentPage + 1)}
             disabled={currentPage === totalPages}
             style={{ padding: '8px 15px', border: '1px solid #ddd', background: 'white', borderRadius: 6, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
           >
