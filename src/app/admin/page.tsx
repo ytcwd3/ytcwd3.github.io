@@ -415,21 +415,31 @@ export default function AdminDashboard() {
       <div style={{ maxWidth: 1200, margin: '20px auto', padding: '0 20px' }}>
         {/* Stats Cards */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          {Object.keys(CATEGORY_NAMES).map(key => (
-            <div key={key} onClick={() => handleCategoryClick(key)} style={{
-              flex: 1, minWidth: 100, cursor: 'pointer',
-              borderRadius: 'var(--radius-md)', padding: '8px 6px', textAlign: 'center',
-              border: `2px solid ${selectedCategory === key ? `rgba(${CAT_RGBA[key]}, 0.5)` : 'rgba(255,255,255,0.6)'}`,
-              background: selectedCategory === key
-                ? `rgba(${CAT_RGBA[key]}, 0.2)`
-                : 'rgba(255,255,255,0.85)',
-              boxShadow: selectedCategory === key ? `0 4px 12px rgba(${CAT_RGBA[key]}, 0.25)` : 'var(--shadow-sm)',
-              transition: 'all 0.2s'
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: 'bold', color: selectedCategory === key ? CAT_COLOR[key] : `rgba(${CAT_RGBA[key]}, 0.9)`, marginBottom: '2px' }}>{categoryCounts[key] || 0}</div>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: selectedCategory === key ? CAT_COLOR[key] : 'var(--text-secondary)' }}>{CATEGORY_DISPLAY[key]}</div>
-            </div>
-          ))}
+          {Object.keys(CATEGORY_NAMES).map(key => {
+            const isActive = selectedCategory === key
+            const GRADIENT: Record<string, string> = {
+              pc: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+              ns: 'linear-gradient(135deg, #e63946, #f472b6)',
+              handheld: 'linear-gradient(135deg, #e63946, #f472b6)',
+              console: 'linear-gradient(135deg, #e63946, #f472b6)',
+              sony: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
+              other: 'linear-gradient(135deg, #059669, #34d399)',
+            }
+            const activeTextColor = key === 'pc' ? '#78350f' : 'white'
+            return (
+              <div key={key} onClick={() => handleCategoryClick(key)} style={{
+                flex: 1, minWidth: 100, cursor: 'pointer',
+                borderRadius: 'var(--radius-md)', padding: '8px 6px', textAlign: 'center',
+                background: isActive ? GRADIENT[key] : 'rgba(255,255,255,0.85)',
+                border: `2px solid ${isActive ? 'transparent' : 'rgba(255,255,255,0.6)'}`,
+                boxShadow: isActive ? `0 4px 12px rgba(0,0,0,0.15)` : 'var(--shadow-sm)',
+                transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: activeTextColor, marginBottom: '2px', opacity: isActive ? 1 : 0.7 }}>{categoryCounts[key] || 0}</div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: activeTextColor, opacity: isActive ? 0.9 : 0.5 }}>{CATEGORY_DISPLAY[key]}</div>
+              </div>
+            )
+          })}
         </div>
 
         {/* Subcategory Filter */}
