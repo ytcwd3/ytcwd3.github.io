@@ -22,6 +22,16 @@ const CATEGORY_DB_VALUE: Record<string, string> = {
   other: 'Ohter'
 }
 
+// 反向映射：数据库值 -> UI key
+const DB_TO_UI_KEY: Record<string, string> = {
+  'PC': 'pc',
+  'NS': 'ns',
+  '任天堂掌机': 'handheld',
+  '任天堂主机': 'console',
+  '索尼': 'sony',
+  'Ohter': 'other',
+}
+
 const CATEGORY_NAMES: Record<string, string> = {
   pc: 'PC',
   ns: 'NS',
@@ -94,7 +104,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     checkAuth()
-    loadData(1)
+    applyFilters(1)
     loadAllMeta() // 一次性加载所有元数据并计算统计
   }, [])
 
@@ -132,19 +142,27 @@ export default function AdminDashboard() {
     return 'pc'
   }
 
-  async function applyFilters(page: number = 1) {
+  async function applyFilters(page: number = 1, cat?: string, sub?: string) {
+    // 立即读取当前状态，避免异步闭包问题
+    const curCat = cat !== undefined ? cat : selectedCategory
+    const curSub = sub !== undefined ? sub : selectedSubcategory
+    const curKeyword = searchKeyword
+    const reqId = Date.now()
+    ;(window as any).__reqId = reqId
     setLoading(true)
     try {
       const from = (page - 1) * PAGE_SIZE
       const to = page * PAGE_SIZE - 1
       let query = supabase.from('games').select('*', { count: 'exact' })
-      if (selectedCategory !== 'all') {
-        const catName = CATEGORY_DB_VALUE[selectedCategory]
+      if (curCat !== 'all') {
+        const catName = CATEGORY_DB_VALUE[curCat]
         if (catName) query = query.contains('category', [catName])
       }
-      if (selectedSubcategory !== 'all') query = query.contains('subcategory', [selectedSubcategory])
-      if (searchKeyword) query = query.ilike('name', `%${searchKeyword}%`)
+      if (curSub !== 'all') query = query.contains('subcategory', [curSub])
+      if (curKeyword) query = query.ilike('name', `%${curKeyword}%`)
       const { data, error, count } = await query.order('id', { ascending: true }).range(from, to)
+      // 忽略过时响应
+      if ((window as any).__reqId !== reqId) return
       if (error) throw error
       setFilteredGames(data || [])
       setTotalCount(count || 0)
@@ -154,9 +172,7 @@ export default function AdminDashboard() {
   }
 
   function handleCategoryClick(cat: string) {
-    setSelectedCategory(cat); setSelectedSubcategory('all'); setSearchKeyword('')
-    applyFilters(1)
-    // 从已加载的内存数据计算子分类统计，0个额外请求
+    // 先更新本地统计（同步），再异步查询数据
     const catName = CATEGORY_DB_VALUE[cat]
     const subcatCountsNew: Record<string, number> = {}
     const subcats = CATEGORY_SUBCATEGORIES[cat] || []
@@ -164,10 +180,19 @@ export default function AdminDashboard() {
       subcatCountsNew[sub] = allGameMeta.filter(g => g.category === catName && g.subcategory === sub).length
     })
     setSubcatCounts(subcatCountsNew)
+    setSelectedCategory(cat)
+    setSelectedSubcategory('all')
+    setSearchKeyword('')
+    // 传参确保用新值，且带请求ID防止覆盖
+    applyFilters(1, cat, 'all')
   }
 
-  function handleSubcategoryClick(sub: string) { setSelectedSubcategory(sub); applyFilters(1) }
+  function handleSubcategoryClick(sub: string) {
+    setSelectedSubcategory(sub)
+    applyFilters(1, undefined, sub)
+  }
   function handleSearch() { applyFilters(1) }
+  function handleRefresh() { applyFilters(currentPage) }
 
   // 一次性批量加载所有元数据，从内存计算所有统计（替代N个请求）
   async function loadAllMeta() {
@@ -275,7 +300,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('games').insert([gameData])
         if (error) throw error; alert('添加成功')
       }
-      setShowEditModal(false); loadData(1)
+      setShowEditModal(false); applyFilters(currentPage)
     } catch (error: any) { alert('操作失败: ' + error.message) }
   }
 
@@ -283,7 +308,7 @@ export default function AdminDashboard() {
     if (!confirm('确定要删除这条数据吗？')) return
     try {
       const { error } = await supabase.from('games').delete().eq('id', id)
-      if (error) throw error; alert('删除成功'); loadData(1)
+      if (error) throw error; alert('删除成功'); applyFilters(currentPage)
     } catch (error: any) { alert('删除失败: ' + error.message) }
   }
 
@@ -386,7 +411,7 @@ export default function AdminDashboard() {
       } catch { failed++ }
     }
     setImportLoading(false); setShowImportModal(false)
-    alert(`导入完成！成功: ${success}, 失败: ${failed}`); loadData(1)
+    alert(`导入完成！成功: ${success}, 失败: ${failed}`); applyFilters(1)
   }
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1
@@ -396,7 +421,7 @@ export default function AdminDashboard() {
   // 通用卡片样式
   const cardStyle = { background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 'var(--radius-md)', padding: '20px', boxShadow: 'var(--shadow-md)', border: '1px solid rgba(255,255,255,0.6)', marginBottom: '20px' }
   const cardStyleSm = { background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 'var(--radius-md)', padding: '12px 16px', boxShadow: 'var(--shadow-md)', border: '1px solid rgba(255,255,255,0.6)', marginBottom: '16px' }
-  const inputStyle = { width: '100%' as const, padding: '10px 12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', fontSize: '14px', background: 'rgba(255,255,255,0.9)', color: 'var(--text-primary)', transition: 'all var(--transition-fast)', boxSizing: 'border-box' as const }
+  const inputStyle = { width: '100%' as const, padding: '7px 10px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', fontSize: '14px', background: 'rgba(255,255,255,0.9)', color: 'var(--text-primary)', transition: 'all var(--transition-fast)', boxSizing: 'border-box' as const }
   const labelStyle = { display: 'block', marginBottom: '5px', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }
 
   return (
@@ -454,7 +479,7 @@ export default function AdminDashboard() {
               color: selectedSubcategory === 'all' ? CAT_COLOR[selectedCategory] : 'var(--text-secondary)',
               fontWeight: selectedSubcategory === 'all' ? 600 : 400,
               transition: 'all 0.2s'
-            }}>全部 ({totalCount})</button>
+            }}>全部 ({categoryCounts[selectedCategory] || 0})</button>
             {(CATEGORY_SUBCATEGORIES[selectedCategory] || []).map(sub => (
               subcatCounts[sub] > 0 && (
                 <button key={sub} onClick={() => handleSubcategoryClick(sub)} style={{
@@ -471,7 +496,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Toolbar */}
-        <div style={{ ...cardStyle, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', padding: '15px 20px' }}>
+        <div style={{ ...cardStyle, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', padding: '10px 16px' }}>
           <div style={{ flex: 1, minWidth: 200 }}>
             <input type="text" placeholder="搜索游戏名称..." value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
@@ -479,9 +504,9 @@ export default function AdminDashboard() {
               style={{ ...inputStyle }}
             />
           </div>
-          <button onClick={openImportModal} style={{ padding: '9px 20px', background: 'linear-gradient(90deg, var(--primary-color), var(--accent-color))', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, boxShadow: '0 3px 8px rgba(216,87,232,0.25)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>📥 导入Excel</button>
-          <button onClick={openAddModal} style={{ padding: '9px 20px', background: 'linear-gradient(90deg, var(--secondary-color), var(--primary-color))', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, boxShadow: '0 3px 8px rgba(147,51,234,0.25)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>+ 添加游戏</button>
-          <button onClick={() => loadData(1)} style={{ padding: '9px 20px', background: 'rgba(255,255,255,0.9)', color: 'var(--text-secondary)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '13px', fontWeight: 500, transition: 'all 0.2s', whiteSpace: 'nowrap' }}>🔄 刷新</button>
+          <button onClick={openImportModal} style={{ padding: '7px 16px', background: 'linear-gradient(90deg, var(--primary-color), var(--accent-color))', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, boxShadow: '0 3px 8px rgba(216,87,232,0.25)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>📥 导入Excel</button>
+          <button onClick={openAddModal} style={{ padding: '7px 16px', background: 'linear-gradient(90deg, var(--secondary-color), var(--primary-color))', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, boxShadow: '0 3px 8px rgba(147,51,234,0.25)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>+ 添加游戏</button>
+          <button onClick={handleRefresh} style={{ padding: '7px 16px', background: 'rgba(255,255,255,0.9)', color: 'var(--text-secondary)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '13px', fontWeight: 500, transition: 'all 0.2s', whiteSpace: 'nowrap' }}>🔄 刷新</button>
         </div>
 
         {/* Table */}
@@ -509,7 +534,8 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {filteredGames.map((game, idx) => {
-                    const catKey = getCategoryKey(game.subcategory || [])
+                    const dbCat = game.category?.[0] || ''
+                    const catKey = DB_TO_UI_KEY[dbCat] || 'pc'
                     return (
                       <tr key={game.id} style={{ borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s', background: idx % 2 === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(216,87,232,0.05)')}
@@ -543,10 +569,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Pagination */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '15px' }}>
-          <button onClick={() => applyFilters(currentPage - 1)} disabled={currentPage === 1} style={{ padding: '8px 16px', border: '1px solid var(--border-light)', background: 'rgba(255,255,255,0.85)', borderRadius: 'var(--radius-sm)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '13px', color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)', opacity: currentPage === 1 ? 0.5 : 1, transition: 'all 0.2s' }}>上一页</button>
-          <span style={{ fontSize: '13px', color: 'var(--text-secondary)', padding: '4px 12px', background: 'rgba(216,87,232,0.08)', borderRadius: 'var(--radius-sm)' }}>第 {currentPage} / {totalPages} 页 · 共 {totalCount} 条</span>
-          <button onClick={() => applyFilters(currentPage + 1)} disabled={currentPage === totalPages} style={{ padding: '8px 16px', border: '1px solid var(--border-light)', background: 'rgba(255,255,255,0.85)', borderRadius: 'var(--radius-sm)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '13px', color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)', opacity: currentPage === totalPages ? 0.5 : 1, transition: 'all 0.2s' }}>下一页</button>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '10px' }}>
+          <button onClick={() => applyFilters(currentPage - 1)} disabled={currentPage === 1} style={{ padding: '6px 16px', border: '1px solid var(--border-light)', background: currentPage === 1 ? '#e0e0e0' : 'white', borderRadius: 'var(--radius-sm)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600, color: currentPage === 1 ? '#aaa' : 'var(--text-primary)', opacity: currentPage === 1 ? 0.8 : 1, transition: 'all 0.2s' }}>上一页</button>
+          <span style={{ fontSize: '13px', color: 'var(--text-primary)', padding: '4px 12px', background: 'white', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>第 {currentPage} / {totalPages} 页 · 共 {totalCount} 条</span>
+          <button onClick={() => applyFilters(currentPage + 1)} disabled={currentPage === totalPages} style={{ padding: '6px 16px', border: '1px solid var(--border-light)', background: currentPage === totalPages ? '#e0e0e0' : 'white', borderRadius: 'var(--radius-sm)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600, color: currentPage === totalPages ? '#aaa' : 'var(--text-primary)', opacity: currentPage === totalPages ? 0.8 : 1, transition: 'all 0.2s' }}>下一页</button>
         </div>
       </div>
 
