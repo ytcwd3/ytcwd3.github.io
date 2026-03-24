@@ -13,10 +13,20 @@ const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
 }
 
 const CATEGORY_NAMES: Record<string, string> = {
+  pc: 'PC及安卓',
+  ns: '任天堂',
+  handheld: '任天堂',
+  console: '任天堂',
+  sony: '索尼',
+  other: '其他平台'
+}
+
+// UI显示用简称
+const CATEGORY_DISPLAY: Record<string, string> = {
   pc: 'PC',
   ns: 'NS',
-  handheld: '任天堂掌机',
-  console: '任天堂主机',
+  handheld: '掌机',
+  console: '主机',
   sony: '索尼',
   other: 'Other'
 }
@@ -117,9 +127,9 @@ export default function AdminDashboard() {
       let query = supabase.from('games').select('*', { count: 'exact' })
       if (selectedCategory !== 'all') {
         const catName = CATEGORY_NAMES[selectedCategory]
-        if (catName) query = query.contains('category', [catName])
+        if (catName) query = query.cs('category', catName)
       }
-      if (selectedSubcategory !== 'all') query = query.contains('subcategory', [selectedSubcategory])
+      if (selectedSubcategory !== 'all') query = query.cs('subcategory', selectedSubcategory)
       if (searchKeyword) query = query.ilike('name', `%${searchKeyword}%`)
       const { data, error, count } = await query.order('id', { ascending: true }).range(from, to)
       if (error) throw error
@@ -142,7 +152,7 @@ export default function AdminDashboard() {
     const counts: Record<string, number> = {}
     for (const catKey of Object.keys(CATEGORY_SUBCATEGORIES)) {
       const catName = CATEGORY_NAMES[catKey]
-      const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true }).contains('category', [catName])
+      const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true }).cs('category', catName)
       if (!error) counts[catKey] = count || 0
     }
     setCategoryCounts(counts)
@@ -154,7 +164,7 @@ export default function AdminDashboard() {
     const counts: Record<string, number> = {}
     for (const subcat of subcats) {
       const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true })
-        .contains('category', [catName]).contains('subcategory', [subcat])
+        .cs('category', catName).cs('subcategory', subcat)
       if (!error) counts[subcat] = count || 0
     }
     setSubcatCounts(counts)
@@ -340,7 +350,7 @@ export default function AdminDashboard() {
       <div style={{ maxWidth: 1200, margin: '20px auto', padding: '0 20px' }}>
         {/* Stats Cards */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          {Object.entries(CATEGORY_NAMES).map(([key, name]) => (
+          {Object.keys(CATEGORY_NAMES).map(key => (
             <div key={key} onClick={() => handleCategoryClick(key)} style={{
               flex: 1, minWidth: 120, background: selectedCategory === key
                 ? `rgba(${CAT_RGBA[key]}, 0.12)`
@@ -351,7 +361,7 @@ export default function AdminDashboard() {
               boxShadow: selectedCategory === key ? `0 4px 12px rgba(${CAT_RGBA[key]}, 0.2)` : 'var(--shadow-sm)',
               transition: 'all 0.2s'
             }}>
-              <h3 style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px', fontWeight: 600 }}>{name}</h3>
+              <h3 style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px', fontWeight: 600 }}>{CATEGORY_DISPLAY[key]}</h3>
               <div style={{ fontSize: '22px', fontWeight: 'bold', color: `rgba(${CAT_RGBA[key]}, 0.9)` }}>{categoryCounts[key] || 0}</div>
             </div>
           ))}
