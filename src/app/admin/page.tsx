@@ -73,7 +73,8 @@ export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null)
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
   const [subcatCounts, setSubcatCounts] = useState<Record<string, number>>({})
-  const [loadedSubcatCats, setLoadedSubcatCats] = useState<string[]>([])
+  const [allGameMeta, setAllGameMeta] = useState<{ category: string; subcategory: string }[]>([])
+  const [statsLoaded, setStatsLoaded] = useState(false)
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -94,9 +95,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     checkAuth()
     loadData(1)
-    // 首次加载时并发读取主分类统计（只发1个请求），子分类懒加载
-    loadCategoryCounts()
-    loadSubcategoryCounts(selectedCategory)
+    loadAllMeta() // 一次性加载所有元数据并计算统计
   }, [])
 
   function checkAuth() {
@@ -157,35 +156,54 @@ export default function AdminDashboard() {
   function handleCategoryClick(cat: string) {
     setSelectedCategory(cat); setSelectedSubcategory('all'); setSearchKeyword('')
     applyFilters(1)
-    // 懒加载：只在未加载过统计时加载
-    if (Object.keys(categoryCounts).length === 0) loadCategoryCounts()
-    if (!loadedSubcatCats.includes(cat)) loadSubcategoryCounts(cat)
+    // 从已加载的内存数据计算子分类统计，0个额外请求
+    const catName = CATEGORY_DB_VALUE[cat]
+    const subcatCountsNew: Record<string, number> = {}
+    const subcats = CATEGORY_SUBCATEGORIES[cat] || []
+    subcats.forEach(sub => {
+      subcatCountsNew[sub] = allGameMeta.filter(g => g.category === catName && g.subcategory === sub).length
+    })
+    setSubcatCounts(subcatCountsNew)
   }
 
   function handleSubcategoryClick(sub: string) { setSelectedSubcategory(sub); applyFilters(1) }
   function handleSearch() { applyFilters(1) }
 
-  async function loadCategoryCounts() {
-    const counts: Record<string, number> = {}
-    for (const catKey of Object.keys(CATEGORY_SUBCATEGORIES)) {
-      const catName = CATEGORY_DB_VALUE[catKey]
-      const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true }).contains('category', [catName])
-      if (!error) counts[catKey] = count || 0
+  // 一次性批量加载所有元数据，从内存计算所有统计（替代N个请求）
+  async function loadAllMeta() {
+    const allMeta: { category: string; subcategory: string }[] = []
+    const BATCH = 1000
+    let page = 0
+    while (true) {
+      const from = page * BATCH
+      const to = from + BATCH - 1
+      const { data, error } = await supabase
+        .from('games').select('category, subcategory')
+        .order('id', { ascending: true }).range(from, to)
+      if (error || !data || data.length === 0) break
+      data.forEach((g: any) => allMeta.push({ category: g.category?.[0] || '', subcategory: g.subcategory?.[0] || '' }))
+      if (data.length < BATCH) break
+      page++
     }
-    setCategoryCounts(counts)
-  }
+    setAllGameMeta(allMeta)
 
-  async function loadSubcategoryCounts(categoryKey: string) {
-    const subcats = CATEGORY_SUBCATEGORIES[categoryKey] || []
-    const catName = CATEGORY_DB_VALUE[categoryKey]
-    const counts: Record<string, number> = {}
-    for (const subcat of subcats) {
-      const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true })
-        .contains('category', [catName]).contains('subcategory', [subcat])
-      if (!error) counts[subcat] = count || 0
+    // 计算主分类统计
+    const catCounts: Record<string, number> = {}
+    for (const catKey of Object.keys(CATEGORY_DB_VALUE)) {
+      const catName = CATEGORY_DB_VALUE[catKey]
+      catCounts[catKey] = allMeta.filter(g => g.category === catName).length
     }
-    setSubcatCounts(prev => ({ ...prev, ...counts }))
-    setLoadedSubcatCats(prev => prev.includes(categoryKey) ? prev : [...prev, categoryKey])
+    setCategoryCounts(catCounts)
+
+    // 计算当前选中分类的子分类统计
+    const catName = CATEGORY_DB_VALUE[selectedCategory]
+    const subcatCountsNew: Record<string, number> = {}
+    const subcats = CATEGORY_SUBCATEGORIES[selectedCategory] || []
+    subcats.forEach(sub => {
+      subcatCountsNew[sub] = allMeta.filter(g => g.category === catName && g.subcategory === sub).length
+    })
+    setSubcatCounts(subcatCountsNew)
+    setStatsLoaded(true)
   }
 
   function openAddModal() {
