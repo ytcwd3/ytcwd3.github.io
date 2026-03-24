@@ -94,6 +94,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     checkAuth()
     loadData(1)
+    // 首次加载时并发读取主分类统计（只发1个请求），子分类懒加载
+    loadCategoryCounts()
+    loadSubcategoryCounts(selectedCategory)
   }, [])
 
   function checkAuth() {
@@ -107,9 +110,11 @@ export default function AdminDashboard() {
     try {
       const from = (page - 1) * PAGE_SIZE
       const to = page * PAGE_SIZE - 1
-      const { data, error, count } = await supabase
-        .from('games').select('*', { count: 'exact' })
+      const catName = CATEGORY_DB_VALUE[selectedCategory]
+      let query = supabase.from('games').select('*', { count: 'exact' })
+        .contains('category', [catName])
         .order('id', { ascending: true }).range(from, to)
+      const { data, error, count } = await query
       if (error) throw error
       setGames(data || [])
       setFilteredGames(data || [])
