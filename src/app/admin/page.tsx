@@ -171,6 +171,35 @@ export default function AdminDashboard() {
 
   // 一次性批量加载所有元数据，从内存计算所有统计（替代N个请求）
   async function loadAllMeta() {
+    const cacheKey = 'admin_game_meta'
+    const cached = localStorage.getItem(cacheKey)
+    if (cached) {
+      try {
+        const { meta, total } = JSON.parse(cached)
+        // 验证缓存新鲜度：先查一次总数
+        const { count } = await supabase.from('games').select('id', { count: 'exact', head: true })
+        if (count === total) {
+          // 缓存有效，直接从本地计算
+          setAllGameMeta(meta)
+          const catCounts: Record<string, number> = {}
+          for (const catKey of Object.keys(CATEGORY_DB_VALUE)) {
+            const catName = CATEGORY_DB_VALUE[catKey]
+            catCounts[catKey] = meta.filter((g: any) => g.category === catName).length
+          }
+          setCategoryCounts(catCounts)
+          const catName = CATEGORY_DB_VALUE[selectedCategory]
+          const subcatCountsNew: Record<string, number> = {}
+          ;(CATEGORY_SUBCATEGORIES[selectedCategory] || []).forEach((sub: string) => {
+            subcatCountsNew[sub] = meta.filter((g: any) => g.category === catName && g.subcategory === sub).length
+          })
+          setSubcatCounts(subcatCountsNew)
+          setStatsLoaded(true)
+          return
+        }
+      } catch {}
+    }
+
+    // 缓存失效，重新加载
     const allMeta: { category: string; subcategory: string }[] = []
     const BATCH = 1000
     let page = 0
@@ -185,24 +214,24 @@ export default function AdminDashboard() {
       if (data.length < BATCH) break
       page++
     }
-    setAllGameMeta(allMeta)
 
-    // 计算主分类统计
+    setAllGameMeta(allMeta)
     const catCounts: Record<string, number> = {}
     for (const catKey of Object.keys(CATEGORY_DB_VALUE)) {
       const catName = CATEGORY_DB_VALUE[catKey]
-      catCounts[catKey] = allMeta.filter(g => g.category === catName).length
+      catCounts[catKey] = allMeta.filter((g: any) => g.category === catName).length
     }
     setCategoryCounts(catCounts)
-
-    // 计算当前选中分类的子分类统计
     const catName = CATEGORY_DB_VALUE[selectedCategory]
     const subcatCountsNew: Record<string, number> = {}
-    const subcats = CATEGORY_SUBCATEGORIES[selectedCategory] || []
-    subcats.forEach(sub => {
-      subcatCountsNew[sub] = allMeta.filter(g => g.category === catName && g.subcategory === sub).length
+    ;(CATEGORY_SUBCATEGORIES[selectedCategory] || []).forEach((sub: string) => {
+      subcatCountsNew[sub] = allMeta.filter((g: any) => g.category === catName && g.subcategory === sub).length
     })
     setSubcatCounts(subcatCountsNew)
+
+    // 存入本地缓存
+    const { count: total } = await supabase.from('games').select('id', { count: 'exact', head: true })
+    localStorage.setItem(cacheKey, JSON.stringify({ meta: allMeta, total }))
     setStatsLoaded(true)
   }
 
