@@ -425,18 +425,18 @@ export default function AdminDashboard() {
               sony: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
               other: 'linear-gradient(135deg, #059669, #34d399)',
             }
-            const activeTextColor = key === 'pc' ? '#78350f' : 'white'
+            const textColor = isActive ? (key === 'pc' ? '#78350f' : 'white') : 'var(--text-primary)'
             return (
               <div key={key} onClick={() => handleCategoryClick(key)} style={{
                 flex: 1, minWidth: 100, cursor: 'pointer',
                 borderRadius: 'var(--radius-md)', padding: '8px 6px', textAlign: 'center',
-                background: isActive ? GRADIENT[key] : 'rgba(255,255,255,0.85)',
+                background: isActive ? GRADIENT[key] : 'rgba(255,255,255,0.95)',
                 border: `2px solid ${isActive ? 'transparent' : 'rgba(255,255,255,0.6)'}`,
                 boxShadow: isActive ? `0 4px 12px rgba(0,0,0,0.15)` : 'var(--shadow-sm)',
                 transition: 'all 0.2s'
               }}>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: activeTextColor, marginBottom: '2px', opacity: isActive ? 1 : 0.7 }}>{categoryCounts[key] || 0}</div>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: activeTextColor, opacity: isActive ? 0.9 : 0.5 }}>{CATEGORY_DISPLAY[key]}</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: textColor, marginBottom: '2px' }}>{categoryCounts[key] || 0}</div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: textColor }}>{CATEGORY_DISPLAY[key]}</div>
               </div>
             )
           })}
