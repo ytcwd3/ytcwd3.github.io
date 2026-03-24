@@ -446,11 +446,11 @@ export default function AdminDashboard() {
       const to = from + PAGE_SIZE_FETCH - 1
       const { data, error } = await supabase
         .from('games')
-        .select('id, name, category, subcategory, code, quarkpan, baidupan, thunderpan')
+        .select('*')
         .order('id', { ascending: true })
         .range(from, to)
       if (error || !data || data.length === 0) break
-      allExisting.push(...data)
+      allExisting.push(...(data as Game[]))
       if (data.length < PAGE_SIZE_FETCH) break
       page++
     }
