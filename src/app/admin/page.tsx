@@ -4,29 +4,39 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase, Game } from '@/lib/supabase'
 
 const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
-  pc: ['必备软件', '各种合集', 'RPG', 'SLG', 'ACT', 'AVG', '策略', '模拟经营', 'FPS', '射击', '格斗', '赛车', '休闲益智', '塔防', '即时战略', 'MOBA', '卡牌', '音乐', '其他PC游戏', '移植PC', '安卓模拟器'],
-  ns: ['NS'],
-  handheld: ['GB', 'GBC', 'GBA', '3DS', 'NDS'],
+  pc: ['必备软件', '各种合集', '横版过关', '平台跳跃', '战棋策略', 'RPG', '双人', '射击', '动作', '经营', '魂类', '竞速运动', '潜行', '解谜', '格斗无双', '恐怖', '不正经', '小游戏', '修改器金手指', '互动影游', '网游单机', '安卓'],
+  ns: ['NS', 'NS乙女'],
+  handheld: ['GBA', 'NDS', '3DS', 'GB', 'GBC'],
   console: ['FC', 'SFC', 'N64', 'NGC', 'Wii', 'Wii U'],
-  sony: ['PSP', 'PS2', 'PS3', 'PS Vita', 'PS1', 'PS4'],
-  other: ['MD', 'SS', 'DC', '街机', 'Xbox', 'Java', 'Neogeo', 'DOS', '文曲星', 'J2ME', '安卓', '步步高']
+  sony: ['PS2', 'PS3', 'PS1', 'PSP', 'PS Vita', 'PS4'],
+  other: ['MD', 'SS', 'DC', 'Xbox', '街机', 'Neogeo', 'DOS', '文曲星', '步步高电子词典', 'JAVA', 'J2ME（诺基亚时代java）', '安卓']
+}
+
+// category 字段实际存的值（用于数据库查询）
+const CATEGORY_DB_VALUE: Record<string, string> = {
+  pc: 'PC',
+  ns: 'NS',
+  handheld: '任天堂掌机',
+  console: '任天堂主机',
+  sony: '索尼',
+  other: 'Other'
 }
 
 const CATEGORY_NAMES: Record<string, string> = {
-  pc: 'PC及安卓',
-  ns: '任天堂',
-  handheld: '任天堂',
-  console: '任天堂',
+  pc: 'PC',
+  ns: 'NS',
+  handheld: '任天堂掌机',
+  console: '任天堂主机',
   sony: '索尼',
-  other: '其他平台'
+  other: 'Other'
 }
 
-// UI显示用简称
+// UI显示用中文名
 const CATEGORY_DISPLAY: Record<string, string> = {
   pc: 'PC',
   ns: 'NS',
-  handheld: '掌机',
-  console: '主机',
+  handheld: '任天堂掌机',
+  console: '任天堂主机',
   sony: '索尼',
   other: 'Other'
 }
@@ -40,7 +50,7 @@ const CAT_RGBA: Record<string, string> = {
   handheld: 'var(--nintendo-rgb)',
   console: 'var(--nintendo-rgb)',
   sony: 'var(--sony-rgb)',
-  other: 'var(--other-rgb)'
+  other: 'var(--other-rgb)',
 }
 const CAT_COLOR: Record<string, string> = {
   pc: 'var(--color-pc-android)',
@@ -48,7 +58,7 @@ const CAT_COLOR: Record<string, string> = {
   handheld: 'var(--color-nintendo)',
   console: 'var(--color-nintendo)',
   sony: 'var(--color-sony)',
-  other: 'var(--color-other)'
+  other: 'var(--color-other)',
 }
 
 export default function AdminDashboard() {
@@ -126,10 +136,10 @@ export default function AdminDashboard() {
       const to = page * PAGE_SIZE - 1
       let query = supabase.from('games').select('*', { count: 'exact' })
       if (selectedCategory !== 'all') {
-        const catName = CATEGORY_NAMES[selectedCategory]
-        if (catName) query = query.filter('cs', 'category', `"${catName}"`)
+        const catName = CATEGORY_DB_VALUE[selectedCategory]
+        if (catName) query = query.contains('category', [catName])
       }
-      if (selectedSubcategory !== 'all') query = query.filter('cs', 'subcategory', `"${selectedSubcategory}"`)
+      if (selectedSubcategory !== 'all') query = query.contains('subcategory', [selectedSubcategory])
       if (searchKeyword) query = query.ilike('name', `%${searchKeyword}%`)
       const { data, error, count } = await query.order('id', { ascending: true }).range(from, to)
       if (error) throw error
@@ -151,8 +161,8 @@ export default function AdminDashboard() {
   async function loadCategoryCounts() {
     const counts: Record<string, number> = {}
     for (const catKey of Object.keys(CATEGORY_SUBCATEGORIES)) {
-      const catName = CATEGORY_NAMES[catKey]
-      const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true }).filter('cs', 'category', `"${catName}"`)
+      const catName = CATEGORY_DB_VALUE[catKey]
+      const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true }).contains('category', [catName])
       if (!error) counts[catKey] = count || 0
     }
     setCategoryCounts(counts)
@@ -160,11 +170,11 @@ export default function AdminDashboard() {
 
   async function loadSubcategoryCounts(categoryKey: string) {
     const subcats = CATEGORY_SUBCATEGORIES[categoryKey] || []
-    const catName = CATEGORY_NAMES[categoryKey]
+    const catName = CATEGORY_DB_VALUE[categoryKey]
     const counts: Record<string, number> = {}
     for (const subcat of subcats) {
       const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true })
-        .filter('cs', 'category', `"${catName}"`).filter('cs', 'subcategory', `"${subcat}"`)
+        .contains('category', [catName]).contains('subcategory', [subcat])
       if (!error) counts[subcat] = count || 0
     }
     setSubcatCounts(counts)
