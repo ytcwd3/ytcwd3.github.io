@@ -4,6 +4,6 @@ const nextConfig = {
     unoptimized: true,
   },
   trailingSlash: true,
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

@@ -598,7 +598,6 @@ body {
   -webkit-backdrop-filter: blur(6px);
   margin-top: 15px;
   box-shadow: var(--shadow-md);
-  display: none;
   animation: fadeIn var(--transition-normal);
   position: relative;
   overflow: hidden;

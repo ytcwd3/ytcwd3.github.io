@@ -1,193 +1,133 @@
 # 单游仓鼠搜索站
 
-一个游戏资源搜索网站，支持多平台游戏资源检索。
+一个游戏资源检索网站，基于 Next.js + Supabase 构建。
 
-## 🌟 功能特点
+## 快速访问
 
-- ✅ 多平台游戏搜索（任天堂、索尼、PC及安卓、其他平台）
-- ✅ 分类筛选和关键词搜索
-- ✅ 二维码快速分享（夸克、百度、迅雷）
-- ✅ 资源更新记录
-- ✅ 留言板功能（基于GitHub Discussions）
-- ✅ 响应式设计，支持移动端
+- 网站：[https://danyoucangshu.xyz/](https://danyoucangshu.xyz/)
+- 管理后台：[https://ytcwd3.github.io/admin](https://ytcwd3.github.io/admin)
 
-## 📊 性能优化
-
-- 原始数据文件：3.3MB
-- 优化后首屏加载：1.09MB（减少67%）
-- 按需加载分类数据
-- 预计加载时间：从3-5秒降至1-2秒
-
-## 🚀 快速开始
-
-### 在线访问
-```
-https://ytcwd3.github.io
-```
-
-### 本地开发
-```bash
-# 启动本地服务器
-python3 -m http.server 8000
-
-# 或使用快速启动脚本
-cd tools
-./start_local_server.sh
-
-# 访问 http://localhost:8000
-```
-
-## 🔧 工具使用
-
-### Excel转JSON工具
-
-用于将Excel数据转换为JSON格式，支持多sheet分别转换。
-
-**使用方法：**
-```bash
-# 安装依赖
-cd tools
-pip install -r requirements.txt
-
-# 运行工具
-python excel_to_json_converter.py
-```
-
-**Excel格式要求：**
-- 每个sheet代表一个分类
-- 必需列：name, category, subCategory, code, unzipCode, quarkPan, baiduPan, thunderPan, updateDate
-- 支持多分类（用逗号分隔）
-
-详细说明：[docs/Excel转JSON工具使用说明.md](docs/Excel转JSON工具使用说明.md)
-
-### JSON分割工具
-
-将大的JSON文件分割为多个小文件，提升加载速度。
+## 项目结构
 
 ```bash
-cd tools
-python split_json.py
-```
-
-生成的文件在 `data/` 文件夹中。
-
-## 💬 留言板配置
-
-网站使用Giscus作为留言板系统（基于GitHub Discussions）。
-
-**配置步骤：**
-
-1. **启用Discussions**
-   - 访问仓库设置：https://github.com/ytcwd3/ytcwd3.github.io/settings
-   - 勾选 "Discussions"
-
-2. **安装Giscus App**
-   - 访问：https://github.com/apps/giscus
-   - 安装到你的仓库
-
-3. **获取配置参数**
-   - 访问：https://giscus.app/zh-CN
-   - 输入仓库名获取 `data-repo-id` 和 `data-category-id`
-
-4. **更新配置**
-   - 编辑 `assets/js/script.js` 中的 `initGiscus()` 函数
-   - 取消注释并填入配置参数
-
-详细说明：[docs/Giscus配置指南.md](docs/Giscus配置指南.md)
-
-## 📁 项目结构
-
-```
 ytcwd3.github.io/
-├── index.html                      # 主页面
-├── CNAME                           # 域名配置
-├── README.md                       # 项目说明
+├── src/
+│   ├── app/
+│   │   ├── page.tsx                    # 首页 - 游戏搜索
+│   │   ├── layout.tsx                  # 根布局
+│   │   ├── globals.css                 # 全局样式
+│   │   ├── admin/
+│   │   │   ├── page.tsx               # 管理后台
+│   │   │   ├── login/page.tsx         # GitHub 登录页
+│   │   │   ├── callback/page.tsx      # OAuth 回调页
+│   │   │   └── components/
+│   │   │       ├── constants.ts        # 共享常量
+│   │   │       ├── Header.tsx         # 顶部导航栏
+│   │   │       ├── StatsCards.tsx      # 分类统计卡片
+│   │   │       ├── SubcategoryFilter.tsx  # 子分类筛选
+│   │   │       ├── Toolbar.tsx         # 搜索和操作按钮
+│   │   │       ├── GameTable.tsx       # 数据表格和分页
+│   │   │       ├── EditModal.tsx       # 添加/编辑游戏弹窗
+│   │   │       └── ImportModal.tsx     # Excel 导入弹窗
+│   │   └── components/
+│   │       ├── SearchResults/
+│   │       │   ├── index.tsx          # 搜索结果容器
+│   │       │   └── GameCard.tsx       # 游戏卡片（含二维码）
+│   │       ├── Popups/
+│   │       │   ├── GuestbookPopup.tsx  # 留言板弹窗
+│   │       │   ├── EmulatorPopup.tsx  # 模拟器弹窗
+│   │       │   ├── FanGroupPopup.tsx  # 粉丝群弹窗
+│   │       │   ├── RewardPopup.tsx    # 打赏弹窗
+│   │       │   └── UpdateRecordPopup.tsx  # 更新记录弹窗
+│   │       └── QrCode/
+│   │           └── QrCodeModal.tsx     # 二维码放大弹窗
+│   └── lib/
+│       └── supabase.ts                # 数据库客户端
 │
-├── assets/                         # 静态资源
-│   ├── css/
-│   │   └── style.css              # 样式表
-│   └── js/
-│       └── script.js              # 主脚本
-│
-├── data/                           # 数据文件
-│   ├── gameData.json              # 原始数据（3.3MB）
-│   ├── gameData_index.json        # 索引文件（1.1MB）
-│   ├── gameData_nintendo.json     # 任天堂数据（2.2MB）
-│   ├── gameData_sony.json         # 索尼数据（550KB）
-│   ├── gameData_pc_android.json   # PC及安卓数据（499KB）
-│   └── gameData_other.json        # 其他平台数据（78KB）
-│
-├── tools/                          # 工具脚本
-│   ├── excel_to_json_converter.py # Excel转JSON工具
-│   ├── split_json.py              # JSON分割工具
-│   ├── requirements.txt           # Python依赖
-│   ├── start_local_server.sh      # 本地服务器启动脚本
-│   └── build_exe.bat              # Windows打包脚本
-│
-└── docs/                           # 文档
-    ├── Excel转JSON工具使用说明.md
-    ├── Giscus配置指南.md
-    ├── 快速开始指南.md
-    └── 文件清理总结.md
+├── 自己分.xlsx                         # 游戏数据源文件
+├── package.json                       # npm 依赖
+├── package-lock.json                  # 依赖锁定
+├── next.config.js                    # Next.js 配置
+├── tsconfig.json                     # TypeScript 配置
+├── next-env.d.ts                     # Next.js 类型声明
+├── .gitignore                        # Git 忽略规则
+└── CNAME                             # 自定义域名
 ```
 
-## 🎯 数据更新流程
+## 文件说明
 
-1. **准备Excel文件**
-   - 按照格式要求整理数据
-   - 每个sheet对应一个分类
+### 首页组件
 
-2. **转换为JSON**
-   ```bash
-   cd tools
-   python excel_to_json_converter.py
-   ```
+| 文件                                              | 说明                                 |
+| ------------------------------------------------- | ------------------------------------ |
+| `src/app/page.tsx`                                | 首页，分类标签、搜索框、底部弹窗入口 |
+| `src/app/components/SearchResults/index.tsx`      | 搜索结果容器，含加载更多             |
+| `src/app/components/SearchResults/GameCard.tsx`   | 游戏卡片，含夸克/百度/迅雷二维码     |
+| `src/app/components/Popups/GuestbookPopup.tsx`    | 留言板弹窗                           |
+| `src/app/components/Popups/EmulatorPopup.tsx`     | 模拟器大全弹窗                       |
+| `src/app/components/Popups/FanGroupPopup.tsx`     | 粉丝群弹窗                           |
+| `src/app/components/Popups/RewardPopup.tsx`       | 打赏捐赠弹窗                         |
+| `src/app/components/Popups/UpdateRecordPopup.tsx` | 资源更新记录弹窗                     |
+| `src/app/components/QrCode/QrCodeModal.tsx`       | 二维码放大弹窗                       |
 
-3. **分割JSON文件**（可选，用于性能优化）
-   ```bash
-   cd tools
-   python split_json.py
-   ```
+### 管理后台组件
 
-4. **提交更新**
-   ```bash
-   git add .
-   git commit -m "更新游戏数据"
-   git push
-   ```
+| 文件                                             | 说明                                       |
+| ------------------------------------------------ | ------------------------------------------ |
+| `src/app/admin/page.tsx`                         | 管理后台主页面                             |
+| `src/app/admin/login/page.tsx`                   | GitHub OAuth 登录（仅 anyebojue / ytcwd3） |
+| `src/app/admin/callback/page.tsx`                | OAuth 回调处理                             |
+| `src/app/admin/components/constants.ts`          | 共享常量（分类映射、样式等）               |
+| `src/app/admin/components/Header.tsx`            | 顶部导航栏                                 |
+| `src/app/admin/components/StatsCards.tsx`        | 分类统计卡片                               |
+| `src/app/admin/components/SubcategoryFilter.tsx` | 子分类筛选按钮                             |
+| `src/app/admin/components/Toolbar.tsx`           | 搜索框和操作按钮                           |
+| `src/app/admin/components/GameTable.tsx`         | 数据表格和分页                             |
+| `src/app/admin/components/EditModal.tsx`         | 添加/编辑游戏弹窗                          |
+| `src/app/admin/components/ImportModal.tsx`       | Excel 导入弹窗                             |
 
-## 📊 数据统计
+### 基础设施
 
-- 总游戏数：10,581条
-- 任天堂：6,649条
-- 索尼：1,725条
-- PC及安卓：1,961条
-- 其他平台：246条
+| 文件                  | 说明                                       |
+| --------------------- | ------------------------------------------ |
+| `src/lib/supabase.ts` | Supabase 客户端，Game / Guestbook 类型定义 |
+| `src/app/layout.tsx`  | 根布局                                     |
+| `src/app/globals.css` | 全局样式                                   |
 
-## 🛠️ 技术栈
+## 管理后台使用方法
 
-- **前端**：HTML5, CSS3, JavaScript (ES6+)
-- **留言板**：Giscus (GitHub Discussions)
-- **工具**：Python 3.7+, pandas, openpyxl
-- **部署**：GitHub Pages
+1. 访问 `/admin`，未登录则跳转 GitHub 登录
+2. 支持按平台/子分类筛选、关键词搜索、分页浏览、导入 Excel、编辑/删除数据
 
-## 📞 联系方式
+### 导入 Excel 格式
 
-- B站私信
-- QQ群：745804936
+Excel 列对应字段：name, 平台1, 平台2, 子分类1, 子分类2, 提取码, 夸克链接, 百度链接, 迅雷链接, 解压密码, 更新日期
 
-## 📝 更新日志
+导入时自动映射 UI 分类为 DB 存储格式（PC及安卓 → PC、任天堂 → NS、索尼 → 索尼、其他平台 → Ohter）
 
-### 2026-03-11
-- ✅ 添加Excel转JSON工具
-- ✅ 集成Giscus留言板
-- ✅ 优化JSON加载（减少67%首屏加载）
-- ✅ 添加详细文档
+## 技术栈
 
-## 📄 许可
+Next.js 15 (App Router) · Supabase (PostgreSQL) · CSS3 + Glassmorphism · qrcode.react · XLSX · Vercel
 
-仅供学习交流使用，请勿用于商业用途。
+## 本地开发
+
+```bash
+npm install
+npm run dev      # 开发
+npm run build    # 构建
+```
+
+## 数据更新流程
+
+1. 在 `自己分.xlsx` 中更新游戏数据
+2. 登录管理后台 `/admin`
+3. 使用「导入 Excel」功能上传
+4. 提交并推送到 GitHub 自动部署
+
+## 联系方式
+
+B站私信 · QQ群：745804936
 
 ---
 
-**© 2026 单游仓鼠搜索站**
+仅供学习交流使用，请勿用于商业用途。
