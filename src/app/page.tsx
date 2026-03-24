@@ -49,7 +49,7 @@ const CATEGORIES: Record<string, { name: string; tags: string[] }[]> = {
         "文曲星",
         "步步高电子词典",
         "JAVA",
-        "J2ME（诺基亚时代Java）",
+        "J2ME（诺基亚时代java）",
       ],
     },
   ],
@@ -77,7 +77,7 @@ const CATEGORIES: Record<string, { name: string; tags: string[] }[]> = {
         "小游戏",
         "修改器金手指",
         "互动影游",
-        "网游单击",
+        "网游单机",
         "安卓",
       ],
     },
@@ -113,34 +113,34 @@ export default function HomePage() {
   }, []);
 
   function handleSearch() {
-    // 如果已有筛选结果，只做关键词搜索
-    if (selectedTag && filteredGames.length > 0 && searchKeyword.trim()) {
-      const keyword = searchKeyword.toLowerCase();
-      const result = filteredGames.filter((g) =>
-        g.name.toLowerCase().includes(keyword),
-      );
-      setFilteredGames(result);
-    } else if (searchKeyword.trim() && !selectedTag) {
-      // 如果没有选分类但有关键词，从数据库搜索
-      setLoading(true);
-      setCurrentPage(1);
+    const keyword = searchKeyword.trim();
+    if (!keyword) return;
 
-      supabase
-        .from("games")
-        .select("*")
-        .ilike("name", `%${searchKeyword}%`) // 使用ilike进行模糊搜索
-        .range(0, PAGE_SIZE - 1) // 只加载前10条
-        .order("id", { ascending: true })
-        .then(({ data, error }) => {
-          if (error) {
-            setFilteredGames([]);
-          } else {
-            setFilteredGames(data || []);
-            setHasMore(data?.length === PAGE_SIZE);
-          }
-          setLoading(false);
-        });
-    }
+    // 清空上方选中状态
+    setSelectedTag(null);
+    setSelectedCategory(null);
+
+    setLoading(true);
+    setShowResult(true);
+    setCurrentPage(1);
+
+    let query = supabase
+      .from("games")
+      .select("*", { count: "exact" })
+      .ilike("name", `%${keyword}%`);
+
+    query
+      .range(0, PAGE_SIZE - 1)
+      .order("id", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          setFilteredGames([]);
+        } else {
+          setFilteredGames(data || []);
+          setHasMore(data?.length === PAGE_SIZE);
+        }
+        setLoading(false);
+      });
   }
 
   function selectTag(category: string, value: string) {
@@ -305,30 +305,48 @@ export default function HomePage() {
 
         {/* 搜索框 */}
         <div className="search-box">
-          <input
-            type="text"
-            id="gameSearch"
-            placeholder="推荐先选择对应平台，再输入游戏名称搜索..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
+          <div className="search-input-wrap">
+            <input
+              type="text"
+              id="gameSearch"
+              placeholder="推荐先选择对应平台，再输入游戏名称搜索..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
+            {searchKeyword && (
+              <button
+                className="search-clear-btn"
+                onClick={() => {
+                  setSearchKeyword("");
+                  setShowResult(false);
+                  setFilteredGames([]);
+                  setSelectedTag(null);
+                  setSelectedCategory(null);
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
           <button id="searchBtn" onClick={handleSearch}>
             搜索
           </button>
         </div>
 
-        {/* 提示 */}
-        <div
-          style={{
-            textAlign: "center",
-            color: "red",
-            fontSize: "15px",
-            marginTop: "6px",
-          }}
-        >
-          未搜到的资源，选对应平台后弹出该平台所有资源！如外文和改版游戏+模拟器固件密钥等
-        </div>
+        {/* 提示 - 有数据时隐藏 */}
+        {filteredGames.length === 0 && showResult && !loading && (
+          <div
+            style={{
+              textAlign: "center",
+              color: "red",
+              fontSize: "15px",
+              marginTop: "6px",
+            }}
+          >
+            未搜到的资源，选对应平台后弹出该平台所有资源！如外文和改版游戏+模拟器固件密钥等
+          </div>
+        )}
 
         {/* 结果区域 */}
         <div style={{ display: showResult ? "block" : "none" }}>
