@@ -395,6 +395,7 @@ export default function AdminDashboard() {
 
   // 通用卡片样式
   const cardStyle = { background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 'var(--radius-md)', padding: '20px', boxShadow: 'var(--shadow-md)', border: '1px solid rgba(255,255,255,0.6)', marginBottom: '20px' }
+  const cardStyleSm = { background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 'var(--radius-md)', padding: '12px 16px', boxShadow: 'var(--shadow-md)', border: '1px solid rgba(255,255,255,0.6)', marginBottom: '16px' }
   const inputStyle = { width: '100%' as const, padding: '10px 12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', fontSize: '14px', background: 'rgba(255,255,255,0.9)', color: 'var(--text-primary)', transition: 'all var(--transition-fast)', boxSizing: 'border-box' as const }
   const labelStyle = { display: 'block', marginBottom: '5px', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }
 
@@ -443,13 +444,13 @@ export default function AdminDashboard() {
         </div>
 
         {/* Subcategory Filter */}
-        <div style={{ ...cardStyle }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: selectedSubcategory !== 'all' ? '12px' : 0 }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>子分类：</span>
+        <div style={cardStyleSm}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>子分类：</span>
             <button onClick={() => handleSubcategoryClick('all')} style={{
-              padding: '6px 14px', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: 'pointer',
+              padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer',
               border: `1px solid ${selectedSubcategory === 'all' ? CAT_COLOR[selectedCategory] : 'var(--border-light)'}`,
-              backgroundColor: selectedSubcategory === 'all' ? `rgba(${CAT_RGBA[selectedCategory]}, 0.12)` : 'rgba(255,255,255,0.8)',
+              backgroundColor: selectedSubcategory === 'all' ? `rgba(${CAT_RGBA[selectedCategory]}, 0.15)` : 'rgba(255,255,255,0.8)',
               color: selectedSubcategory === 'all' ? CAT_COLOR[selectedCategory] : 'var(--text-secondary)',
               fontWeight: selectedSubcategory === 'all' ? 600 : 400,
               transition: 'all 0.2s'
@@ -457,7 +458,7 @@ export default function AdminDashboard() {
             {(CATEGORY_SUBCATEGORIES[selectedCategory] || []).map(sub => (
               subcatCounts[sub] > 0 && (
                 <button key={sub} onClick={() => handleSubcategoryClick(sub)} style={{
-                  padding: '5px 12px', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer',
+                  padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: '11px', cursor: 'pointer',
                   border: `1px solid ${selectedSubcategory === sub ? CAT_COLOR[selectedCategory] : 'var(--border-light)'}`,
                   backgroundColor: selectedSubcategory === sub ? `rgba(${CAT_RGBA[selectedCategory]}, 0.15)` : 'rgba(255,255,255,0.7)',
                   color: selectedSubcategory === sub ? CAT_COLOR[selectedCategory] : 'var(--text-secondary)',
