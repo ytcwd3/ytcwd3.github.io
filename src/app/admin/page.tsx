@@ -426,7 +426,7 @@ export default function AdminDashboard() {
               sony: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
               other: 'linear-gradient(135deg, #059669, #34d399)',
             }
-            const textColor = isActive ? (key === 'pc' ? '#78350f' : 'white') : 'var(--text-primary)'
+            const textColor = isActive ? 'white' : CAT_COLOR[key]
             return (
               <div key={key} onClick={() => handleCategoryClick(key)} style={{
                 flex: 1, minWidth: 100, cursor: 'pointer',
