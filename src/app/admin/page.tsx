@@ -414,20 +414,20 @@ export default function AdminDashboard() {
 
       <div style={{ maxWidth: 1200, margin: '20px auto', padding: '0 20px' }}>
         {/* Stats Cards */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
           {Object.keys(CATEGORY_NAMES).map(key => (
             <div key={key} onClick={() => handleCategoryClick(key)} style={{
-              flex: 1, minWidth: 120, background: selectedCategory === key
-                ? `rgba(${CAT_RGBA[key]}, 0.12)`
+              flex: 1, minWidth: 100, cursor: 'pointer',
+              borderRadius: 'var(--radius-md)', padding: '8px 6px', textAlign: 'center',
+              border: `2px solid ${selectedCategory === key ? `rgba(${CAT_RGBA[key]}, 0.5)` : 'rgba(255,255,255,0.6)'}`,
+              background: selectedCategory === key
+                ? `rgba(${CAT_RGBA[key]}, 0.2)`
                 : 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-              borderRadius: 'var(--radius-md)', padding: '14px 12px', cursor: 'pointer',
-              textAlign: 'center', border: `2px solid ${selectedCategory === key ? `rgba(${CAT_RGBA[key]}, 0.4)` : 'rgba(255,255,255,0.6)'}`,
-              boxShadow: selectedCategory === key ? `0 4px 12px rgba(${CAT_RGBA[key]}, 0.2)` : 'var(--shadow-sm)',
+              boxShadow: selectedCategory === key ? `0 4px 12px rgba(${CAT_RGBA[key]}, 0.25)` : 'var(--shadow-sm)',
               transition: 'all 0.2s'
             }}>
-              <h3 style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px', fontWeight: 600 }}>{CATEGORY_DISPLAY[key]}</h3>
-              <div style={{ fontSize: '22px', fontWeight: 'bold', color: `rgba(${CAT_RGBA[key]}, 0.9)` }}>{categoryCounts[key] || 0}</div>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: selectedCategory === key ? CAT_COLOR[key] : `rgba(${CAT_RGBA[key]}, 0.9)`, marginBottom: '2px' }}>{categoryCounts[key] || 0}</div>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: selectedCategory === key ? CAT_COLOR[key] : 'var(--text-secondary)' }}>{CATEGORY_DISPLAY[key]}</div>
             </div>
           ))}
         </div>
