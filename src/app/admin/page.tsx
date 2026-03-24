@@ -19,7 +19,7 @@ const CATEGORY_DB_VALUE: Record<string, string> = {
   handheld: '任天堂掌机',
   console: '任天堂主机',
   sony: '索尼',
-  other: 'Other'
+  other: 'Ohter'
 }
 
 const CATEGORY_NAMES: Record<string, string> = {
@@ -73,6 +73,7 @@ export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null)
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
   const [subcatCounts, setSubcatCounts] = useState<Record<string, number>>({})
+  const [loadedSubcatCats, setLoadedSubcatCats] = useState<string[]>([])
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -93,8 +94,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     checkAuth()
     loadData(1)
-    loadCategoryCounts()
-    loadSubcategoryCounts('pc')
   }, [])
 
   function checkAuth() {
@@ -152,7 +151,10 @@ export default function AdminDashboard() {
 
   function handleCategoryClick(cat: string) {
     setSelectedCategory(cat); setSelectedSubcategory('all'); setSearchKeyword('')
-    applyFilters(1); loadSubcategoryCounts(cat)
+    applyFilters(1)
+    // 懒加载：只在未加载过统计时加载
+    if (Object.keys(categoryCounts).length === 0) loadCategoryCounts()
+    if (!loadedSubcatCats.includes(cat)) loadSubcategoryCounts(cat)
   }
 
   function handleSubcategoryClick(sub: string) { setSelectedSubcategory(sub); applyFilters(1) }
@@ -177,7 +179,8 @@ export default function AdminDashboard() {
         .contains('category', [catName]).contains('subcategory', [subcat])
       if (!error) counts[subcat] = count || 0
     }
-    setSubcatCounts(counts)
+    setSubcatCounts(prev => ({ ...prev, ...counts }))
+    setLoadedSubcatCats(prev => prev.includes(categoryKey) ? prev : [...prev, categoryKey])
   }
 
   function openAddModal() {
