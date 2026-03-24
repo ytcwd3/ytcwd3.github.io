@@ -427,7 +427,10 @@ export default function HomePage() {
           style={{ display: "flex" }}
           onClick={() => togglePopup("popup4")}
         >
-          <RewardPopup onClose={() => togglePopup("popup4")} onOpenQrModal={openBigQrcode} />
+          <RewardPopup
+            onClose={() => togglePopup("popup4")}
+            onOpenQrModal={openBigQrcode}
+          />
         </div>
       )}
 
@@ -438,7 +441,10 @@ export default function HomePage() {
           style={{ display: "flex" }}
           onClick={() => togglePopup("popup5")}
         >
-          <UpdateRecordPopup onClose={() => togglePopup("popup5")} hasData={filteredGames.length > 0} />
+          <UpdateRecordPopup
+            onClose={() => togglePopup("popup5")}
+            hasData={filteredGames.length > 0}
+          />
         </div>
       )}
 
