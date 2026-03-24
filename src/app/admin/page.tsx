@@ -127,9 +127,9 @@ export default function AdminDashboard() {
       let query = supabase.from('games').select('*', { count: 'exact' })
       if (selectedCategory !== 'all') {
         const catName = CATEGORY_NAMES[selectedCategory]
-        if (catName) query = query.cs('category', catName)
+        if (catName) query = query.filter('cs', 'category', `"${catName}"`)
       }
-      if (selectedSubcategory !== 'all') query = query.cs('subcategory', selectedSubcategory)
+      if (selectedSubcategory !== 'all') query = query.filter('cs', 'subcategory', `"${selectedSubcategory}"`)
       if (searchKeyword) query = query.ilike('name', `%${searchKeyword}%`)
       const { data, error, count } = await query.order('id', { ascending: true }).range(from, to)
       if (error) throw error
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
     const counts: Record<string, number> = {}
     for (const catKey of Object.keys(CATEGORY_SUBCATEGORIES)) {
       const catName = CATEGORY_NAMES[catKey]
-      const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true }).cs('category', catName)
+      const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true }).filter('cs', 'category', `"${catName}"`)
       if (!error) counts[catKey] = count || 0
     }
     setCategoryCounts(counts)
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
     const counts: Record<string, number> = {}
     for (const subcat of subcats) {
       const { count, error } = await supabase.from('games').select('*', { count: 'exact', head: true })
-        .cs('category', catName).cs('subcategory', subcat)
+        .filter('cs', 'category', `"${catName}"`).filter('cs', 'subcategory', `"${subcat}"`)
       if (!error) counts[subcat] = count || 0
     }
     setSubcatCounts(counts)
