@@ -14,6 +14,7 @@ import Toolbar from "./components/Toolbar";
 import GameTable from "./components/GameTable";
 import EditModal from "./components/EditModal";
 import ImportModal from "./components/ImportModal";
+import ConfirmModal from "./components/ConfirmModal";
 
 export default function AdminDashboard() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
@@ -37,6 +38,10 @@ export default function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
 
+  // 删除确认
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [pendingDeleteBatch, setPendingDeleteBatch] = useState<number[] | null>(null);
+
   useEffect(() => {
     checkAuth();
     applyFilters(1);
@@ -52,10 +57,10 @@ export default function AdminDashboard() {
     setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
   }
 
-  async function applyFilters(page: number = 1, cat?: string, sub?: string) {
+  async function applyFilters(page: number = 1, cat?: string, sub?: string, keyword?: string) {
     const curCat = cat !== undefined ? cat : selectedCategory;
     const curSub = sub !== undefined ? sub : selectedSubcategory;
-    const curKeyword = searchKeyword;
+    const curKeyword = keyword !== undefined ? keyword : searchKeyword;
     const reqId = Date.now();
     (window as any).__reqId = reqId;
     setLoading(true);
@@ -112,6 +117,11 @@ export default function AdminDashboard() {
 
   function handleSearch() {
     applyFilters(1);
+  }
+
+  function handleClearSearch() {
+    setSearchKeyword("");
+    applyFilters(1, undefined, undefined, "");
   }
 
   function handleRefresh() {
@@ -223,15 +233,53 @@ export default function AdminDashboard() {
     setShowEditModal(true);
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("确定要删除这条数据吗？")) return;
+  function confirmDelete(id: number) {
+    setPendingDeleteId(id);
+  }
+
+  function confirmBatchDelete(ids: number[]) {
+    setPendingDeleteBatch(ids);
+  }
+
+  async function executeDelete() {
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
+    if (id === null) return;
+
     try {
       const { error } = await supabase.from("games").delete().eq("id", id);
       if (error) throw error;
-      alert("删除成功");
-      applyFilters(currentPage);
+      localStorage.removeItem("admin_game_meta");
+      // 如果当前页只有1条，删后回退到上一页
+      if (filteredGames.length === 1 && currentPage > 1) {
+        applyFilters(currentPage - 1);
+      } else {
+        applyFilters(currentPage);
+      }
     } catch (error: any) {
       alert("删除失败: " + error.message);
+    }
+  }
+
+  async function executeBatchDelete() {
+    const ids = pendingDeleteBatch;
+    setPendingDeleteBatch(null);
+    if (!ids || ids.length === 0) return;
+
+    try {
+      const { error } = await supabase.from("games").delete().in("id", ids);
+      if (error) throw error;
+      localStorage.removeItem("admin_game_meta");
+      alert(`批量删除成功，共删除 ${ids.length} 条数据`);
+      // 如果删完当前页空了，回退
+      const remaining = filteredGames.length - ids.length;
+      if (remaining <= 0 && currentPage > 1) {
+        applyFilters(currentPage - 1);
+      } else {
+        applyFilters(currentPage);
+      }
+    } catch (error: any) {
+      alert("批量删除失败: " + error.message);
     }
   }
 
@@ -264,6 +312,7 @@ export default function AdminDashboard() {
           searchKeyword={searchKeyword}
           onSearchChange={setSearchKeyword}
           onSearch={handleSearch}
+          onClearSearch={handleClearSearch}
           onOpenImport={openImportModal}
           onOpenAdd={openAddModal}
           onRefresh={handleRefresh}
@@ -277,7 +326,8 @@ export default function AdminDashboard() {
           totalPages={totalPages}
           onPageChange={handlePageChange}
           onEdit={openEditModal}
-          onDelete={handleDelete}
+          onDelete={confirmDelete}
+          onBatchDelete={confirmBatchDelete}
         />
       </div>
 
@@ -287,7 +337,7 @@ export default function AdminDashboard() {
           onClose={() => setShowEditModal(false)}
           onSaved={() => {
             setShowEditModal(false);
-            applyFilters(currentPage);
+            applyFilters(1);
           }}
         />
       )}
@@ -299,6 +349,30 @@ export default function AdminDashboard() {
             setShowImportModal(false);
             applyFilters(1);
           }}
+        />
+      )}
+
+      {/* 单条删除确认 */}
+      {pendingDeleteId !== null && (
+        <ConfirmModal
+          title="确认删除"
+          message={`确定要删除这条游戏数据吗？此操作不可恢复！`}
+          confirmText="确认删除"
+          danger
+          onConfirm={executeDelete}
+          onCancel={() => setPendingDeleteId(null)}
+        />
+      )}
+
+      {/* 批量删除确认 */}
+      {pendingDeleteBatch !== null && pendingDeleteBatch.length > 0 && (
+        <ConfirmModal
+          title="批量删除"
+          message={`确定要删除选中的 ${pendingDeleteBatch.length} 条数据吗？此操作不可恢复！`}
+          confirmText={`确认删除 ${pendingDeleteBatch.length} 条`}
+          danger
+          onConfirm={executeBatchDelete}
+          onCancel={() => setPendingDeleteBatch(null)}
         />
       )}
     </>

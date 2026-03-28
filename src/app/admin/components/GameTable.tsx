@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Game } from "@/lib/supabase";
 import {
   CATEGORY_NAMES,
@@ -17,6 +18,7 @@ interface GameTableProps {
   onPageChange: (page: number) => void;
   onEdit: (game: Game) => void;
   onDelete: (id: number) => void;
+  onBatchDelete?: (ids: number[]) => void;
 }
 
 export default function GameTable({
@@ -28,10 +30,63 @@ export default function GameTable({
   onPageChange,
   onEdit,
   onDelete,
+  onBatchDelete,
 }: GameTableProps) {
   const PAGE_SIZE = 20;
   const startIndex = (currentPage - 1) * PAGE_SIZE + 1;
   const endIndex = Math.min(currentPage * PAGE_SIZE, totalCount);
+
+  // 批量选择
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showBatchBar, setShowBatchBar] = useState(false);
+
+  const allOnPageSelected = games.length > 0 && games.every((g) => selectedIds.has(g.id));
+
+  function toggleAll() {
+    if (allOnPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        games.forEach((g) => next.delete(g.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        games.forEach((g) => next.add(g.id));
+        return next;
+      });
+    }
+  }
+
+  function toggleOne(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // 每次数据变化检测是否显示批量栏，并清理已删除的选中项
+  useEffect(() => {
+    setShowBatchBar(selectedIds.size > 0);
+    // 清理已不在当前页的选中 id（数据删除后自动清空选中状态）
+    setSelectedIds((prev) => {
+      const currentIds = new Set(games.map((g) => g.id));
+      const next = new Set<number>();
+      let changed = false;
+      prev.forEach((id) => {
+        if (currentIds.has(id)) next.add(id);
+        else changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [selectedIds.size, games]);
+
+  function handleBatchDelete() {
+    const ids = Array.from(selectedIds);
+    onBatchDelete?.(ids);
+  }
 
   return (
     <>
@@ -65,13 +120,21 @@ export default function GameTable({
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "rgba(216,87,232,0.06)" }}>
+                  <th style={{ padding: "12px 8px", textAlign: "center", borderBottom: "1px solid var(--border-light)", width: "40px" }}>
+                    <input
+                      type="checkbox"
+                      checked={allOnPageSelected}
+                      onChange={toggleAll}
+                      style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                    />
+                  </th>
                   {[
                     "ID",
                     "游戏名称",
                     "主分类",
                     "子分类",
                     "提取码",
-                    "夸克链接",
+                    "网盘链接",
                     "更新日期",
                     "操作",
                   ].map((h) => (
@@ -103,22 +166,34 @@ export default function GameTable({
                       style={{
                         borderBottom: "1px solid var(--border-light)",
                         transition: "background 0.2s",
-                        background:
-                          idx % 2 === 0
+                        background: selectedIds.has(game.id)
+                          ? "rgba(229,57,53,0.06)"
+                          : idx % 2 === 0
                             ? "rgba(255,255,255,0.5)"
                             : "rgba(255,255,255,0.3)",
                       }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background =
-                          "rgba(216,87,232,0.05)")
-                      }
+                      onMouseEnter={(e) => {
+                        if (!selectedIds.has(game.id)) {
+                          e.currentTarget.style.background = "rgba(216,87,232,0.05)";
+                        }
+                      }}
                       onMouseLeave={(e) =>
                         (e.currentTarget.style.background =
-                          idx % 2 === 0
-                            ? "rgba(255,255,255,0.5)"
-                            : "rgba(255,255,255,0.3)")
+                          selectedIds.has(game.id)
+                            ? "rgba(229,57,53,0.06)"
+                            : idx % 2 === 0
+                              ? "rgba(255,255,255,0.5)"
+                              : "rgba(255,255,255,0.3)")
                       }
                     >
+                      <td style={{ padding: "11px 8px", textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(game.id)}
+                          onChange={() => toggleOne(game.id)}
+                          style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                        />
+                      </td>
                       <td
                         style={{
                           padding: "11px 14px",
@@ -186,17 +261,23 @@ export default function GameTable({
                       >
                         {game.code || "-"}
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: "13px" }}>
+                      <td style={{ padding: "11px 14px", fontSize: "12px" }}>
                         {game.quarkpan ? (
-                          <a
-                            href={game.quarkpan}
-                            target="_blank"
-                            className="resource-link"
-                          >
-                            查看
-                          </a>
+                          <a href={game.quarkpan} target="_blank" className="resource-link" style={{ color: "#f59e0b" }}>夸克</a>
                         ) : (
-                          "-"
+                          <span style={{ color: "var(--text-tertiary)" }}>夸克 无</span>
+                        )}
+                        {" "}
+                        {game.baidupan ? (
+                          <a href={game.baidupan} target="_blank" className="resource-link" style={{ color: "#2563eb" }}>百度</a>
+                        ) : (
+                          <span style={{ color: "var(--text-tertiary)" }}>百度 无</span>
+                        )}
+                        {" "}
+                        {game.thunderpan ? (
+                          <a href={game.thunderpan} target="_blank" className="resource-link" style={{ color: "#059669" }}>迅雷</a>
+                        ) : (
+                          <span style={{ color: "var(--text-tertiary)" }}>迅雷 无</span>
                         )}
                       </td>
                       <td
@@ -239,6 +320,14 @@ export default function GameTable({
                             fontWeight: 500,
                             transition: "all 0.2s",
                           }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(229,57,53,0.18)";
+                            e.currentTarget.style.color = "#e53935";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(229,57,53,0.08)";
+                            e.currentTarget.style.color = "var(--color-nintendo)";
+                          }}
                         >
                           删除
                         </button>
@@ -260,6 +349,7 @@ export default function GameTable({
           alignItems: "center",
           gap: "12px",
           padding: "10px",
+          position: "relative",
         }}
       >
         <button
@@ -311,6 +401,66 @@ export default function GameTable({
           下一页
         </button>
       </div>
+
+      {/* 批量操作浮动栏 */}
+      {showBatchBar && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(30,30,40,0.95)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            borderRadius: "12px",
+            padding: "12px 20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+            zIndex: 1000,
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          <span style={{ color: "white", fontSize: "14px", fontWeight: 500 }}>
+            已选择 <strong style={{ color: "#f472b6" }}>{selectedIds.size}</strong> 条数据
+          </span>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            style={{
+              padding: "7px 16px",
+              background: "rgba(255,255,255,0.1)",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.2)",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 500,
+              transition: "all 0.2s",
+            }}
+          >
+            取消选择
+          </button>
+          <button
+            onClick={handleBatchDelete}
+            style={{
+              padding: "7px 20px",
+              background: "linear-gradient(90deg, #e53935, #c62828)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 600,
+              boxShadow: "0 3px 10px rgba(229,57,53,0.35)",
+              transition: "all 0.2s",
+            }}
+          >
+            🗑 批量删除
+          </button>
+        </div>
+      )}
     </>
   );
 }
