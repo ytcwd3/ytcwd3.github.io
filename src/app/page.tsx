@@ -279,8 +279,8 @@ export default function HomePage() {
         </div>
 
         {/* 已选分类栏 */}
-        <div className="selected-tag-hint" onClick={clearTag}>
-          已选分类：
+        <div className="selected-tag-hint">
+          <span style={{ color: "var(--text-secondary)" }}>已选分类：</span>
           <div className="selected-tag-wrapper">
             {selectedTag ? (
               <span
@@ -293,9 +293,37 @@ export default function HomePage() {
                         : selectedTag.category === "PC及安卓"
                           ? "var(--color-pc-android)"
                           : "var(--color-other)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
                 }}
               >
                 {selectedTag.category} - {selectedTag.value}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearTag();
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    color: "var(--text-tertiary)",
+                    padding: "0 2px",
+                    lineHeight: 1,
+                    transition: "color 0.2s",
+                    marginLeft: "2px",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "var(--text-primary)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "var(--text-tertiary)")
+                  }
+                >
+                  ×
+                </button>
               </span>
             ) : (
               <span id="selectedTagText">无</span>
@@ -461,7 +489,6 @@ export default function HomePage() {
         >
           <UpdateRecordPopup
             onClose={() => togglePopup("popup5")}
-            hasData={filteredGames.length > 0}
           />
         </div>
       )}
