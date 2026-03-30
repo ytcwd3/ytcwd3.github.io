@@ -40,7 +40,9 @@ export default function AdminDashboard() {
 
   // 删除确认
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
-  const [pendingDeleteBatch, setPendingDeleteBatch] = useState<number[] | null>(null);
+  const [pendingDeleteBatch, setPendingDeleteBatch] = useState<number[] | null>(
+    null,
+  );
 
   useEffect(() => {
     checkAuth();
@@ -57,7 +59,12 @@ export default function AdminDashboard() {
     setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
   }
 
-  async function applyFilters(page: number = 1, cat?: string, sub?: string, keyword?: string) {
+  async function applyFilters(
+    page: number = 1,
+    cat?: string,
+    sub?: string,
+    keyword?: string,
+  ) {
     const curCat = cat !== undefined ? cat : selectedCategory;
     const curSub = sub !== undefined ? sub : selectedSubcategory;
     const curKeyword = keyword !== undefined ? keyword : searchKeyword;
@@ -228,6 +235,114 @@ export default function AdminDashboard() {
     setShowEditModal(true);
   }
 
+  async function downloadTemplate() {
+    const XLSX = await import("xlsx");
+    const SHEET_COLS = [
+      "游戏名称",
+      "主分类",
+      "子分类",
+      "提取码",
+      "解压密码",
+      "夸克网盘链接",
+      "百度网盘链接",
+      "迅雷网盘链接",
+      "更新日期",
+    ];
+    const SHEET_DATA: Record<string, string[][]> = {
+      PC: [
+        SHEET_COLS,
+        [
+          "示例游戏",
+          "PC",
+          "RPG",
+          "CODE123",
+          "1234",
+          "https://pan.quark.cn/s/xxx",
+          "https://pan.baidu.com/s/xxx",
+          "https://pan.xunlei.com/s/xxx",
+          "2026.3.30",
+        ],
+      ],
+      NS: [
+        SHEET_COLS,
+        [
+          "示例游戏",
+          "NS",
+          "动作",
+          "CODE123",
+          "1234",
+          "https://pan.quark.cn/s/xxx",
+          "https://pan.baidu.com/s/xxx",
+          "https://pan.xunlei.com/s/xxx",
+          "2026.3.30",
+        ],
+      ],
+      任天堂掌机: [
+        SHEET_COLS,
+        [
+          "示例游戏",
+          "任天堂掌机",
+          "RPG",
+          "CODE123",
+          "1234",
+          "https://pan.quark.cn/s/xxx",
+          "https://pan.baidu.com/s/xxx",
+          "https://pan.xunlei.com/s/xxx",
+          "2026.3.30",
+        ],
+      ],
+      任天堂主机: [
+        SHEET_COLS,
+        [
+          "示例游戏",
+          "任天堂主机",
+          "运动",
+          "CODE123",
+          "1234",
+          "https://pan.quark.cn/s/xxx",
+          "https://pan.baidu.com/s/xxx",
+          "https://pan.xunlei.com/s/xxx",
+          "2026.3.30",
+        ],
+      ],
+      索尼: [
+        SHEET_COLS,
+        [
+          "示例游戏",
+          "索尼",
+          "RPG",
+          "CODE123",
+          "1234",
+          "https://pan.quark.cn/s/xxx",
+          "https://pan.baidu.com/s/xxx",
+          "https://pan.xunlei.com/s/xxx",
+          "2026.3.30",
+        ],
+      ],
+      Other: [
+        SHEET_COLS,
+        [
+          "示例游戏",
+          "Other",
+          "FPS",
+          "CODE123",
+          "1234",
+          "https://pan.quark.cn/s/xxx",
+          "https://pan.baidu.com/s/xxx",
+          "https://pan.xunlei.com/s/xxx",
+          "2026.3.30",
+        ],
+      ],
+    };
+
+    const wb = XLSX.utils.book_new();
+    Object.entries(SHEET_DATA).forEach(([name, data]) => {
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, name);
+    });
+    XLSX.writeFile(wb, "游戏导入模板.xlsx");
+  }
+
   function openEditModal(game: Game) {
     setEditingGame(game);
     setShowEditModal(true);
@@ -315,6 +430,7 @@ export default function AdminDashboard() {
           onClearSearch={handleClearSearch}
           onOpenImport={openImportModal}
           onOpenAdd={openAddModal}
+          onDownloadTemplate={downloadTemplate}
           onRefresh={handleRefresh}
         />
 

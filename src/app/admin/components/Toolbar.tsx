@@ -9,6 +9,7 @@ interface ToolbarProps {
   onClearSearch: () => void;
   onOpenImport: () => void;
   onOpenAdd: () => void;
+  onDownloadTemplate: () => void;
   onRefresh: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function Toolbar({
   onClearSearch,
   onOpenImport,
   onOpenAdd,
+  onDownloadTemplate,
   onRefresh,
 }: ToolbarProps) {
   return (
@@ -61,13 +63,35 @@ export default function Toolbar({
               lineHeight: 1,
               transition: "color 0.2s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-tertiary)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = "var(--text-primary)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = "var(--text-tertiary)")
+            }
           >
             ×
           </button>
         )}
       </div>
+
+      <button
+        onClick={onDownloadTemplate}
+        style={{
+          padding: "7px 16px",
+          background: "rgba(255,255,255,0.9)",
+          color: "var(--text-secondary)",
+          border: "1px solid var(--border-light)",
+          borderRadius: "var(--radius-sm)",
+          cursor: "pointer",
+          fontSize: "13px",
+          fontWeight: 500,
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        📄 下载模板
+      </button>
 
       <button
         onClick={onOpenImport}

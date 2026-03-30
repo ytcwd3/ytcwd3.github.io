@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { supabase, Game } from "@/lib/supabase";
-import { SHEET_DB_CAT, UI_CAT_TO_DB, NS_DEFAULT_SUBCAT } from "./constants";
+import { SHEET_DB_CAT, UI_CAT_TO_DB } from "./constants";
 
 interface ImportModalProps {
   onClose: () => void;
@@ -56,39 +56,27 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
             if (!name) continue;
 
             const p1 = String(row[1] || "").trim();
-            const p2 = String(row[2] || "").trim();
             let dbCat: string;
             if (p1 && UI_CAT_TO_DB[p1]) {
               dbCat = UI_CAT_TO_DB[p1];
-            } else if (p2 && UI_CAT_TO_DB[p2]) {
-              dbCat = UI_CAT_TO_DB[p2];
             } else {
               dbCat = sheetDbCat;
             }
             const category: string[] = [dbCat];
 
-            const s1 = String(row[3] || "").trim();
-            const s2 = String(row[4] || "").trim();
-            const subcategory: string[] = [];
-            if (s1) subcategory.push(s1);
-            if (s2) subcategory.push(s2);
-
-            if (subcategory.length === 0) {
-              if (sheetName === "NS") {
-                subcategory.push(...NS_DEFAULT_SUBCAT);
-              }
-            }
+            const s1 = String(row[2] || "").trim();
+            const subcategory: string[] = s1 ? [s1] : [];
 
             allGames.push({
               name,
               category,
               subcategory,
-              code: String(row[5] || "").trim(),
-              unzipcode: String(row[9] || "").trim(),
-              quarkpan: String(row[6] || "").trim(),
-              baidupan: String(row[7] || "").trim(),
-              thunderpan: String(row[8] || "").trim(),
-              updatedate: String(row[10] || "").trim(),
+              code: String(row[3] || "").trim(),
+              unzipcode: String(row[4] || "").trim(),
+              quarkpan: String(row[5] || "").trim(),
+              baidupan: String(row[6] || "").trim(),
+              thunderpan: String(row[7] || "").trim(),
+              updatedate: String(row[8] || "").trim(),
             });
           }
         });
