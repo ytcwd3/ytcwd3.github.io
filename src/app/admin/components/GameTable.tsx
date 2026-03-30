@@ -39,8 +39,10 @@ export default function GameTable({
   // 批量选择
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBatchBar, setShowBatchBar] = useState(false);
+  const [pageInput, setPageInput] = useState("");
 
-  const allOnPageSelected = games.length > 0 && games.every((g) => selectedIds.has(g.id));
+  const allOnPageSelected =
+    games.length > 0 && games.every((g) => selectedIds.has(g.id));
 
   function toggleAll() {
     if (allOnPageSelected) {
@@ -120,12 +122,23 @@ export default function GameTable({
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "rgba(216,87,232,0.06)" }}>
-                  <th style={{ padding: "12px 8px", textAlign: "center", borderBottom: "1px solid var(--border-light)", width: "40px" }}>
+                  <th
+                    style={{
+                      padding: "12px 8px",
+                      textAlign: "center",
+                      borderBottom: "1px solid var(--border-light)",
+                      width: "40px",
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={allOnPageSelected}
                       onChange={toggleAll}
-                      style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                      style={{
+                        cursor: "pointer",
+                        width: "16px",
+                        height: "16px",
+                      }}
                     />
                   </th>
                   {[
@@ -174,16 +187,18 @@ export default function GameTable({
                       }}
                       onMouseEnter={(e) => {
                         if (!selectedIds.has(game.id)) {
-                          e.currentTarget.style.background = "rgba(216,87,232,0.05)";
+                          e.currentTarget.style.background =
+                            "rgba(216,87,232,0.05)";
                         }
                       }}
                       onMouseLeave={(e) =>
-                        (e.currentTarget.style.background =
-                          selectedIds.has(game.id)
-                            ? "rgba(229,57,53,0.06)"
-                            : idx % 2 === 0
-                              ? "rgba(255,255,255,0.5)"
-                              : "rgba(255,255,255,0.3)")
+                        (e.currentTarget.style.background = selectedIds.has(
+                          game.id,
+                        )
+                          ? "rgba(229,57,53,0.06)"
+                          : idx % 2 === 0
+                            ? "rgba(255,255,255,0.5)"
+                            : "rgba(255,255,255,0.3)")
                       }
                     >
                       <td style={{ padding: "11px 8px", textAlign: "center" }}>
@@ -191,7 +206,11 @@ export default function GameTable({
                           type="checkbox"
                           checked={selectedIds.has(game.id)}
                           onChange={() => toggleOne(game.id)}
-                          style={{ cursor: "pointer", width: "16px", height: "16px" }}
+                          style={{
+                            cursor: "pointer",
+                            width: "16px",
+                            height: "16px",
+                          }}
                         />
                       </td>
                       <td
@@ -263,21 +282,46 @@ export default function GameTable({
                       </td>
                       <td style={{ padding: "11px 14px", fontSize: "12px" }}>
                         {game.quarkpan ? (
-                          <a href={game.quarkpan} target="_blank" className="resource-link" style={{ color: "#f59e0b" }}>夸克</a>
+                          <a
+                            href={game.quarkpan}
+                            target="_blank"
+                            className="resource-link"
+                            style={{ color: "#f59e0b" }}
+                          >
+                            夸克
+                          </a>
                         ) : (
-                          <span style={{ color: "var(--text-tertiary)" }}>夸克 无</span>
-                        )}
-                        {" "}
+                          <span style={{ color: "var(--text-tertiary)" }}>
+                            夸克 无
+                          </span>
+                        )}{" "}
                         {game.baidupan ? (
-                          <a href={game.baidupan} target="_blank" className="resource-link" style={{ color: "#2563eb" }}>百度</a>
+                          <a
+                            href={game.baidupan}
+                            target="_blank"
+                            className="resource-link"
+                            style={{ color: "#2563eb" }}
+                          >
+                            百度
+                          </a>
                         ) : (
-                          <span style={{ color: "var(--text-tertiary)" }}>百度 无</span>
-                        )}
-                        {" "}
+                          <span style={{ color: "var(--text-tertiary)" }}>
+                            百度 无
+                          </span>
+                        )}{" "}
                         {game.thunderpan ? (
-                          <a href={game.thunderpan} target="_blank" className="resource-link" style={{ color: "#059669" }}>迅雷</a>
+                          <a
+                            href={game.thunderpan}
+                            target="_blank"
+                            className="resource-link"
+                            style={{ color: "#059669" }}
+                          >
+                            迅雷
+                          </a>
                         ) : (
-                          <span style={{ color: "var(--text-tertiary)" }}>迅雷 无</span>
+                          <span style={{ color: "var(--text-tertiary)" }}>
+                            迅雷 无
+                          </span>
                         )}
                       </td>
                       <td
@@ -321,12 +365,15 @@ export default function GameTable({
                             transition: "all 0.2s",
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "rgba(229,57,53,0.18)";
+                            e.currentTarget.style.background =
+                              "rgba(229,57,53,0.18)";
                             e.currentTarget.style.color = "#e53935";
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.background = "rgba(229,57,53,0.08)";
-                            e.currentTarget.style.color = "var(--color-nintendo)";
+                            e.currentTarget.style.background =
+                              "rgba(229,57,53,0.08)";
+                            e.currentTarget.style.color =
+                              "var(--color-nintendo)";
                           }}
                         >
                           删除
@@ -382,6 +429,72 @@ export default function GameTable({
         >
           第 {currentPage} / {totalPages} 页 · 共 {totalCount} 条
         </span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "4px 12px",
+            background: "white",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border-light)",
+          }}
+        >
+          <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+            跳至
+          </span>
+          <input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={pageInput}
+            onChange={(e) => setPageInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const page = parseInt(pageInput, 10);
+                if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                  onPageChange(page);
+                  setPageInput("");
+                }
+              }
+            }}
+            style={{
+              width: "48px",
+              padding: "4px 8px",
+              fontSize: "13px",
+              border: "1px solid var(--border-light)",
+              borderRadius: "var(--radius-sm)",
+              textAlign: "center",
+              outline: "none",
+            }}
+            onWheel={(e) => e.currentTarget.blur()}
+          />
+          <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+            页
+          </span>
+          <button
+            onClick={() => {
+              const page = parseInt(pageInput, 10);
+              if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                onPageChange(page);
+                setPageInput("");
+              }
+            }}
+            style={{
+              padding: "4px 12px",
+              border: "1px solid var(--border-light)",
+              background: "white",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: "var(--text-primary)",
+              transition: "0.2s",
+            }}
+          >
+            跳转
+          </button>
+        </div>
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
@@ -424,7 +537,9 @@ export default function GameTable({
           }}
         >
           <span style={{ color: "white", fontSize: "14px", fontWeight: 500 }}>
-            已选择 <strong style={{ color: "#f472b6" }}>{selectedIds.size}</strong> 条数据
+            已选择{" "}
+            <strong style={{ color: "#f472b6" }}>{selectedIds.size}</strong>{" "}
+            条数据
           </span>
           <button
             onClick={() => setSelectedIds(new Set())}
