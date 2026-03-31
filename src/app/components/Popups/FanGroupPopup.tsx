@@ -10,7 +10,7 @@ export default function FanGroupPopup({ onClose }: FanGroupPopupProps) {
       </span>
       <h3 className="popup-title">粉丝交流群</h3>
       <div className="popup-text">
-        <p>QQ群：745804936 进潜水群后，想聊天私信群主申请进入主群即可</p>
+        <p>QQ群：1092295162 进潜水群后，想聊天私信群主申请进入主群即可</p>
       </div>
     </div>
   );
