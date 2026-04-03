@@ -453,7 +453,7 @@ export default function AdminDashboard() {
           onClose={() => setShowEditModal(false)}
           onSaved={() => {
             setShowEditModal(false);
-            applyFilters(1);
+            applyFilters(currentPage);
           }}
         />
       )}
@@ -463,7 +463,7 @@ export default function AdminDashboard() {
           onClose={() => setShowImportModal(false)}
           onImported={() => {
             setShowImportModal(false);
-            applyFilters(1);
+            applyFilters(currentPage);
           }}
         />
       )}
