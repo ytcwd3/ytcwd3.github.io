@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "游戏数据库",
-  description: "游戏资源数据库",
+  title: "单游仓鼠搜索站",
+  description: "单游仓鼠搜索站",
 };
 
 export default function RootLayout({
