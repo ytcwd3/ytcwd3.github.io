@@ -116,31 +116,46 @@ export default function HomePage() {
     const keyword = searchKeyword.trim();
     if (!keyword) return;
 
-    // 清空上方选中状态
-    setSelectedTag(null);
-    setSelectedCategory(null);
-
     setLoading(true);
     setShowResult(true);
     setCurrentPage(1);
 
-    let query = supabase
-      .from("games")
-      .select("*", { count: "exact" })
-      .ilike("name", `%${keyword}%`);
-
-    query
-      .range(0, PAGE_SIZE - 1)
-      .order("id", { ascending: true })
-      .then(({ data, error }) => {
-        if (error) {
-          setFilteredGames([]);
-        } else {
-          setFilteredGames(data || []);
-          setHasMore(data?.length === PAGE_SIZE);
-        }
-        setLoading(false);
-      });
+    // 如果有选中子标签，在该子标签范围内搜索
+    if (selectedTag) {
+      supabase
+        .from("games")
+        .select("*", { count: "exact" })
+        .contains("subcategory", [selectedTag.value])
+        .ilike("name", `%${keyword}%`)
+        .range(0, PAGE_SIZE - 1)
+        .order("id", { ascending: true })
+        .then(({ data, error }) => {
+          if (error) {
+            setFilteredGames([]);
+          } else {
+            setFilteredGames(data || []);
+            setHasMore(data?.length === PAGE_SIZE);
+          }
+          setLoading(false);
+        });
+    } else {
+      // 全局搜索
+      supabase
+        .from("games")
+        .select("*", { count: "exact" })
+        .ilike("name", `%${keyword}%`)
+        .range(0, PAGE_SIZE - 1)
+        .order("id", { ascending: true })
+        .then(({ data, error }) => {
+          if (error) {
+            setFilteredGames([]);
+          } else {
+            setFilteredGames(data || []);
+            setHasMore(data?.length === PAGE_SIZE);
+          }
+          setLoading(false);
+        });
+    }
   }
 
   function selectTag(category: string, value: string) {
@@ -337,7 +352,7 @@ export default function HomePage() {
             <input
               type="text"
               id="gameSearch"
-              placeholder="推荐先选择对应平台，再输入游戏名称搜索..."
+              placeholder="推荐先选择平台，再输入游戏名称搜索..."
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
