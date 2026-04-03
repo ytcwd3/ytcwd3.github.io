@@ -113,6 +113,7 @@ body {
   overflow: hidden;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  isolation: isolate;
 }
 
 .container::before {
@@ -128,6 +129,7 @@ body {
     var(--accent-color),
     var(--secondary-color)
   );
+  pointer-events: none;
 }
 
 .title {
@@ -195,6 +197,8 @@ body {
   background-color: transparent;
   width: 80%;
   max-width: 600px;
+  position: relative;
+  z-index: 100;
 }
 
 .tab-btn {
@@ -228,6 +232,7 @@ body {
     transparent
   );
   transition: var(--transition-normal);
+  pointer-events: none;
 }
 
 .tab-btn:hover::before {
