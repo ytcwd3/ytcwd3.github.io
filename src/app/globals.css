@@ -72,6 +72,7 @@ body {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
+  background-attachment: fixed;
 }
 
 .container {
@@ -1280,6 +1281,14 @@ body {
 /* ====================== 移动端适配（精准分级，仅超小屏换行） ====================== */
 @media (max-width: 768px) {
   /* 基础布局适配 */
+  html, body {
+    background-image: url("/bg.jpg") !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: scroll !important;
+    min-height: 100vh !important;
+  }
   .container {
     padding: 20px 15px 15px;
     margin-top: 15px;
