@@ -2,6 +2,12 @@
   "name": "game-database",
   "version": "1.0.0",
   "private": true,
+  "browserslist": [
+    ">0.5%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "npm install --include=dev && next build",
@@ -9,11 +15,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.39.0",
-    "next": "^16.2.1",
+    "core-js": "^3.49.0",
+    "next": "^15.5.14",
     "qrcode.react": "^3.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "regenerator-runtime": "^0.14.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
