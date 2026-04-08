@@ -58,47 +58,34 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Inter", "微软雅黑", Arial, sans-serif;
+  font-family: "PingFang SC", "Microsoft YaHei", "微软雅黑", "Helvetica Neue", Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--bg-gradient);
   color: var(--text-primary);
   padding: 20px;
   line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  background-image:
-    url("https://pic2.zhimg.com/100/v2-f94c29b1b568edbe9071c9b7229c7f33_r.jpg"),
-    radial-gradient(
-      circle at 10% 20%,
-      rgba(216, 87, 232, 0.05),
-      transparent 20%
-    ),
-    radial-gradient(
-      circle at 90% 80%,
-      rgba(240, 98, 146, 0.05),
-      transparent 20%
-    );
+  background-image: url("/bg.jpg");
   background-repeat: no-repeat;
   background-position: center center;
-  background-attachment: fixed;
   background-size: cover;
-  background-blend-mode: overlay;
 }
 
 .container {
   /* 毛玻璃效果 - 使用渐变和阴影模拟 */
   max-width: 900px;
-  min-width: 320px;
+  min-width: 280px;
   margin: 0 auto;
   text-align: center;
   margin-top: 20px;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.8) 0%,
-    rgba(255, 255, 255, 0.8) 50%,
-    rgba(255, 255, 255, 0.8) 100%
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0.88) 100%
   );
   padding: 30px 30px 20px;
   border-radius: var(--radius-lg);
@@ -110,7 +97,7 @@ body {
     inset 0 -1px 0 rgba(216, 87, 232, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.8);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   isolation: isolate;
@@ -305,16 +292,18 @@ body {
   position: relative;
   width: 100%;
   margin-bottom: 20px;
+  z-index: 100;
 }
 
 .tab-panel {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
+  position: relative;
+  top: 0;
+  left: 0;
+  transform: none;
+  width: 100%;
   max-width: 500px;
-  background-color: rgba(255, 255, 255, 0.95);
+  margin: 0 auto;
+  background-color: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-md);
@@ -978,11 +967,11 @@ body {
 @keyframes panelFadeIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(10px);
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
   }
 }
 
@@ -1028,12 +1017,19 @@ body {
 .pan-link-item {
   font-size: 14px;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 4px;
+  flex-basis: 100%;
 }
 .pan-link-item label {
   color: var(--text-gray);
   font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pan-link-item a {
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 /* ====================== 新增：二维码放大弹窗样式 ====================== */
@@ -1288,6 +1284,9 @@ body {
     padding: 20px 15px 15px;
     margin-top: 15px;
     max-width: 95%;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.95) !important;
   }
   .tab-header {
     gap: 8px;
@@ -1312,10 +1311,16 @@ body {
     max-width: 100%;
     padding: 12px 18px;
     font-size: 14px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: rgba(255, 255, 255, 0.95) !important;
   }
   .tab-panel {
     width: 95%;
     padding: 15px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.98) !important;
   }
   #searchBtn {
     width: 100%;
@@ -1333,13 +1338,20 @@ body {
   }
   .result-box {
     padding: 15px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: rgba(255, 255, 255, 0.95) !important;
   }
   .result-item {
     flex-direction: column;
     gap: 8px;
+    align-items: flex-start;
   }
   body {
-    background-size: auto 100vh;
+    background-image: url("/bg.jpg") !important;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
     padding: 10px;
   }
   .footer {
@@ -1377,6 +1389,19 @@ body {
   .popup-content {
     padding: 20px;
     max-width: 95%;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.98) !important;
+    border-radius: 16px 16px 0 0 !important;
+    margin-bottom: 0 !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+  }
+  .popup-mask {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    align-items: flex-end !important;
+    padding: 0 !important;
   }
   .popup-title {
     font-size: 16px;
@@ -1391,12 +1416,38 @@ body {
     width: 100%;
   }
   .result-content-wrap {
-    text-align: center;
+    text-align: left;
+  }
+  .code-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .code-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .code-item span {
+    word-break: break-all;
   }
   .pan-links {
-    justify-content: center;
+    justify-content: flex-start;
     flex-direction: column;
     gap: 4px;
+  }
+  .pan-link-item {
+    font-size: 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    flex-basis: 100%;
+  }
+  .pan-link-item label {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .pan-link-item a {
+    overflow-wrap: break-word;
+    word-break: break-all;
   }
 
   /* 二维码放大弹窗适配 */
@@ -1430,6 +1481,20 @@ body {
   .popup-btn[data-target="popup5"] {
     min-width: 100% !important;
     width: 100% !important;
+  }
+  .container {
+    padding: 12px 8px 8px;
+    min-width: unset;
+  }
+  .title {
+    font-size: 22px;
+  }
+  .sub-title {
+    font-size: 12px;
+  }
+  .tab-btn {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }
 
@@ -1816,7 +1881,7 @@ body {
   border: none;
 }
 
-/* 移动端适配 */
+/* 移动端 giscus 弹窗适配 */
 @media (max-width: 768px) {
   .giscus-popup {
     max-width: 95% !important;
