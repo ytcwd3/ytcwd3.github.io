@@ -5,9 +5,10 @@ import { Game } from "@/lib/supabase";
 
 interface HeaderProps {
   user: { github?: string; email?: string } | null;
+  className?: string;
 }
 
-export default function AdminHeader({ user }: HeaderProps) {
+export default function AdminHeader({ user, className }: HeaderProps) {
   async function handleLogout() {
     await supabase.auth.signOut();
     localStorage.removeItem("admin_logged_in");
@@ -17,6 +18,7 @@ export default function AdminHeader({ user }: HeaderProps) {
 
   return (
     <div
+      className={`admin-header ${className || ""}`}
       style={{
         background: "linear-gradient(135deg, #d857e8 0%, #9333ea 100%)",
         color: "white",
@@ -29,6 +31,7 @@ export default function AdminHeader({ user }: HeaderProps) {
     >
       <div>
         <h1
+          className="admin-header-title"
           style={{
             fontSize: "18px",
             fontWeight: 700,
@@ -42,7 +45,7 @@ export default function AdminHeader({ user }: HeaderProps) {
           单游仓鼠 · 游戏资源管理
         </p>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+      <div className="admin-header-user" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
         <span style={{ fontSize: "12px", opacity: 0.9 }}>
           👤 {user?.github || user?.email}
         </span>

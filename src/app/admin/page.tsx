@@ -1,4 +1,5 @@
 "use client";
+import "./admin.css";
 
 import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
@@ -408,14 +409,16 @@ export default function AdminDashboard() {
     <>
       <AdminHeader user={user} />
 
-      <div style={{ maxWidth: 1200, margin: "20px auto", padding: "0 20px" }}>
+      <div className="admin-container" style={{ maxWidth: 1200, margin: "20px auto", padding: "0 20px" }}>
         <StatsCards
+          className="stats-cards"
           selectedCategory={selectedCategory}
           categoryCounts={categoryCounts}
           onCategoryClick={handleCategoryClick}
         />
 
         <SubcategoryFilter
+          className="subcat-filter"
           selectedCategory={selectedCategory}
           selectedSubcategory={selectedSubcategory}
           categoryCounts={categoryCounts}
@@ -424,6 +427,7 @@ export default function AdminDashboard() {
         />
 
         <Toolbar
+          className="toolbar"
           searchKeyword={searchKeyword}
           onSearchChange={setSearchKeyword}
           onSearch={handleSearch}
@@ -435,6 +439,7 @@ export default function AdminDashboard() {
         />
 
         <GameTable
+          className="game-table-wrapper"
           games={filteredGames}
           loading={loading}
           currentPage={currentPage}

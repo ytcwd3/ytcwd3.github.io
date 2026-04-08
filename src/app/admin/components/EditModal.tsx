@@ -239,9 +239,9 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
   return (
     <>
-      <div className="popup-mask" style={{ display: "flex" }} onClick={tryClose}>
+      <div className="popup-mask modal-overlay" style={{ display: "flex" }} onClick={tryClose}>
         <div
-          className="popup-content"
+          className="popup-content modal-content"
           style={{ maxWidth: 620, maxHeight: "90vh", overflowY: "auto" }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -289,7 +289,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
           <form onSubmit={(e) => { e.preventDefault(); saveAndClose(); }}>
             {/* 游戏名称 */}
-            <div style={{ marginBottom: "14px" }}>
+            <div className="form-group" style={{ marginBottom: "14px" }}>
               <label style={LABEL_STYLE}>
                 游戏名称 *
                 <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
@@ -320,7 +320,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
             </div>
 
             {/* 主分类 & 子分类 */}
-            <div style={{ display: "flex", gap: "12px", marginBottom: "14px" }}>
+            <div className="form-group" style={{ display: "flex", gap: "12px", marginBottom: "14px" }}>
               <div style={{ flex: 1 }}>
                 <label style={LABEL_STYLE}>主分类</label>
                 <select
@@ -355,7 +355,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
             </div>
 
             {/* 提取码 & 解压密码 */}
-            <div style={{ display: "flex", gap: "12px", marginBottom: "14px" }}>
+            <div className="form-group" style={{ display: "flex", gap: "12px", marginBottom: "14px" }}>
               <div style={{ flex: 1 }}>
                 <label style={LABEL_STYLE}>提取码</label>
                 <input
@@ -379,7 +379,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
             </div>
 
             {/* 夸克 */}
-            <div style={{ marginBottom: "14px" }}>
+            <div className="form-group" style={{ marginBottom: "14px" }}>
               <label style={LABEL_STYLE}>
                 夸克网盘链接
                 <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
@@ -407,7 +407,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
             </div>
 
             {/* 百度 */}
-            <div style={{ marginBottom: "14px" }}>
+            <div className="form-group" style={{ marginBottom: "14px" }}>
               <label style={LABEL_STYLE}>
                 百度网盘链接
                 <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
@@ -435,7 +435,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
             </div>
 
             {/* 迅雷 */}
-            <div style={{ marginBottom: "14px" }}>
+            <div className="form-group" style={{ marginBottom: "14px" }}>
               <label style={LABEL_STYLE}>
                 迅雷网盘链接
                 <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
@@ -463,7 +463,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
             </div>
 
             {/* 更新日期 */}
-            <div style={{ marginBottom: "14px" }}>
+            <div className="form-group" style={{ marginBottom: "14px" }}>
               <label style={LABEL_STYLE}>更新日期</label>
               <input
                 type="text"
@@ -476,6 +476,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
             {/* 底部按钮 */}
             <div
+              className="form-actions"
               style={{
                 display: "flex",
                 justifyContent: "flex-end",

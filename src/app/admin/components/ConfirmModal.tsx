@@ -30,9 +30,9 @@ export default function ConfirmModal({
   }, [onCancel]);
 
   return (
-    <div className="popup-mask" style={{ display: "flex" }} onClick={onCancel}>
+    <div className="popup-mask modal-overlay" style={{ display: "flex" }} onClick={onCancel}>
       <div
-        className="popup-content"
+        className="popup-content modal-content"
         style={{ maxWidth: 400, textAlign: "center" }}
         onClick={(e) => e.stopPropagation()}
       >

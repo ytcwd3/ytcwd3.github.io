@@ -11,15 +11,18 @@ interface StatsCardsProps {
   selectedCategory: string;
   categoryCounts: Record<string, number>;
   onCategoryClick: (cat: string) => void;
+  className?: string;
 }
 
 export default function StatsCards({
   selectedCategory,
   categoryCounts,
   onCategoryClick,
+  className,
 }: StatsCardsProps) {
   return (
     <div
+      className={`stats-cards ${className || ""}`}
       style={{
         display: "flex",
         gap: "8px",

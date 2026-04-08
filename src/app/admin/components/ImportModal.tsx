@@ -217,9 +217,9 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
 
   return (
     <>
-      <div className="popup-mask" style={{ display: "flex" }} onClick={onClose}>
+      <div className="popup-mask modal-overlay" style={{ display: "flex" }} onClick={onClose}>
         <div
-          className="popup-content"
+          className="popup-content modal-content"
           style={{ maxWidth: 680 }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -251,7 +251,7 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
             </button>
           </div>
 
-          <div style={{ marginBottom: 20 }}>
+          <div className="form-group" style={{ marginBottom: 20 }}>
             <label
               style={{
                 display: "block",
@@ -317,6 +317,7 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
           )}
 
           <div
+            className="form-actions"
             style={{
               display: "flex",
               justifyContent: "flex-end",

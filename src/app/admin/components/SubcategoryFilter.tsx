@@ -13,6 +13,7 @@ interface SubcategoryFilterProps {
   categoryCounts: Record<string, number>;
   subcatCounts: Record<string, number>;
   onSubcategoryClick: (sub: string) => void;
+  className?: string;
 }
 
 export default function SubcategoryFilter({
@@ -21,10 +22,12 @@ export default function SubcategoryFilter({
   categoryCounts,
   subcatCounts,
   onSubcategoryClick,
+  className,
 }: SubcategoryFilterProps) {
   return (
-    <div style={CARD_STYLE_SM}>
+    <div className={`subcat-filter ${className || ""}`} style={CARD_STYLE_SM}>
       <div
+        className="filter-scroll"
         style={{
           display: "flex",
           flexWrap: "wrap",

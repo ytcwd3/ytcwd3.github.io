@@ -19,6 +19,7 @@ interface GameTableProps {
   onEdit: (game: Game) => void;
   onDelete: (id: number) => void;
   onBatchDelete?: (ids: number[]) => void;
+  className?: string;
 }
 
 export default function GameTable({
@@ -31,6 +32,7 @@ export default function GameTable({
   onEdit,
   onDelete,
   onBatchDelete,
+  className,
 }: GameTableProps) {
   const PAGE_SIZE = 20;
   const startIndex = (currentPage - 1) * PAGE_SIZE + 1;
@@ -92,7 +94,7 @@ export default function GameTable({
 
   return (
     <>
-      <div style={{ ...CARD_STYLE, padding: 0, overflow: "hidden" }}>
+      <div className={`game-table-wrapper ${className || ""}`} style={{ ...CARD_STYLE, padding: 0, overflow: "hidden" }}>
         {loading ? (
           <div
             style={{
@@ -118,6 +120,7 @@ export default function GameTable({
             <div className="empty-state-subtext">试试其他分类或关键词搜索</div>
           </div>
         ) : (
+          <div className="game-table-both" style={{ display: "contents" }}>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -385,11 +388,92 @@ export default function GameTable({
               </tbody>
             </table>
           </div>
-        )}
+          <div className="game-card-list">
+            {games.map((game) => {
+              const dbCat = game.category?.[0] || "";
+              const catKey = DB_TO_UI_KEY[dbCat] || "pc";
+              return (
+                <div className="game-card" key={game.id}>
+                  <div className="game-card-header">
+                    <input
+                      type="checkbox"
+                      className="game-card-select"
+                      checked={selectedIds.has(game.id)}
+                      onChange={() => toggleOne(game.id)}
+                    />
+                    <span className="game-card-name">{game.name}</span>
+                    <span
+                      className="game-card-cat"
+                      style={{
+                        background: `rgba(${CAT_RGBA[catKey]}, 0.12)`,
+                        color: `rgba(${CAT_RGBA[catKey]}, 0.9)`,
+                        border: `1px solid rgba(${CAT_RGBA[catKey]}, 0.25)`,
+                      }}
+                    >
+                      {CATEGORY_NAMES[catKey]}
+                    </span>
+                  </div>
+                  <div className="game-card-row">
+                    {(game.subcategory || []).length > 0 && (
+                      <>
+                        <span className="game-card-row-label">子分类：</span>
+                        {(game.subcategory || []).map((s) => (
+                          <span key={s}>{s}</span>
+                        ))}
+                      </>
+                    )}
+                    {game.code && (
+                      <>
+                        <span className="game-card-row-label" style={{ marginLeft: game.subcategory?.length ? "12px" : 0 }}>提取码：</span>
+                        <span>{game.code}</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="game-card-footer">
+                    <div className="game-card-links">
+                    {game.quarkpan && (
+                      <a href={game.quarkpan} target="_blank" style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}>夸克</a>
+                    )}
+                    {game.baidupan && (
+                      <a href={game.baidupan} target="_blank" style={{ background: "rgba(37,99,235,0.1)", color: "#2563eb" }}>百度</a>
+                    )}
+                    {game.thunderpan && (
+                      <a href={game.thunderpan} target="_blank" style={{ background: "rgba(5,150,105,0.1)", color: "#059669" }}>迅雷</a>
+                    )}
+                  </div>
+                    <div className="game-card-actions">
+                      <button
+                        onClick={() => onEdit(game)}
+                        style={{
+                          background: "rgba(33,150,243,0.1)",
+                          color: "var(--color-sony)",
+                          borderColor: "rgba(33,150,243,0.2)",
+                        }}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        onClick={() => onDelete(game.id)}
+                        style={{
+                          background: "rgba(229,57,53,0.08)",
+                          color: "var(--color-nintendo)",
+                          borderColor: "rgba(229,57,53,0.15)",
+                        }}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>)}
       </div>
 
       {/* Pagination */}
       <div
+        className="pagination"
         style={{
           display: "flex",
           justifyContent: "center",
@@ -518,6 +602,7 @@ export default function GameTable({
       {/* 批量操作浮动栏 */}
       {showBatchBar && (
         <div
+          className="batch-bar"
           style={{
             position: "fixed",
             bottom: "24px",

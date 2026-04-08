@@ -11,6 +11,7 @@ interface ToolbarProps {
   onOpenAdd: () => void;
   onDownloadTemplate: () => void;
   onRefresh: () => void;
+  className?: string;
 }
 
 export default function Toolbar({
@@ -22,9 +23,11 @@ export default function Toolbar({
   onOpenAdd,
   onDownloadTemplate,
   onRefresh,
+  className,
 }: ToolbarProps) {
   return (
     <div
+      className={`toolbar ${className || ""}`}
       style={{
         ...CARD_STYLE,
         display: "flex",
@@ -34,7 +37,7 @@ export default function Toolbar({
         padding: "10px 16px",
       }}
     >
-      <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+      <div className="toolbar-search" style={{ flex: 1, minWidth: 200, position: "relative" }}>
         <input
           type="text"
           placeholder="搜索游戏名称..."
@@ -76,6 +79,7 @@ export default function Toolbar({
       </div>
 
       <button
+        className="toolbar-btn"
         onClick={onDownloadTemplate}
         style={{
           padding: "7px 16px",
@@ -94,6 +98,7 @@ export default function Toolbar({
       </button>
 
       <button
+        className="toolbar-btn"
         onClick={onOpenImport}
         style={{
           padding: "7px 16px",
@@ -114,6 +119,7 @@ export default function Toolbar({
       </button>
 
       <button
+        className="toolbar-btn"
         onClick={onOpenAdd}
         style={{
           padding: "7px 16px",
@@ -134,6 +140,7 @@ export default function Toolbar({
       </button>
 
       <button
+        className="toolbar-btn"
         onClick={onRefresh}
         style={{
           padding: "7px 16px",
