@@ -854,15 +854,37 @@ body {
   color: #e53935;
   border-color: rgba(229, 57, 53, 0.2);
 }
-.drive-link-video:hover { background: rgba(229, 57, 53, 0.15); }
-.drive-code {
-  font-size: 11px;
-  font-family: monospace;
-  background: rgba(0,0,0,0.08);
-  padding: 1px 5px;
-  border-radius: 4px;
-  margin-left: 4px;
-  font-weight: 700;
+/* 网盘链接容器（链接+复制按钮） */
+.drive-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 复制按钮 */
+.drive-copy-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  color: #999;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.drive-copy-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #333;
+  transform: scale(1.1);
+}
+.drive-copy-btn.copied {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.3);
 }
 
 /* 分类左侧边框（原始） */
