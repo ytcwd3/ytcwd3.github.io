@@ -28,6 +28,8 @@ interface FormData {
   baidupan: string;
   thunderpan: string;
   updatedate: string;
+  image: string;
+  video: string;
 }
 
 function getDefaultDate() {
@@ -47,6 +49,8 @@ function buildGameData(formData: FormData) {
     baidupan: formData.baidupan.trim(),
     thunderpan: formData.thunderpan.trim(),
     updatedate: formData.updatedate.trim() || getDefaultDate(),
+    image: formData.image.trim(),
+    video: formData.video.trim(),
   };
 }
 
@@ -64,6 +68,8 @@ function getFormDataFromGame(game: Game | null): FormData {
       baidupan: game.baidupan || "",
       thunderpan: game.thunderpan || "",
       updatedate: game.updatedate || "",
+      image: game.image || "",
+      video: game.video || "",
     };
   }
   return {
@@ -76,6 +82,8 @@ function getFormDataFromGame(game: Game | null): FormData {
     baidupan: "",
     thunderpan: "",
     updatedate: getDefaultDate(),
+    image: "",
+    video: "",
   };
 }
 
@@ -90,6 +98,8 @@ function buildInitialData(): FormData {
     baidupan: "",
     thunderpan: "",
     updatedate: getDefaultDate(),
+    image: "",
+    video: "",
   };
 }
 
@@ -472,6 +482,30 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                 placeholder="2026.3.28"
                 style={INPUT_STYLE}
               />
+            </div>
+
+            {/* 图片 & 视频 */}
+            <div className="form-group" style={{ display: "flex", gap: "12px", marginBottom: "14px" }}>
+              <div style={{ flex: 1 }}>
+                <label style={LABEL_STYLE}>封面图片</label>
+                <input
+                  type="url"
+                  value={formData.image}
+                  onChange={(e) => setField("image", e.target.value)}
+                  placeholder="https://..."
+                  style={INPUT_STYLE}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={LABEL_STYLE}>视频链接</label>
+                <input
+                  type="url"
+                  value={formData.video}
+                  onChange={(e) => setField("video", e.target.value)}
+                  placeholder="https://..."
+                  style={INPUT_STYLE}
+                />
+              </div>
             </div>
 
             {/* 底部按钮 */}
