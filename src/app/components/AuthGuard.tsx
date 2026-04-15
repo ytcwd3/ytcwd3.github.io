@@ -1,19 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
+// 登录相关页面跳过检查
+const SKIP_PATHS = ["/admin/login", "/admin/callback"];
+
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   useEffect(() => {
+    if (SKIP_PATHS.some((p) => pathname.startsWith(p))) return;
+
     async function check() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        // 没登录，不处理
-        return;
-      }
+      if (!session) return;
 
       const githubUsername =
         session.user.user_metadata?.user_name ||
@@ -27,7 +32,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     check();
-  }, []);
+  }, [pathname]);
 
   return <>{children}</>;
 }
