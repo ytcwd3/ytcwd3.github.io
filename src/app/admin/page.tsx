@@ -248,6 +248,8 @@ export default function AdminDashboard() {
       "百度网盘链接",
       "迅雷网盘链接",
       "更新日期",
+      "封面图片",
+      "视频链接",
     ];
     const SHEET_DATA: Record<string, string[][]> = {
       PC: [
@@ -262,6 +264,8 @@ export default function AdminDashboard() {
           "https://pan.baidu.com/s/xxx",
           "https://pan.xunlei.com/s/xxx",
           "2026.3.30",
+          "https://",
+          "https://",
         ],
       ],
       NS: [
@@ -276,6 +280,8 @@ export default function AdminDashboard() {
           "https://pan.baidu.com/s/xxx",
           "https://pan.xunlei.com/s/xxx",
           "2026.3.30",
+          "https://",
+          "https://",
         ],
       ],
       任天堂掌机: [
@@ -290,6 +296,8 @@ export default function AdminDashboard() {
           "https://pan.baidu.com/s/xxx",
           "https://pan.xunlei.com/s/xxx",
           "2026.3.30",
+          "https://",
+          "https://",
         ],
       ],
       任天堂主机: [
@@ -304,6 +312,8 @@ export default function AdminDashboard() {
           "https://pan.baidu.com/s/xxx",
           "https://pan.xunlei.com/s/xxx",
           "2026.3.30",
+          "https://",
+          "https://",
         ],
       ],
       索尼: [
@@ -318,6 +328,8 @@ export default function AdminDashboard() {
           "https://pan.baidu.com/s/xxx",
           "https://pan.xunlei.com/s/xxx",
           "2026.3.30",
+          "https://",
+          "https://",
         ],
       ],
       Other: [
@@ -332,6 +344,8 @@ export default function AdminDashboard() {
           "https://pan.baidu.com/s/xxx",
           "https://pan.xunlei.com/s/xxx",
           "2026.3.30",
+          "https://",
+          "https://",
         ],
       ],
     };

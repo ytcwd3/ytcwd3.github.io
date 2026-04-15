@@ -77,6 +77,8 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
               baidupan: String(row[6] || "").trim(),
               thunderpan: String(row[7] || "").trim(),
               updatedate: String(row[8] || "").trim(),
+              image: String(row[9] || "").trim(),
+              video: String(row[10] || "").trim(),
             });
           }
         });
@@ -127,6 +129,8 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
           excelGame.baidupan !== existing.baidupan ||
           excelGame.thunderpan !== existing.thunderpan ||
           excelGame.code !== existing.code ||
+          (excelGame.image || "") !== (existing.image || "") ||
+          (excelGame.video || "") !== (existing.video || "") ||
           JSON.stringify(excelGame.category) !==
             JSON.stringify(existing.category) ||
           JSON.stringify(excelGame.subcategory) !==
@@ -175,6 +179,8 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
             baidupan: item.new.baidupan,
             thunderpan: item.new.thunderpan,
             updatedate: item.new.updatedate,
+            image: item.new.image || "",
+            video: item.new.video || "",
           })
           .eq("name", item.new.name);
 
@@ -198,6 +204,8 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
             baidupan: game.baidupan,
             thunderpan: game.thunderpan,
             updatedate: game.updatedate,
+            image: game.image || "",
+            video: game.video || "",
           },
         ]);
 

@@ -17,6 +17,8 @@ export interface Game {
   baidupan: string;
   thunderpan: string;
   updatedate: string;
+  image?: string;
+  video?: string;
 }
 
 export interface Guestbook {
