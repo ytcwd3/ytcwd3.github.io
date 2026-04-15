@@ -50,23 +50,37 @@ export default function AdminDashboard() {
   useEffect(() => {
     localStorage.clear();
     sessionStorage.clear();
+    validateSession();
+  }, []);
+
+  async function validateSession() {
     const loggedIn = localStorage.getItem("admin_logged_in");
     if (!loggedIn) {
+      window.location.href = "/admin/login";
+      return;
+    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = "/admin/login";
+      return;
+    }
+    const githubUsername =
+      session.user.user_metadata?.user_name ||
+      session.user.user_metadata?.preferred_username;
+    if (!["anyebojue", "ytcwd3"].includes(githubUsername)) {
+      localStorage.clear();
+      sessionStorage.clear();
+      await supabase.auth.signOut();
       window.location.href = "/admin/login";
       return;
     }
     setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
     applyFilters(1);
     loadAllMeta();
-  }, []);
-
-  function checkAuth() {
-    const loggedIn = localStorage.getItem("admin_logged_in");
-    if (!loggedIn) {
-      window.location.href = "/admin/login";
-      return;
-    }
-    setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
   }
 
   async function applyFilters(
