@@ -73,20 +73,40 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
                 <div className="update-record-games">
                   {grouped[date].map((game) => (
                     <div key={game.id} className="update-record-item">
-                      {game.image ? (
-                        <img
-                          src={game.image}
-                          alt={game.name}
-                          className="update-record-thumb"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
+                      <div className="update-record-thumb" style={{ position: "relative", overflow: "hidden" }}>
+                        {game.image ? (
+                          <img
+                            src={game.image}
+                            alt={game.name}
+                            loading="lazy"
+                            decoding="async"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            onError={(e) => {
+                              const el = e.target as HTMLImageElement;
+                              el.style.display = "none";
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="update-record-thumb-placeholder"
+                          style={{
+                            display: game.image ? "none" : "flex",
+                            width: "100%",
+                            height: "100%",
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: "white",
+                            background: "linear-gradient(135deg, #9333ea, #d857e8)",
                           }}
-                        />
-                      ) : (
-                        <div className="update-record-thumb update-record-thumb-placeholder">
+                        >
                           {game.name.charAt(0)}
                         </div>
-                      )}
+                      </div>
                       <span className="update-record-name">{game.name}</span>
                       <span className="update-record-category">
                         {(game.subcategory || []).join(" / ") || (game.category || []).join(" / ")}

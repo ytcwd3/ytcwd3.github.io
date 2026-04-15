@@ -1,6 +1,6 @@
 import { Game } from "@/lib/supabase";
 import { QRCodeSVG } from "qrcode.react";
-import { useState } from "react";
+import { useState, Component, ReactNode } from "react";
 
 interface GameCardProps {
   game: Game;
@@ -42,6 +42,23 @@ const CopyIcon = () => (
   </svg>
 );
 
+// 二维码错误边界：渲染失败时显示纯文字
+class QRFallback extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return <span style={{ fontSize: 10, color: "#999" }}>二维码加载失败</span>;
+    }
+    return this.props.children;
+  }
+}
+
 // 从链接中解析提取码
 function parseCodeFromUrl(url: string): string | null {
   if (!url) return null;
@@ -78,6 +95,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
           <img
             src={game.image}
             alt={game.name}
+            loading="lazy"
             style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
             onError={(e) => {
               const el = e.target as HTMLImageElement;
@@ -205,7 +223,9 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
             onClick={() => onOpenQrModal(game.quarkpan!, `${game.name} 夸克`)}
           >
             <div className="qr-label" style={{ color: "#ffc000" }}>夸克</div>
-            <QRCodeSVG value={game.quarkpan} size={60} level="M" includeMargin={false} />
+            <QRFallback>
+              <QRCodeSVG value={game.quarkpan} size={60} level="M" includeMargin={false} />
+            </QRFallback>
           </div>
         )}
         {game.baidupan && (
@@ -215,7 +235,9 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
             onClick={() => onOpenQrModal(game.baidupan!, `${game.name} 百度`)}
           >
             <div className="qr-label" style={{ color: "#2932e1" }}>百度</div>
-            <QRCodeSVG value={game.baidupan} size={60} level="M" includeMargin={false} />
+            <QRFallback>
+              <QRCodeSVG value={game.baidupan} size={60} level="M" includeMargin={false} />
+            </QRFallback>
           </div>
         )}
         {game.thunderpan && (
@@ -225,7 +247,9 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
             onClick={() => onOpenQrModal(game.thunderpan!, `${game.name} 迅雷`)}
           >
             <div className="qr-label" style={{ color: "#00b42a" }}>迅雷</div>
-            <QRCodeSVG value={game.thunderpan} size={60} level="M" includeMargin={false} />
+            <QRFallback>
+              <QRCodeSVG value={game.thunderpan} size={60} level="M" includeMargin={false} />
+            </QRFallback>
           </div>
         )}
       </div>
