@@ -1169,6 +1169,10 @@ body {
   font-weight: 700;
   line-height: 1;
 }
+.qrcode-box.qr-loading {
+  opacity: 0.6;
+  cursor: wait;
+}
 
 /* ====================== 新增：二维码放大弹窗样式 ====================== */
 .qrcode-modal {

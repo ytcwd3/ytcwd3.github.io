@@ -59,6 +59,12 @@ class QRFallback extends Component<{ children: ReactNode }, { hasError: boolean 
   }
 }
 
+// 生成二维码 data URL
+async function getQrDataUrl(value: string): Promise<string> {
+  const { default: QRCode } = await import("qrcode");
+  return QRCode.toDataURL(value, { width: 300, margin: 1, errorCorrectionLevel: "M" });
+}
+
 // 从链接中解析提取码
 function parseCodeFromUrl(url: string): string | null {
   if (!url) return null;
@@ -73,9 +79,22 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
   };
   const catColor = catColors[game.category?.[0] || ""] || "#9333ea";
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
 
   function getDisplayCode(url: string, code: string): string {
     return parseCodeFromUrl(url) || code || "8888";
+  }
+
+  async function handleQrClick(url: string, title: string) {
+    setQrLoading(true);
+    try {
+      const dataUrl = await getQrDataUrl(url);
+      onOpenQrModal(dataUrl, title);
+    } catch {
+      // 生成失败则直接用原始链接
+      onOpenQrModal(url, title);
+    }
+    setQrLoading(false);
   }
 
   function handleCopy(id: string, url: string, code: string) {
@@ -218,9 +237,9 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
       <div className="qrcode-area">
         {game.quarkpan && (
           <div
-            className="qrcode-box"
+            className={`qrcode-box ${qrLoading ? "qr-loading" : ""}`}
             title="点击放大夸克二维码"
-            onClick={() => onOpenQrModal(game.quarkpan!, `${game.name} 夸克`)}
+            onClick={() => handleQrClick(game.quarkpan!, `${game.name} 夸克`)}
           >
             <div className="qr-label" style={{ color: "#ffc000" }}>夸克</div>
             <QRFallback>
@@ -230,9 +249,9 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
         )}
         {game.baidupan && (
           <div
-            className="qrcode-box"
+            className={`qrcode-box ${qrLoading ? "qr-loading" : ""}`}
             title="点击放大百度二维码"
-            onClick={() => onOpenQrModal(game.baidupan!, `${game.name} 百度`)}
+            onClick={() => handleQrClick(game.baidupan!, `${game.name} 百度`)}
           >
             <div className="qr-label" style={{ color: "#2932e1" }}>百度</div>
             <QRFallback>
@@ -242,9 +261,9 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
         )}
         {game.thunderpan && (
           <div
-            className="qrcode-box"
+            className={`qrcode-box ${qrLoading ? "qr-loading" : ""}`}
             title="点击放大迅雷二维码"
-            onClick={() => onOpenQrModal(game.thunderpan!, `${game.name} 迅雷`)}
+            onClick={() => handleQrClick(game.thunderpan!, `${game.name} 迅雷`)}
           >
             <div className="qr-label" style={{ color: "#00b42a" }}>迅雷</div>
             <QRFallback>
