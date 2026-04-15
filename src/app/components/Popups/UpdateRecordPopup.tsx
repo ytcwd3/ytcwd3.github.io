@@ -13,6 +13,8 @@ interface GameRecord {
   updatedate: string;
   category: string[];
   subcategory: string[];
+  image?: string;
+  video?: string;
 }
 
 export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
@@ -22,9 +24,9 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
   useEffect(() => {
     supabase
       .from("games")
-      .select("id, name, updatedate, category, subcategory")
+      .select("id, name, updatedate, category, subcategory, image, video")
       .order("id", { ascending: false })
-      .limit(100)
+      .limit(200)
       .then(({ data, error }) => {
         if (error) {
           console.error("加载更新记录失败:", error);
@@ -44,7 +46,6 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
     grouped[date].push(r);
   });
   const dates = Object.keys(grouped).sort((a, b) => {
-    // 尝试按日期排序，最新的在前
     const dateA = new Date(a.replace(/\./g, "-"));
     const dateB = new Date(b.replace(/\./g, "-"));
     return isNaN(dateA.getTime()) ? 1 : isNaN(dateB.getTime()) ? -1 : dateB.getTime() - dateA.getTime();
@@ -72,10 +73,34 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
                 <div className="update-record-games">
                   {grouped[date].map((game) => (
                     <div key={game.id} className="update-record-item">
+                      {game.image ? (
+                        <img
+                          src={game.image}
+                          alt={game.name}
+                          className="update-record-thumb"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="update-record-thumb update-record-thumb-placeholder">
+                          {game.name.charAt(0)}
+                        </div>
+                      )}
                       <span className="update-record-name">{game.name}</span>
                       <span className="update-record-category">
                         {(game.subcategory || []).join(" / ") || (game.category || []).join(" / ")}
                       </span>
+                      {game.video && (
+                        <a
+                          href={game.video}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="update-record-video"
+                        >
+                          🎬
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>

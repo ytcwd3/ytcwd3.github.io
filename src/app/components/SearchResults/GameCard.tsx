@@ -14,6 +14,31 @@ export default function GameCard({
 }: GameCardProps) {
   return (
     <div className="result-item" data-category={game.category?.[0]}>
+      {/* 缩略图 */}
+      {game.image ? (
+        <div className="game-thumb">
+          <img
+            src={game.image}
+            alt={game.name}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: 6,
+            }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
+      ) : (
+        <div className="game-thumb game-thumb-placeholder">
+          <span style={{ fontSize: 12, color: "#aaa" }}>
+            {game.name.charAt(0)}
+          </span>
+        </div>
+      )}
+
       <div className="qrcode-area">
         {/* 夸克二维码 */}
         <div
@@ -149,6 +174,24 @@ export default function GameCard({
             <div className="code-item">
               <label style={{ color: "#999" }}>解压密码：</label>
               <span>{game.unzipcode}</span>
+            </div>
+          )}
+          {game.video && (
+            <div className="code-item">
+              <a
+                href={game.video}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "#e53935",
+                  textDecoration: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 3,
+                }}
+              >
+                🎬 视频教程
+              </a>
             </div>
           )}
         </div>

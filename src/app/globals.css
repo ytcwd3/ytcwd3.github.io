@@ -732,6 +732,26 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  align-items: flex-start;
+}
+
+/* 游戏缩略图 */
+.game-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.game-thumb-placeholder {
+  background: linear-gradient(135deg, #9333ea, #d857e8);
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
 }
 
 /* 分类左侧边框（原始） */
@@ -1556,13 +1576,14 @@ body {
 
 /* 单条更新记录项（适配网站卡片风格） */
 .update-record-item {
-  padding: 12px 15px;
+  padding: 10px 15px;
   margin: 8px 0;
   background: rgba(255, 255, 255, 0.8);
   border-radius: var(--radius-sm);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 10px;
   transition: all var(--transition-fast);
   cursor: default;
   border-left: 3px solid transparent; /* 分类色边框占位 */
@@ -1574,17 +1595,54 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* 更新记录缩略图 */
+.update-record-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 5px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.05);
+}
+.update-record-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #9333ea, #d857e8);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* 更新记录视频标记 */
+.update-record-video {
+  font-size: 14px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
 /* 游戏名称（主色） */
 .update-record-name {
   font-weight: 500;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 14px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 分类标签（次要色） */
 .update-record-category {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 12px;
+  flex-shrink: 0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
   background: rgba(255, 255, 255, 0.7);
   padding: 3px 8px;
   border-radius: 4px;
