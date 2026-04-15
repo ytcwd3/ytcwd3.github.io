@@ -154,7 +154,6 @@ export default function GameTable({
                     "游戏名称",
                     "主分类",
                     "子分类",
-                    "提取码",
                     "网盘链接",
                     "更新日期",
                     "操作",
@@ -231,10 +230,41 @@ export default function GameTable({
                       >
                         {startIndex + idx}
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: "14px" }}>
-                        <strong style={{ color: "var(--text-primary)" }}>
-                          {game.name}
-                        </strong>
+                      <td style={{ padding: "8px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {game.image ? (
+                            <img
+                              src={game.image}
+                              alt={game.name}
+                              style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
+                              onError={(e) => {
+                                const el = e.target as HTMLImageElement;
+                                el.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 6,
+                                background: `rgba(${CAT_RGBA[catKey]}, 0.15)`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 16,
+                                fontWeight: 700,
+                                color: `rgba(${CAT_RGBA[catKey]}, 0.9)`,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {game.name.charAt(0)}
+                            </div>
+                          )}
+                          <strong style={{ color: "var(--text-primary)", fontSize: "14px" }}>
+                            {game.name}
+                          </strong>
+                        </div>
                       </td>
                       <td style={{ padding: "11px 14px" }}>
                         <span
@@ -277,16 +307,6 @@ export default function GameTable({
                             </span>
                           ))}
                         </div>
-                      </td>
-                      <td
-                        style={{
-                          padding: "11px 14px",
-                          fontSize: "13px",
-                          fontFamily: "monospace",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        {game.code || "-"}
                       </td>
                       <td style={{ padding: "11px 14px", fontSize: "12px" }}>
                         {game.quarkpan ? (
@@ -440,15 +460,6 @@ export default function GameTable({
                           <span key={s}>{s}</span>
                         ))}
                       </>
-                    )}
-                    {(game as any).quarkcode && (
-                      <><span className="game-card-row-label">夸克：</span><span>{(game as any).quarkcode}</span></>
-                    )}
-                    {(game as any).baiducode && (
-                      <><span className="game-card-row-label">百度：</span><span>{(game as any).baiducode}</span></>
-                    )}
-                    {(game as any).thundercode && (
-                      <><span className="game-card-row-label">迅雷：</span><span>{(game as any).thundercode}</span></>
                     )}
                   </div>
                   <div className="game-card-footer">
