@@ -441,11 +441,14 @@ export default function GameTable({
                         ))}
                       </>
                     )}
-                    {game.code && (
-                      <>
-                        <span className="game-card-row-label" style={{ marginLeft: game.subcategory?.length ? "12px" : 0 }}>提取码：</span>
-                        <span>{game.code}</span>
-                      </>
+                    {(game as any).quarkcode && (
+                      <><span className="game-card-row-label">夸克：</span><span>{(game as any).quarkcode}</span></>
+                    )}
+                    {(game as any).baiducode && (
+                      <><span className="game-card-row-label">百度：</span><span>{(game as any).baiducode}</span></>
+                    )}
+                    {(game as any).thundercode && (
+                      <><span className="game-card-row-label">迅雷：</span><span>{(game as any).thundercode}</span></>
                     )}
                   </div>
                   <div className="game-card-footer">
