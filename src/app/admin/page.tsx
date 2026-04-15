@@ -48,8 +48,6 @@ export default function AdminDashboard() {
   );
 
   useEffect(() => {
-    localStorage.clear();
-    sessionStorage.clear();
     validateSession();
   }, []);
 
