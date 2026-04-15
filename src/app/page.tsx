@@ -111,7 +111,8 @@ export default function HomePage() {
 
   // 加载数据 - 不再预加载所有数据
   useEffect(() => {
-    // 页面加载时不需要预加载所有数据
+    localStorage.clear();
+    sessionStorage.clear();
   }, []);
 
   function handleSearch() {
