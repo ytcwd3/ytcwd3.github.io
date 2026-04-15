@@ -16,6 +16,7 @@ import GameTable from "./components/GameTable";
 import EditModal from "./components/EditModal";
 import ImportModal from "./components/ImportModal";
 import ConfirmModal from "./components/ConfirmModal";
+import ImageMatchModal from "./components/ImageMatchModal";
 
 export default function AdminDashboard() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImageMatchModal, setShowImageMatchModal] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
 
   // 删除确认
@@ -464,6 +466,7 @@ export default function AdminDashboard() {
           onOpenAdd={openAddModal}
           onDownloadTemplate={downloadTemplate}
           onRefresh={handleRefresh}
+          onOpenImageMatch={() => setShowImageMatchModal(true)}
         />
 
         <GameTable
@@ -496,6 +499,16 @@ export default function AdminDashboard() {
           onClose={() => setShowImportModal(false)}
           onImported={() => {
             setShowImportModal(false);
+            applyFilters(currentPage);
+          }}
+        />
+      )}
+
+      {showImageMatchModal && (
+        <ImageMatchModal
+          onClose={() => setShowImageMatchModal(false)}
+          onDone={() => {
+            setShowImageMatchModal(false);
             applyFilters(currentPage);
           }}
         />
