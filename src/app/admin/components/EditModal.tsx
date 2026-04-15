@@ -25,8 +25,11 @@ interface FormData {
   code: string;
   unzipcode: string;
   quarkpan: string;
+  quarkcode: string;
   baidupan: string;
+  baiducode: string;
   thunderpan: string;
+  thundercode: string;
   updatedate: string;
   image: string;
   video: string;
@@ -46,8 +49,11 @@ function buildGameData(formData: FormData) {
     code: formData.code.trim(),
     unzipcode: formData.unzipcode.trim(),
     quarkpan: formData.quarkpan.trim(),
+    quarkcode: formData.quarkcode.trim(),
     baidupan: formData.baidupan.trim(),
+    baiducode: formData.baiducode.trim(),
     thunderpan: formData.thunderpan.trim(),
+    thundercode: formData.thundercode.trim(),
     updatedate: formData.updatedate.trim() || getDefaultDate(),
     image: formData.image.trim(),
     video: formData.video.trim(),
@@ -65,8 +71,11 @@ function getFormDataFromGame(game: Game | null): FormData {
       code: game.code || "",
       unzipcode: game.unzipcode || "",
       quarkpan: game.quarkpan || "",
+      quarkcode: (game as any).quarkcode || "",
       baidupan: game.baidupan || "",
+      baiducode: (game as any).baiducode || "",
       thunderpan: game.thunderpan || "",
+      thundercode: (game as any).thundercode || "",
       updatedate: game.updatedate || "",
       image: game.image || "",
       video: game.video || "",
@@ -79,8 +88,11 @@ function getFormDataFromGame(game: Game | null): FormData {
     code: "",
     unzipcode: "",
     quarkpan: "",
+    quarkcode: "",
     baidupan: "",
+    baiducode: "",
     thunderpan: "",
+    thundercode: "",
     updatedate: getDefaultDate(),
     image: "",
     video: "",
@@ -95,8 +107,11 @@ function buildInitialData(): FormData {
     code: "",
     unzipcode: "",
     quarkpan: "",
+    quarkcode: "",
     baidupan: "",
+    baiducode: "",
     thunderpan: "",
+    thundercode: "",
     updatedate: getDefaultDate(),
     image: "",
     video: "",
@@ -364,51 +379,30 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
               </div>
             </div>
 
-            {/* 提取码 & 解压密码 */}
-            <div className="form-group" style={{ display: "flex", gap: "12px", marginBottom: "14px" }}>
-              <div style={{ flex: 1 }}>
-                <label style={LABEL_STYLE}>提取码</label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => setField("code", e.target.value)}
-                  style={INPUT_STYLE}
-                  placeholder="如: abc123"
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={LABEL_STYLE}>解压密码</label>
-                <input
-                  type="text"
-                  value={formData.unzipcode}
-                  onChange={(e) => setField("unzipcode", e.target.value)}
-                  style={INPUT_STYLE}
-                  placeholder="如: 1234"
-                />
-              </div>
-            </div>
-
             {/* 夸克 */}
             <div className="form-group" style={{ marginBottom: "14px" }}>
-              <label style={LABEL_STYLE}>
-                夸克网盘链接
-                <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
-                  {" "}
-                  （至少填一个，多个用换行分隔）
-                </span>
-              </label>
-              <textarea
-                value={formData.quarkpan}
-                onChange={(e) => setField("quarkpan", e.target.value)}
-                placeholder={"https://pan.quark.cn/s/...\nhttps://pan.quark.cn/s/..."}
-                rows={2}
-                style={{
-                  ...INPUT_STYLE,
-                  resize: "vertical",
-                  minHeight: "52px",
-                  borderColor: linkErrors.quarkpan ? "#e53935" : undefined,
-                }}
-              />
+              <label style={LABEL_STYLE}>夸克网盘</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  value={formData.quarkcode}
+                  onChange={(e) => setField("quarkcode", e.target.value)}
+                  style={{ ...INPUT_STYLE, width: "100px", flexShrink: 0 }}
+                  placeholder="提取码"
+                />
+                <textarea
+                  value={formData.quarkpan}
+                  onChange={(e) => setField("quarkpan", e.target.value)}
+                  placeholder="https://pan.quark.cn/s/..."
+                  rows={1}
+                  style={{
+                    ...INPUT_STYLE,
+                    resize: "vertical",
+                    flex: 1,
+                    borderColor: linkErrors.quarkpan ? "#e53935" : undefined,
+                  }}
+                />
+              </div>
               {linkErrors.quarkpan && (
                 <p style={{ color: "#e53935", fontSize: "12px", marginTop: "4px" }}>
                   {linkErrors.quarkpan}
@@ -418,25 +412,28 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
             {/* 百度 */}
             <div className="form-group" style={{ marginBottom: "14px" }}>
-              <label style={LABEL_STYLE}>
-                百度网盘链接
-                <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
-                  {" "}
-                  （多个用换行分隔）
-                </span>
-              </label>
-              <textarea
-                value={formData.baidupan}
-                onChange={(e) => setField("baidupan", e.target.value)}
-                placeholder={"https://pan.baidu.com/s/...\nhttps://pan.baidu.com/s/..."}
-                rows={2}
-                style={{
-                  ...INPUT_STYLE,
-                  resize: "vertical",
-                  minHeight: "52px",
-                  borderColor: linkErrors.baidupan ? "#e53935" : undefined,
-                }}
-              />
+              <label style={LABEL_STYLE}>百度网盘</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  value={formData.baiducode}
+                  onChange={(e) => setField("baiducode", e.target.value)}
+                  style={{ ...INPUT_STYLE, width: "100px", flexShrink: 0 }}
+                  placeholder="提取码"
+                />
+                <textarea
+                  value={formData.baidupan}
+                  onChange={(e) => setField("baidupan", e.target.value)}
+                  placeholder="https://pan.baidu.com/s/..."
+                  rows={1}
+                  style={{
+                    ...INPUT_STYLE,
+                    resize: "vertical",
+                    flex: 1,
+                    borderColor: linkErrors.baidupan ? "#e53935" : undefined,
+                  }}
+                />
+              </div>
               {linkErrors.baidupan && (
                 <p style={{ color: "#e53935", fontSize: "12px", marginTop: "4px" }}>
                   {linkErrors.baidupan}
@@ -446,25 +443,28 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
             {/* 迅雷 */}
             <div className="form-group" style={{ marginBottom: "14px" }}>
-              <label style={LABEL_STYLE}>
-                迅雷网盘链接
-                <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
-                  {" "}
-                  （多个用换行分隔）
-                </span>
-              </label>
-              <textarea
-                value={formData.thunderpan}
-                onChange={(e) => setField("thunderpan", e.target.value)}
-                placeholder={"https://pan.xunlei.com/s/...\nhttps://pan.xunlei.com/s/..."}
-                rows={2}
-                style={{
-                  ...INPUT_STYLE,
-                  resize: "vertical",
-                  minHeight: "52px",
-                  borderColor: linkErrors.thunderpan ? "#e53935" : undefined,
-                }}
-              />
+              <label style={LABEL_STYLE}>迅雷网盘</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  value={formData.thundercode}
+                  onChange={(e) => setField("thundercode", e.target.value)}
+                  style={{ ...INPUT_STYLE, width: "100px", flexShrink: 0 }}
+                  placeholder="提取码"
+                />
+                <textarea
+                  value={formData.thunderpan}
+                  onChange={(e) => setField("thunderpan", e.target.value)}
+                  placeholder="https://pan.xunlei.com/s/..."
+                  rows={1}
+                  style={{
+                    ...INPUT_STYLE,
+                    resize: "vertical",
+                    flex: 1,
+                    borderColor: linkErrors.thunderpan ? "#e53935" : undefined,
+                  }}
+                />
+              </div>
               {linkErrors.thunderpan && (
                 <p style={{ color: "#e53935", fontSize: "12px", marginTop: "4px" }}>
                   {linkErrors.thunderpan}
@@ -472,6 +472,17 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
               )}
             </div>
 
+            {/* 解压密码 */}
+            <div className="form-group" style={{ marginBottom: "14px" }}>
+              <label style={LABEL_STYLE}>解压密码</label>
+              <input
+                type="text"
+                value={formData.unzipcode}
+                onChange={(e) => setField("unzipcode", e.target.value)}
+                style={INPUT_STYLE}
+                placeholder="如: 1234"
+              />
+            </div>
             {/* 更新日期 */}
             <div className="form-group" style={{ marginBottom: "14px" }}>
               <label style={LABEL_STYLE}>更新日期</label>
