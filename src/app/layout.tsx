@@ -23,6 +23,11 @@ const polyfillScript =
   "delete Object.prototype.__mg__;" +
   "}";
 
+// 禁用F12和右键
+const disableDevToolsScript =
+  "document.addEventListener('contextmenu',e=>e.preventDefault());" +
+  "document.addEventListener('keydown',e=>{if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['I','J','C'].includes(e.key)))e.preventDefault();});";
+
 export default function RootLayout({
   children,
 }: {
@@ -32,6 +37,7 @@ export default function RootLayout({
     <html lang="zh-CN">
       <head>
         <script dangerouslySetInnerHTML={{ __html: polyfillScript }} />
+        <script dangerouslySetInnerHTML={{ __html: disableDevToolsScript }} />
       </head>
       <body>
         <AuthGuard>{children}</AuthGuard>
