@@ -63,6 +63,18 @@ export default function AdminLogin() {
     }
   }
 
+  function handleLocalTest() {
+    localStorage.setItem("admin_logged_in", "true");
+    localStorage.setItem(
+      "admin_user",
+      JSON.stringify({
+        email: "test@localhost",
+        github: "local-test",
+      }),
+    );
+    window.location.href = "/admin";
+  }
+
   return (
     <div
       style={{
@@ -148,6 +160,22 @@ export default function AdminLogin() {
           </svg>
           <span>{loading ? "跳转中..." : "使用 GitHub 登录"}</span>
         </button>
+
+        <div style={{ marginTop: 12, fontSize: 12, color: "#999" }}>
+          <button
+            onClick={handleLocalTest}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#888",
+              textDecoration: "underline",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            本地测试登录（绕过 GitHub）
+          </button>
+        </div>
 
         <div style={{ marginTop: 20, fontSize: 12, color: "#999" }}>
           <a href="/" style={{ color: "#666", textDecoration: "underline" }}>
