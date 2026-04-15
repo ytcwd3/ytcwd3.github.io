@@ -57,6 +57,8 @@ export default function AdminCallback() {
               window.location.href = "/admin";
             }, 1000);
           } else {
+            localStorage.clear();
+            sessionStorage.clear();
             await supabase.auth.signOut();
             setStatus("您没有权限访问管理后台");
             console.log("用户没有权限");
@@ -65,6 +67,8 @@ export default function AdminCallback() {
             }, 2000);
           }
         } else {
+          localStorage.clear();
+          sessionStorage.clear();
           setStatus("请使用 GitHub 账号登录");
           console.log("不是GitHub登录");
           setTimeout(() => {
@@ -73,10 +77,14 @@ export default function AdminCallback() {
         }
       } else {
         console.log("没有session，跳转回登录页");
+        localStorage.clear();
+        sessionStorage.clear();
         window.location.href = "/admin/login";
       }
     } catch (err: any) {
       console.error("Callback错误:", err);
+      localStorage.clear();
+      sessionStorage.clear();
       setStatus("验证失败: " + err.message);
       setTimeout(() => {
         window.location.href = "/admin/login";

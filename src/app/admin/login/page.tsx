@@ -42,10 +42,14 @@ export default function AdminLogin() {
         window.location.href = "/admin";
       } else {
         setError("您没有权限访问管理后台");
+        localStorage.clear();
+        sessionStorage.clear();
         await supabase.auth.signOut();
       }
     } else {
       setError("请使用 GitHub 账号登录");
+      localStorage.clear();
+      sessionStorage.clear();
     }
   }
 
