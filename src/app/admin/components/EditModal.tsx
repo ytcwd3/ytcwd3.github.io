@@ -39,6 +39,12 @@ function getDefaultDate() {
   return new Date().toLocaleDateString("zh-CN").replace(/\//g, ".");
 }
 
+function parseCodeFromUrl(url: string): string | null {
+  if (!url) return null;
+  const match = url.match(/[?&]pwd=([^&\s#]+)/i);
+  return match ? match[1] : null;
+}
+
 function buildGameData(formData: FormData) {
   const category: string[] = formData.category ? [formData.category] : [];
   const subcategory: string[] = formData.subcategory ? [formData.subcategory] : [];
@@ -71,11 +77,11 @@ function getFormDataFromGame(game: Game | null): FormData {
       code: game.code || "",
       unzipcode: game.unzipcode || "",
       quarkpan: game.quarkpan || "",
-      quarkcode: (game as any).quarkcode || "",
+      quarkcode: (game as any).quarkcode || parseCodeFromUrl(game.quarkpan) || "8888",
       baidupan: game.baidupan || "",
-      baiducode: (game as any).baiducode || "",
+      baiducode: (game as any).baiducode || parseCodeFromUrl(game.baidupan) || "8888",
       thunderpan: game.thunderpan || "",
-      thundercode: (game as any).thundercode || "",
+      thundercode: (game as any).thundercode || parseCodeFromUrl(game.thunderpan) || "8888",
       updatedate: game.updatedate || "",
       image: game.image || "",
       video: game.video || "",
@@ -107,11 +113,11 @@ function buildInitialData(): FormData {
     code: "",
     unzipcode: "",
     quarkpan: "",
-    quarkcode: "",
+    quarkcode: "8888",
     baidupan: "",
-    baiducode: "",
+    baiducode: "8888",
     thunderpan: "",
-    thundercode: "",
+    thundercode: "8888",
     updatedate: getDefaultDate(),
     image: "",
     video: "",
@@ -154,14 +160,26 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
   }, [tryClose]);
 
   function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
-    setFormData((prev) => ({ ...prev, [key]: value }));
     if (key === "name") setNameError("");
     if (["quarkpan", "baidupan", "thunderpan"].includes(key)) {
       setLinkErrors((prev) => ({ ...prev, [key]: "" }));
+      // 自动从链接识别提取码
+      const detected = parseCodeFromUrl(value as string);
+      if (detected) {
+        const codeMap: Record<string, "quarkcode" | "baiducode" | "thundercode"> = {
+          quarkpan: "quarkcode",
+          baidupan: "baiducode",
+          thunderpan: "thundercode",
+        };
+        setFormData((prev) => ({ ...prev, [key]: value, [codeMap[key as string]]: detected }));
+        return;
+      }
     }
     if (key === "category") {
       setFormData((prev) => ({ ...prev, [key]: value, subcategory: "" }));
+      return;
     }
+    setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
   async function saveAndClose() {

@@ -57,9 +57,13 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
   const catColor = catColors[game.category?.[0] || ""] || "#9333ea";
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  function getDisplayCode(url: string, code: string): string {
+    return parseCodeFromUrl(url) || code || "8888";
+  }
+
   function handleCopy(id: string, url: string, code: string) {
-    const hasCode = parseCodeFromUrl(url) || code;
-    const text = hasCode ? `${url}\n提取码：${hasCode}` : url;
+    const displayCode = getDisplayCode(url, code);
+    const text = `${url}\n提取码：${displayCode}`;
     navigator.clipboard.writeText(text).then(() => {
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 1500);
@@ -125,9 +129,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
                 className="drive-link drive-link-quark"
               >
                 <QuarkIcon /> 夸克
-                {((game as any).quarkcode || parseCodeFromUrl(game.quarkpan)) && (
-                  <span className="drive-code">{(game as any).quarkcode || parseCodeFromUrl(game.quarkpan)}</span>
-                )}
+                <span className="drive-code">{getDisplayCode(game.quarkpan, (game as any).quarkcode || "")}</span>
               </a>
               <button
                 className={`drive-copy-btn ${copiedId === "quark" ? "copied" : ""}`}
@@ -147,9 +149,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
                 className="drive-link drive-link-baidu"
               >
                 <BaiduIcon /> 百度
-                {((game as any).baiducode || parseCodeFromUrl(game.baidupan)) && (
-                  <span className="drive-code">{(game as any).baiducode || parseCodeFromUrl(game.baidupan)}</span>
-                )}
+                <span className="drive-code">{getDisplayCode(game.baidupan, (game as any).baiducode || "")}</span>
               </a>
               <button
                 className={`drive-copy-btn ${copiedId === "baidu" ? "copied" : ""}`}
@@ -169,9 +169,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
                 className="drive-link drive-link-xunlei"
               >
                 <XunleiIcon /> 迅雷
-                {((game as any).thundercode || parseCodeFromUrl(game.thunderpan)) && (
-                  <span className="drive-code">{(game as any).thundercode || parseCodeFromUrl(game.thunderpan)}</span>
-                )}
+                <span className="drive-code">{getDisplayCode(game.thunderpan, (game as any).thundercode || "")}</span>
               </a>
               <button
                 className={`drive-copy-btn ${copiedId === "thunder" ? "copied" : ""}`}
@@ -206,6 +204,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
             title="点击放大夸克二维码"
             onClick={() => onOpenQrModal(game.quarkpan!, `${game.name} 夸克`)}
           >
+            <div className="qr-label" style={{ color: "#ffc000" }}>夸克</div>
             <QRCodeSVG value={game.quarkpan} size={60} level="M" includeMargin={false} />
           </div>
         )}
@@ -215,6 +214,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
             title="点击放大百度二维码"
             onClick={() => onOpenQrModal(game.baidupan!, `${game.name} 百度`)}
           >
+            <div className="qr-label" style={{ color: "#2932e1" }}>百度</div>
             <QRCodeSVG value={game.baidupan} size={60} level="M" includeMargin={false} />
           </div>
         )}
@@ -224,6 +224,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
             title="点击放大迅雷二维码"
             onClick={() => onOpenQrModal(game.thunderpan!, `${game.name} 迅雷`)}
           >
+            <div className="qr-label" style={{ color: "#00b42a" }}>迅雷</div>
             <QRCodeSVG value={game.thunderpan} size={60} level="M" includeMargin={false} />
           </div>
         )}
