@@ -400,6 +400,20 @@ export default function GameTable({
               return (
                 <div className="game-card" key={game.id}>
                   <div className="game-card-header">
+                    {game.image ? (
+                      <img
+                        src={game.image}
+                        alt={game.name}
+                        className="game-card-thumb"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="game-card-thumb game-card-thumb-placeholder">
+                        {game.name.charAt(0)}
+                      </div>
+                    )}
                     <input
                       type="checkbox"
                       className="game-card-select"
@@ -444,6 +458,9 @@ export default function GameTable({
                     )}
                     {game.thunderpan && (
                       <a href={game.thunderpan} target="_blank" style={{ background: "rgba(5,150,105,0.1)", color: "#059669" }}>迅雷</a>
+                    )}
+                    {game.video && (
+                      <a href={game.video} target="_blank" style={{ background: "rgba(229,57,53,0.1)", color: "#e53935" }}>🎬视频</a>
                     )}
                   </div>
                     <div className="game-card-actions">
