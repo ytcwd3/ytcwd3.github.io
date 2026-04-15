@@ -8,6 +8,8 @@ import EmulatorPopup from "./components/Popups/EmulatorPopup";
 import FanGroupPopup from "./components/Popups/FanGroupPopup";
 import RewardPopup from "./components/Popups/RewardPopup";
 import UpdateRecordPopup from "./components/Popups/UpdateRecordPopup";
+import ToolPatchPopup from "./components/Popups/ToolPatchPopup";
+import HelpCenterPopup from "./components/Popups/HelpCenterPopup";
 import QrCodeModal from "./components/QrCode/QrCodeModal";
 
 // 子分类数据
@@ -417,6 +419,12 @@ export default function HomePage() {
           <button className="popup-btn" onClick={() => togglePopup("popup4")}>
             打赏捐赠
           </button>
+          <button className="popup-btn" onClick={() => togglePopup("popup6")}>
+            工具补丁
+          </button>
+          <button className="popup-btn" onClick={() => togglePopup("popup7")}>
+            帮助中心
+          </button>
         </div>
 
         <div className="update-record-btn-container">
@@ -505,6 +513,28 @@ export default function HomePage() {
           <UpdateRecordPopup
             onClose={() => togglePopup("popup5")}
           />
+        </div>
+      )}
+
+      {/* 工具补丁弹窗 */}
+      {showPopups["popup6"] && (
+        <div
+          className="popup-mask"
+          style={{ display: "flex" }}
+          onClick={() => togglePopup("popup6")}
+        >
+          <ToolPatchPopup onClose={() => togglePopup("popup6")} />
+        </div>
+      )}
+
+      {/* 帮助中心弹窗 */}
+      {showPopups["popup7"] && (
+        <div
+          className="popup-mask"
+          style={{ display: "flex" }}
+          onClick={() => togglePopup("popup7")}
+        >
+          <HelpCenterPopup onClose={() => togglePopup("popup7")} />
         </div>
       )}
 
