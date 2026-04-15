@@ -14,8 +14,11 @@ export interface Game {
   code: string;
   unzipcode: string;
   quarkpan: string;
+  quarkcode: string;
   baidupan: string;
+  baiducode: string;
   thunderpan: string;
+  thundercode: string;
   updatedate: string;
   image?: string;
   video?: string;
