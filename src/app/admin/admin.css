@@ -1,5 +1,10 @@
 /* 管理后台移动端适配 */
 
+/* 桌面端默认隐藏卡片列表（由移动端媒体查询控制显示） */
+.game-card-list {
+  display: none;
+}
+
 /* 通用移动端适配 */
 @media (max-width: 768px) {
   /* Header 移动端 */
@@ -86,11 +91,7 @@
     -webkit-overflow-scrolling: touch !important;
   }
 
-  /* 桌面端保持原有表格样式 */
-  .game-card-list {
-    display: none;
-  }
-
+  /* 表格最小宽度 */
   .game-table-wrapper table {
     min-width: 700px;
   }
