@@ -15,31 +15,68 @@ interface MatchResult {
   message?: string;
 }
 
+// Steam 搜索（PC游戏优先）
+async function searchSteam(name: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(name)}&l=schinese&cc=CN&v=1`,
+      { headers: { "User-Agent": "Mozilla/5.0" } },
+    );
+    const json = await res.json();
+    if (json.items && json.items.length > 0) {
+      return json.items[0].header_image || json.items[0].tiny_image || null;
+    }
+  } catch {}
+  return null;
+}
+
+// RAWG 搜索（备用）
+const RAWG_KEY = process.env.NEXT_PUBLIC_RAWG_API_KEY || "";
+async function searchRawg(name: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.rawg.io/api/games?key=${RAWG_KEY}&search=${encodeURIComponent(name)}&page_size=1`,
+    );
+    const json = await res.json();
+    if (json.results && json.results.length > 0) {
+      const g = json.results[0];
+      return (
+        g.background_image ||
+        g.background_image_additional ||
+        (g.short_screenshots && g.short_screenshots[0]?.image) ||
+        null
+      );
+    }
+  } catch {}
+  return null;
+}
+
+// 判断游戏平台
+function isPCGame(subcategory: string[]): boolean {
+  const sub = subcategory?.[0] || "";
+  // PC分类的子分类
+  const pcSubs = ["必备软件", "各种合集", "网游单机", "横版过关", "平台跳跃",
+    "战棋策略", "RPG", "双人", "射击", "动作", "经营", "魂类", "竞速运动",
+    "潜行", "解谜", "格斗无双", "恐怖", "不正经", "小游戏", "修改器金手指", "互动影游"];
+  return pcSubs.includes(sub);
+}
+
+// Steam 匹配策略说明
+const STRATEGIES = [
+  { icon: "🎮", name: "PC游戏", desc: "优先 Steam → 备用 RAWG", platforms: "PC分类" },
+  { icon: "🕹️", name: "NS/掌机/索尼", desc: "使用 RAWG 搜索", platforms: "NS、3DS、GBA、PSP等" },
+];
+
 export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProps) {
   const [step, setStep] = useState<"intro" | "loading" | "matching" | "done">("intro");
   const [results, setResults] = useState<MatchResult[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cancel, setCancel] = useState(false);
-  const [totalGames, setTotalGames] = useState(0);
 
-  const apiKey = process.env.NEXT_PUBLIC_RAWG_API_KEY;
-
-  // 第一步：快速查询需要匹配的游戏数量
-  async function getGamesCount(): Promise<number> {
-    const { count, error } = await supabase
-      .from("games")
-      .select("id", { count: "exact", head: true })
-      .or("image.is.null,image.eq.");
-
-    if (error) throw error;
-    return count || 0;
-  }
-
-  // 第二步：获取需要匹配的游戏
   async function getGamesWithoutImages(limit: number): Promise<Game[]> {
     const { data, error } = await supabase
       .from("games")
-      .select("id, name")
+      .select("id, name, category, subcategory")
       .or("image.is.null,image.eq.")
       .order("id", { ascending: true })
       .limit(limit);
@@ -52,25 +89,18 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
     setStep("loading");
 
     try {
-      // 先查总数
-      const count = await getGamesCount();
-      setTotalGames(count);
+      const LIMIT = 200;
+      const games = await getGamesWithoutImages(LIMIT);
 
-      if (count === 0) {
+      if (games.length === 0) {
         setStep("done");
         return;
       }
-
-      // 限制每次处理数量，避免超时
-      const LIMIT = 200;
-      const games = await getGamesWithoutImages(LIMIT);
 
       setResults(games.map((g) => ({ name: g.name, status: "pending" as const })));
       setStep("matching");
       setCurrentIndex(0);
       setCancel(false);
-
-      const cache: Record<string, string | null> = {};
 
       for (let i = 0; i < games.length; i++) {
         if (cancel) break;
@@ -82,66 +112,36 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
           prev.map((r, idx) => (idx === i ? { ...r, status: "pending" } : r)),
         );
 
-        let imageUrl = cache[game.name];
-        if (imageUrl === undefined) {
-          try {
-            const params = new URLSearchParams({
-              key: apiKey || "",
-              search: game.name,
-              page_size: "1",
-            });
-            const res = await fetch(
-              `https://api.rawg.io/api/games?${params.toString()}`,
-            );
-            const json = await res.json();
+        let imageUrl: string | null = null;
+        const sub = game.subcategory || [];
+        const isPC = isPCGame(sub);
 
-            const results_data = json.results as any[];
-            if (results_data && results_data.length > 0) {
-              const match = results_data[0];
-              imageUrl =
-                match.background_image ||
-                match.background_image_additional ||
-                null;
-              if (!imageUrl && match.short_screenshots) {
-                for (const shot of match.short_screenshots) {
-                  if (shot.image) {
-                    imageUrl = shot.image;
-                    break;
-                  }
-                }
-              }
-            } else {
-              imageUrl = null;
-            }
-            cache[game.name] = imageUrl;
-          } catch {
-            imageUrl = null;
-            cache[game.name] = null;
+        if (isPC) {
+          // PC游戏先搜Steam，再备用Rawg
+          imageUrl = await searchSteam(game.name);
+          if (!imageUrl) {
+            await new Promise((r) => setTimeout(r, 200));
+            imageUrl = await searchRawg(game.name);
           }
-
-          // API 限速
-          await new Promise((r) => setTimeout(r, 120));
+        } else {
+          // 非PC用Rawg
+          imageUrl = await searchRawg(game.name);
         }
 
-        if (imageUrl) {
-          const { error } = await supabase
-            .from("games")
-            .update({ image: imageUrl })
-            .eq("id", game.id);
+        // RAWG限速
+        await new Promise((r) => setTimeout(r, 150));
 
+        if (imageUrl) {
+          await supabase.from("games").update({ image: imageUrl }).eq("id", game.id);
           setResults((prev) =>
             prev.map((r, idx) =>
-              idx === i
-                ? { ...r, status: "success", image: imageUrl! }
-                : r,
+              idx === i ? { ...r, status: "success", image: imageUrl! } : r,
             ),
           );
         } else {
           setResults((prev) =>
             prev.map((r, idx) =>
-              idx === i
-                ? { ...r, status: "failed", message: "未找到匹配图片" }
-                : r,
+              idx === i ? { ...r, status: "failed", message: "未找到" } : r,
             ),
           );
         }
@@ -149,18 +149,18 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
 
       setStep("done");
     } catch (err: any) {
-      alert("加载失败: " + err.message);
+      alert("失败: " + err.message);
       setStep("intro");
     }
   }
 
+  const success = results.filter((r) => r.status === "success").length;
+  const failed = results.filter((r) => r.status === "failed").length;
+  const pending = results.filter((r) => r.status === "pending").length;
+
   return (
     <>
-      <div
-        className="popup-mask modal-overlay"
-        style={{ display: "flex" }}
-        onClick={onClose}
-      >
+      <div className="popup-mask modal-overlay" style={{ display: "flex" }} onClick={onClose}>
         <div
           className="popup-content modal-content"
           style={{ maxWidth: 680, maxHeight: "85vh", display: "flex", flexDirection: "column" }}
@@ -196,30 +196,53 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
           {/* Body */}
           <div style={{ flex: 1, overflow: "auto" }}>
             {step === "intro" && (
-              <div style={{ textAlign: "center", padding: "30px 0" }}>
-                <p style={{ fontSize: 36, marginBottom: 12 }}>🖼️</p>
-                <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>
-                  基于 RAWG 游戏数据库自动匹配封面图
+              <div style={{ padding: "10px 0" }}>
+                <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
+                  匹配策略说明：
                 </p>
-                <p style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 20 }}>
-                  每次处理 200 个游戏，匹配成功自动更新数据库
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                  {STRATEGIES.map((s) => (
+                    <div
+                      key={s.name}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 14px",
+                        background: "rgba(0,0,0,0.03)",
+                        borderRadius: 8,
+                        border: "1px solid var(--border-light)",
+                      }}
+                    >
+                      <span style={{ fontSize: 20 }}>{s.icon}</span>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{s.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 20 }}>
+                  每次处理 200 个游戏，中文名搜不到可手动补充
                 </p>
-                <button
-                  onClick={startMatching}
-                  style={{
-                    padding: "10px 32px",
-                    background: "linear-gradient(90deg, #2563eb, #7c3aed)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "var(--radius-md)",
-                    cursor: "pointer",
-                    fontSize: 15,
-                    fontWeight: 600,
-                    boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
-                  }}
-                >
-                  开始匹配
-                </button>
+                <div style={{ textAlign: "center" }}>
+                  <button
+                    onClick={startMatching}
+                    style={{
+                      padding: "10px 40px",
+                      background: "linear-gradient(90deg, #2563eb, #7c3aed)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "var(--radius-md)",
+                      cursor: "pointer",
+                      fontSize: 15,
+                      fontWeight: 600,
+                      boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
+                    }}
+                  >
+                    开始匹配
+                  </button>
+                </div>
               </div>
             )}
 
@@ -227,44 +250,23 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <div className="loading" style={{ justifyContent: "center" }} />
                 <p style={{ color: "var(--text-secondary)", marginTop: 12, fontSize: 14 }}>
-                  正在查询数据（{totalGames} 个游戏待匹配）...
+                  正在加载待匹配游戏...
                 </p>
               </div>
             )}
 
             {step === "matching" && (
               <div>
-                {/* 进度 */}
+                {/* 进度条 */}
                 <div style={{ marginBottom: 12 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: 12,
-                      color: "var(--text-secondary)",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>
                     <span>处理中 {currentIndex + 1} / {results.length}</span>
                     <span>
-                      成功{" "}
-                      <b style={{ color: "var(--success-color)" }}>
-                        {results.filter((r) => r.status === "success").length}
-                      </b>{" "}
-                      / 失败{" "}
-                      <b style={{ color: "var(--danger-color)" }}>
-                        {results.filter((r) => r.status === "failed").length}
-                      </b>
+                      成功 <b style={{ color: "var(--success-color)" }}>{success}</b>
+                      {" "}/ 失败 <b style={{ color: "var(--danger-color)" }}>{failed}</b>
                     </span>
                   </div>
-                  <div
-                    style={{
-                      height: 6,
-                      background: "rgba(0,0,0,0.08)",
-                      borderRadius: 3,
-                      overflow: "hidden",
-                    }}
-                  >
+                  <div style={{ height: 6, background: "rgba(0,0,0,0.08)", borderRadius: 3, overflow: "hidden" }}>
                     <div
                       style={{
                         height: "100%",
@@ -293,15 +295,8 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
                   </div>
                 )}
 
-                {/* 结果列表 */}
-                <div
-                  style={{
-                    maxHeight: 280,
-                    overflow: "auto",
-                    border: "1px solid var(--border-light)",
-                    borderRadius: 8,
-                  }}
-                >
+                {/* 结果列表（只显示最近10条）*/}
+                <div style={{ maxHeight: 280, overflow: "auto", border: "1px solid var(--border-light)", borderRadius: 8 }}>
                   {results.slice(Math.max(0, currentIndex - 10), currentIndex + 1).map((r, i) => (
                     <div
                       key={i}
@@ -315,11 +310,7 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
                       }}
                     >
                       <span style={{ fontSize: 13 }}>
-                        {r.status === "success"
-                          ? "✅"
-                          : r.status === "failed"
-                            ? "❌"
-                            : "⏳"}
+                        {r.status === "success" ? "✅" : r.status === "failed" ? "❌" : "⏳"}
                       </span>
                       <span
                         style={{
@@ -327,12 +318,8 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
-                          color:
-                            r.status === "failed"
-                              ? "var(--danger-color)"
-                              : r.status === "success"
-                                ? "var(--success-color)"
-                                : "var(--text-secondary)",
+                          color: r.status === "failed" ? "var(--danger-color)"
+                            : r.status === "success" ? "var(--success-color)" : "var(--text-secondary)",
                         }}
                       >
                         {r.name}
@@ -342,9 +329,7 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
                           src={r.image}
                           alt=""
                           style={{ width: 36, height: 24, objectFit: "cover", borderRadius: 3, flexShrink: 0 }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
                       )}
                     </div>
@@ -372,29 +357,19 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
             {step === "done" && (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <p style={{ fontSize: 36, marginBottom: 8 }}>
-                  {results.filter((r) => r.status === "success").length > 0 ? "🎉" : "😅"}
+                  {success > 0 ? "🎉" : "😅"}
                 </p>
-                <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-                  匹配完成！
-                </p>
+                <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>匹配完成！</p>
                 <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
-                  成功匹配{" "}
-                  <b style={{ color: "var(--success-color)" }}>
-                    {results.filter((r) => r.status === "success").length}
-                  </b>{" "}
-                  个 / 匹配失败{" "}
-                  <b style={{ color: "var(--danger-color)" }}>
-                    {results.filter((r) => r.status === "failed").length}
-                  </b>{" "}
-                  个 / 取消{" "}
-                  <b style={{ color: "var(--warning-color)" }}>
-                    {results.filter((r) => r.status === "pending").length}
-                  </b>{" "}
-                  个
+                  成功 <b style={{ color: "var(--success-color)" }}>{success}</b>{" "}
+                  / 失败 <b style={{ color: "var(--danger-color)" }}>{failed}</b>
+                  {pending > 0 && ` / 取消 <b style={{color:"var(--warning-color)"}}>${pending}</b>`}
                 </p>
-                <p style={{ color: "var(--text-tertiary)", fontSize: 12, marginTop: 8 }}>
-                  每次处理 200 个，更多游戏可在结果页继续匹配
-                </p>
+                {failed > 0 && (
+                  <p style={{ color: "var(--text-tertiary)", fontSize: 12, marginTop: 8 }}>
+                    失败的游戏大多为中文名，可手动去 Steam/Rawg 搜索补充图片
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -423,7 +398,7 @@ export default function ImageMatchModal({ onClose, onDone }: ImageMatchModalProp
                 fontSize: 13,
               }}
             >
-              {step === "done" || step === "intro" ? "关闭" : "取消"}
+              关闭
             </button>
           </div>
         </div>
