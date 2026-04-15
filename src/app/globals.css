@@ -719,39 +719,150 @@ body {
   width: 100%;
 }
 
-/* 结果项（适配迅雷网盘二维码布局） */
+/* 结果项（重构：左图+中信息+右二维码） */
 .result-item {
-  padding: 12px 18px;
-  border-radius: var(--radius-sm);
-  background-color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 10px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background-color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 12px;
   transition: all var(--transition-fast);
   border-left: 3px solid transparent;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-wrap: nowrap;
+  gap: 14px;
   align-items: flex-start;
 }
 
 /* 游戏缩略图 */
 .game-thumb {
-  width: 56px;
-  height: 56px;
-  border-radius: 6px;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
   background: rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
-.game-thumb-placeholder {
-  background: linear-gradient(135deg, #9333ea, #d857e8);
-  color: white;
+
+/* 中间区域 */
+.result-middle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 游戏名称行 */
+.game-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+.game-index {
   font-weight: 700;
-  font-size: 18px;
+  font-size: 15px;
+}
+.game-name-text {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 15px;
+  word-break: break-all;
+}
+.game-cat-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 提取码行 */
+.game-code-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+}
+.game-code-label {
+  color: #999;
+  font-size: 12px;
+}
+.game-code-value {
+  color: #333;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 600;
+  background: #f5f5f5;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+/* 网盘链接行 */
+.game-links-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+.drive-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid;
+}
+.drive-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.drive-link-quark {
+  background: rgba(255, 192, 0, 0.1);
+  color: #e6a100;
+  border-color: rgba(255, 192, 0, 0.3);
+}
+.drive-link-quark:hover { background: rgba(255, 192, 0, 0.2); }
+.drive-link-baidu {
+  background: rgba(41, 50, 225, 0.08);
+  color: #2932e1;
+  border-color: rgba(41, 50, 225, 0.25);
+}
+.drive-link-baidu:hover { background: rgba(41, 50, 225, 0.15); }
+.drive-link-xunlei {
+  background: rgba(0, 180, 42, 0.08);
+  color: #00b42a;
+  border-color: rgba(0, 180, 42, 0.25);
+}
+.drive-link-xunlei:hover { background: rgba(0, 180, 42, 0.15); }
+.drive-link-video {
+  background: rgba(229, 57, 53, 0.08);
+  color: #e53935;
+  border-color: rgba(229, 57, 53, 0.2);
+}
+.drive-link-video:hover { background: rgba(229, 57, 53, 0.15); }
+.drive-code {
+  font-size: 11px;
+  font-family: monospace;
+  background: rgba(0,0,0,0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+  font-weight: 700;
 }
 
 /* 分类左侧边框（原始） */
@@ -999,22 +1110,28 @@ body {
 /* ====================== 原有二维码基础样式（适配迅雷） ====================== */
 .qrcode-area {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
 }
 .qrcode-box {
-  width: 80px;
+  width: 66px;
+  height: 66px;
   text-align: center;
   background: white;
-  padding: 6px;
-  border-radius: var(--radius-sm);
+  padding: 3px;
+  border-radius: 8px;
   border: 1px solid var(--border-light);
   cursor: pointer;
   transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .qrcode-box:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-color: var(--accent-color);
 }
 .qrcode-box p {
@@ -1022,35 +1139,6 @@ body {
   color: var(--text-secondary);
   margin-top: 5px;
   font-weight: 600;
-}
-.result-content-wrap {
-  flex: 1;
-  min-width: 200px;
-}
-.pan-links {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--border-light);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.pan-link-item {
-  font-size: 14px;
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  flex-basis: 100%;
-}
-.pan-link-item label {
-  color: var(--text-gray);
-  font-weight: 500;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.pan-link-item a {
-  overflow-wrap: break-word;
-  word-break: break-all;
 }
 
 /* ====================== 新增：二维码放大弹窗样式 ====================== */
@@ -1127,30 +1215,6 @@ body {
 .qrcode-modal-tip {
   font-size: 13px;
   color: var(--text-tertiary);
-}
-
-/* ====================== 新增：解压密码样式 ====================== */
-.code-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 4px;
-}
-.code-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.code-item label {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-.code-item span {
-  font-family: monospace;
-  color: var(--text-dark);
-  background: #e2e8f0;
-  padding: 2px 6px;
-  border-radius: 4px;
 }
 
 /* ====================== 核心修改：打赏二维码弹窗（强制横向排列） ====================== */
@@ -1373,8 +1437,37 @@ body {
   }
   .result-item {
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .game-thumb {
+    width: 56px;
+    height: 56px;
+  }
+  .result-middle {
+    width: 100%;
+  }
+  .game-title-row {
+    font-size: 14px;
+  }
+  .game-name-text {
+    font-size: 14px;
+  }
+  .game-code-row {
+    font-size: 12px;
+  }
+  .game-links-row {
+    gap: 6px;
+  }
+  .qrcode-area {
+    justify-content: flex-start;
+    width: 100%;
+    gap: 6px;
+  }
+  .qrcode-box {
+    width: 60px;
+    height: 60px;
   }
   body {
     background-image: url("/bg.jpg") !important;
@@ -1441,42 +1534,8 @@ body {
 
   /* 二维码基础样式适配 */
   .qrcode-area {
-    justify-content: center;
-    width: 100%;
-  }
-  .result-content-wrap {
-    text-align: left;
-  }
-  .code-row {
-    flex-direction: column;
-    gap: 6px;
-  }
-  .code-item {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-  .code-item span {
-    word-break: break-all;
-  }
-  .pan-links {
     justify-content: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .pan-link-item {
-    font-size: 14px;
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    flex-basis: 100%;
-  }
-  .pan-link-item label {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .pan-link-item a {
-    overflow-wrap: break-word;
-    word-break: break-all;
+    width: 100%;
   }
 
   /* 二维码放大弹窗适配 */
