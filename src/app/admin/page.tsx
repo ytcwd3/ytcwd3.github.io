@@ -48,7 +48,14 @@ export default function AdminDashboard() {
   );
 
   useEffect(() => {
-    checkAuth();
+    localStorage.clear();
+    sessionStorage.clear();
+    const loggedIn = localStorage.getItem("admin_logged_in");
+    if (!loggedIn) {
+      window.location.href = "/admin/login";
+      return;
+    }
+    setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
     applyFilters(1);
     loadAllMeta();
   }, []);
