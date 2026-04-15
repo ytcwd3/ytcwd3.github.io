@@ -1,7 +1,8 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Game } from "@/lib/supabase";
 
 interface HeaderProps {
   user: { github?: string; email?: string } | null;
@@ -9,6 +10,9 @@ interface HeaderProps {
 }
 
 export default function AdminHeader({ user, className }: HeaderProps) {
+  const pathname = usePathname();
+  const isLinksPage = pathname === "/admin/links";
+
   async function handleLogout() {
     await supabase.auth.signOut();
     localStorage.removeItem("admin_logged_in");
@@ -45,10 +49,26 @@ export default function AdminHeader({ user, className }: HeaderProps) {
           单游仓鼠 · 游戏资源管理
         </p>
       </div>
-      <div className="admin-header-user" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+      <div className="admin-header-user" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <span style={{ fontSize: "12px", opacity: 0.9 }}>
           👤 {user?.github || user?.email}
         </span>
+        <Link
+          href={isLinksPage ? "/admin" : "/admin/links"}
+          style={{
+            background: "rgba(255,255,255,0.15)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            color: "white",
+            padding: "5px 12px",
+            borderRadius: "var(--radius-sm)",
+            cursor: "pointer",
+            fontSize: "12px",
+            textDecoration: "none",
+            transition: "all 0.2s",
+          }}
+        >
+          {isLinksPage ? "📊 数据管理" : "🔗 链接管理"}
+        </Link>
         <button
           onClick={handleLogout}
           style={{
