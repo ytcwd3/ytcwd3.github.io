@@ -41,7 +41,12 @@ export default function GameTable({
   // 批量选择
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBatchBar, setShowBatchBar] = useState(false);
-  const [pageInput, setPageInput] = useState("");
+  const [pageInput, setPageInput] = useState(String(currentPage));
+  const [pageError, setPageError] = useState("");
+
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
 
   const allOnPageSelected =
     games.length > 0 && games.every((g) => selectedIds.has(g.id));
@@ -530,7 +535,6 @@ export default function GameTable({
           <input
             type="number"
             min={1}
-            max={totalPages}
             value={pageInput}
             onChange={(e) => setPageInput(e.target.value)}
             onKeyDown={(e) => {
@@ -538,12 +542,11 @@ export default function GameTable({
                 const page = parseInt(pageInput, 10);
                 if (!isNaN(page) && page >= 1 && page <= totalPages) {
                   onPageChange(page);
-                  setPageInput("");
                 }
               }
             }}
             style={{
-              width: "48px",
+              width: "64px",
               padding: "4px 8px",
               fontSize: "13px",
               border: "1px solid var(--border-light)",
@@ -559,9 +562,13 @@ export default function GameTable({
           <button
             onClick={() => {
               const page = parseInt(pageInput, 10);
-              if (!isNaN(page) && page >= 1 && page <= totalPages) {
+              if (isNaN(page) || page < 1) {
+                setPageError("请输入有效的页码");
+              } else if (page > totalPages) {
+                setPageError(`最多只能输入第 ${totalPages} 页`);
+              } else {
+                setPageError("");
                 onPageChange(page);
-                setPageInput("");
               }
             }}
             style={{
@@ -578,6 +585,11 @@ export default function GameTable({
           >
             跳转
           </button>
+          {pageError && (
+            <span style={{ fontSize: "12px", color: "#ef4444", marginLeft: 4 }}>
+              {pageError}
+            </span>
+          )}
         </div>
         <button
           onClick={() => onPageChange(currentPage + 1)}
