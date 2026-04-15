@@ -29,3 +29,11 @@ export interface Guestbook {
   admin_id?: string;
   is_reply?: boolean;
 }
+
+export interface SiteLink {
+  id: number;
+  type: "tool" | "help";
+  name: string;
+  url: string;
+  created_at?: string;
+}
