@@ -10,7 +10,7 @@ export default function EmulatorPopup({ onClose }: EmulatorPopupProps) {
       </span>
       <h3 className="popup-title">模拟器大全</h3>
       <div className="popup-text">
-        <p>1. 夸克：https://pan.quark.cn/s/03d883257f8f/</p>
+        <p>1. 夸克：https://pan.quark.cn/s/37749fb7d441</p>
         <p>
           2. 百度：https://pan.baidu.com/s/1sXOTOkot8gR78h4Aj7NCDg?pwd=aty3/
         </p>
