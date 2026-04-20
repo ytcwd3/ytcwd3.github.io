@@ -5,16 +5,21 @@ import { useState, useEffect, useRef, useCallback } from "react";
 interface MatchResult {
   done: boolean;
   matched: number;
+  updated: number;
+  skipped: number;
   failed: number;
   remaining: number;
   batchSize: number;
+  mode: string;
 }
 
 export default function ImageMatchModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [step, setStep] = useState<"intro" | "loading" | "matching" | "done">("intro");
-  const [status, setStatus] = useState({ matched: 0, failed: 0, total: 0 });
+  const [mode, setMode] = useState<"unmatched" | "all">("unmatched");
+  const [status, setStatus] = useState({ matched: 0, updated: 0, skipped: 0, failed: 0, total: 0 });
   const [remaining, setRemaining] = useState(0);
   const [currentBatch, setCurrentBatch] = useState(0);
+  const [unmatchedTotal, setUnmatchedTotal] = useState(0);
   const runningRef = useRef(true);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -22,7 +27,7 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
     if (!runningRef.current) return;
 
     try {
-      const res = await fetch("/api/match-images", { method: "POST" });
+      const res = await fetch(`/api/match-images?mode=${mode}`, { method: "POST" });
       const json: MatchResult & { error?: string } = await res.json();
 
       if (json.error) {
@@ -32,9 +37,11 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
       }
 
       setStatus((prev) => ({
-        matched: prev.matched + json.matched,
-        failed: prev.failed + json.failed,
-        total: prev.total + json.matched + json.failed,
+        matched: prev.matched + (json.matched || 0),
+        updated: prev.updated + (json.updated || 0),
+        skipped: prev.skipped + (json.skipped || 0),
+        failed: prev.failed + (json.failed || 0),
+        total: prev.total + json.matched + json.updated + json.failed,
       }));
       setRemaining(json.remaining);
       setCurrentBatch((b) => b + 1);
@@ -50,21 +57,30 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
       alert("网络错误: " + err.message);
       setStep("intro");
     }
-  }, []);
+  }, [mode]);
 
-  async function startMatching() {
+  async function startMatching(selectedMode: "unmatched" | "all") {
+    setMode(selectedMode);
     setStep("loading");
 
     try {
-      const res = await fetch("/api/match-images");
+      const res = await fetch(`/api/match-images?mode=${selectedMode}`);
       const json = await res.json();
-      if (json.total === 0) {
-        setStatus({ matched: 0, failed: 0, total: 0 });
-        setStep("done");
-        return;
+
+      if (selectedMode === "unmatched") {
+        setUnmatchedTotal(json.total || 0);
+        if (json.total === 0) {
+          setStatus({ matched: 0, updated: 0, skipped: 0, failed: 0, total: 0 });
+          setStep("done");
+          return;
+        }
+        setRemaining(json.total);
+      } else {
+        setUnmatchedTotal(json.total || 0);
+        setRemaining(-1); // all 模式不显示剩余数
       }
-      setStatus({ matched: 0, failed: 0, total: 0 });
-      setRemaining(json.total);
+
+      setStatus({ matched: 0, updated: 0, skipped: 0, failed: 0, total: 0 });
       setCurrentBatch(0);
       setStep("matching");
       runningRef.current = true;
@@ -91,9 +107,13 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
     };
   }, []);
 
-  const pct = status.total > 0
-    ? Math.round(((status.matched + status.failed) / (status.matched + status.failed + remaining)) * 100)
-    : 0;
+  const isAllMode = mode === "all";
+  const processed = status.matched + status.updated + status.failed;
+  const pct = isAllMode
+    ? 0
+    : (status.total > 0 && unmatchedTotal > 0
+      ? Math.round((status.total / unmatchedTotal) * 100)
+      : 0);
 
   return (
     <>
@@ -141,31 +161,50 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left", marginBottom: 20, padding: "0 10px" }}>
                   <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                    <b>PC游戏：</b>Steam 优先 → RAWG 备用
+                    <b>PC游戏：</b>Steam → steambk → 其他中文站 → RAWG
                   </div>
                   <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                    <b>NS/掌机/索尼：</b>RAWG 搜索
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                    预计 10-30 分钟完成，中途关闭页面下次继续即可
+                    <b>NS/掌机/索尼：</b>中文游戏站 → RAWG
                   </div>
                 </div>
-                <button
-                  onClick={startMatching}
-                  style={{
-                    padding: "10px 40px",
-                    background: "linear-gradient(90deg, #2563eb, #7c3aed)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "var(--radius-md)",
-                    cursor: "pointer",
-                    fontSize: 15,
-                    fontWeight: 600,
-                    boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
-                  }}
-                >
-                  开始匹配
-                </button>
+
+                {/* 匹配选项 */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+                  <button
+                    onClick={() => startMatching("unmatched")}
+                    style={{
+                      padding: "12px 24px",
+                      background: "linear-gradient(90deg, #2563eb, #7c3aed)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "var(--radius-md)",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
+                    }}
+                  >
+                    🔍 匹配未匹配图片
+                  </button>
+                  <button
+                    onClick={() => startMatching("all")}
+                    style={{
+                      padding: "12px 24px",
+                      background: "rgba(255,255,255,0.9)",
+                      color: "var(--primary-color)",
+                      border: "1px solid var(--primary-color)",
+                      borderRadius: "var(--radius-md)",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                  >
+                    🔄 重新匹配全部图片
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 400, color: "var(--text-secondary)", marginTop: 2 }}>
+                      用更优质来源覆盖现有图片
+                    </span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -173,7 +212,7 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <div className="loading" style={{ justifyContent: "center" }} />
                 <p style={{ color: "var(--text-secondary)", marginTop: 12, fontSize: 14 }}>
-                  正在检查待匹配游戏数量...
+                  正在检查游戏数量...
                 </p>
               </div>
             )}
@@ -184,42 +223,88 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-secondary)", marginBottom: 6 }}>
                     <span>第 {currentBatch + 1} 批处理中</span>
-                    <span>
-                      已完成 <b style={{ color: "var(--success-color)" }}>{status.matched + status.failed}</b>
-                      {" "}/ 剩余 <b style={{ color: "var(--text-secondary)" }}>{remaining}</b>
-                    </span>
+                    {!isAllMode && remaining > 0 && (
+                      <span>
+                        已完成 <b style={{ color: "var(--success-color)" }}>{status.total}</b>
+                        {" "}/ 剩余 <b style={{ color: "var(--text-secondary)" }}>{remaining}</b>
+                      </span>
+                    )}
+                    {isAllMode && (
+                      <span>
+                        已处理 <b style={{ color: "var(--success-color)" }}>{processed}</b>
+                      </span>
+                    )}
                   </div>
-                  <div style={{ height: 8, background: "rgba(0,0,0,0.08)", borderRadius: 4, overflow: "hidden" }}>
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${pct}%`,
-                        background: "linear-gradient(90deg, #2563eb, #7c3aed)",
-                        borderRadius: 4,
-                        transition: "width 0.5s ease",
-                      }}
-                    />
-                  </div>
+                  {!isAllMode && (
+                    <div style={{ height: 8, background: "rgba(0,0,0,0.08)", borderRadius: 4, overflow: "hidden" }}>
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${pct}%`,
+                          background: "linear-gradient(90deg, #2563eb, #7c3aed)",
+                          borderRadius: 4,
+                          transition: "width 0.5s ease",
+                        }}
+                      />
+                    </div>
+                  )}
+                  {isAllMode && (
+                    <div style={{ height: 8, background: "rgba(0,0,0,0.08)", borderRadius: 4, overflow: "hidden", position: "relative" }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          height: "100%",
+                          width: "100%",
+                          background: "linear-gradient(90deg, #2563eb, #7c3aed)",
+                          borderRadius: 4,
+                          animation: "pulse 1.5s ease-in-out infinite",
+                        }}
+                      />
+                    </div>
+                  )}
                   <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700, marginTop: 8, background: "linear-gradient(90deg, #2563eb, #7c3aed)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
-                    {pct}%
+                    {isAllMode ? "重新匹配全部中..." : `${pct}%`}
                   </div>
                 </div>
 
                 {/* 统计 */}
-                <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                  <div style={{ flex: 1, textAlign: "center", padding: "10px 8px", background: "rgba(34,197,94,0.08)", borderRadius: 8, border: "1px solid rgba(34,197,94,0.15)" }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--success-color)" }}>{status.matched}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>匹配成功</div>
+                {isAllMode ? (
+                  /* 全部模式统计 */
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 45%", textAlign: "center", padding: "10px 8px", background: "rgba(34,197,94,0.08)", borderRadius: 8, border: "1px solid rgba(34,197,94,0.15)" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--success-color)" }}>{status.matched}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>新匹配</div>
+                    </div>
+                    <div style={{ flex: "1 1 45%", textAlign: "center", padding: "10px 8px", background: "rgba(37,99,235,0.08)", borderRadius: 8, border: "1px solid rgba(37,99,235,0.15)" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "#2563eb" }}>{status.updated}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>已更新</div>
+                    </div>
+                    <div style={{ flex: "1 1 45%", textAlign: "center", padding: "10px 8px", background: "rgba(0,0,0,0.04)", borderRadius: 8, border: "1px solid var(--border-light)" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-secondary)" }}>{status.skipped}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>无更优结果</div>
+                    </div>
+                    <div style={{ flex: "1 1 45%", textAlign: "center", padding: "10px 8px", background: "rgba(239,68,68,0.08)", borderRadius: 8, border: "1px solid rgba(239,68,68,0.15)" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--danger-color)" }}>{status.failed}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>未找到</div>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, textAlign: "center", padding: "10px 8px", background: "rgba(239,68,68,0.08)", borderRadius: 8, border: "1px solid rgba(239,68,68,0.15)" }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--danger-color)" }}>{status.failed}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>未找到</div>
+                ) : (
+                  /* 未匹配模式统计 */
+                  <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                    <div style={{ flex: 1, textAlign: "center", padding: "10px 8px", background: "rgba(34,197,94,0.08)", borderRadius: 8, border: "1px solid rgba(34,197,94,0.15)" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--success-color)" }}>{status.matched}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>匹配成功</div>
+                    </div>
+                    <div style={{ flex: 1, textAlign: "center", padding: "10px 8px", background: "rgba(239,68,68,0.08)", borderRadius: 8, border: "1px solid rgba(239,68,68,0.15)" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--danger-color)" }}>{status.failed}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>未找到</div>
+                    </div>
+                    <div style={{ flex: 1, textAlign: "center", padding: "10px 8px", background: "rgba(0,0,0,0.04)", borderRadius: 8, border: "1px solid var(--border-light)" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-secondary)" }}>{remaining}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>待处理</div>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, textAlign: "center", padding: "10px 8px", background: "rgba(0,0,0,0.04)", borderRadius: 8, border: "1px solid var(--border-light)" }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-secondary)" }}>{remaining}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>待处理</div>
-                  </div>
-                </div>
+                )}
 
                 <p style={{ fontSize: 12, color: "var(--text-tertiary)", textAlign: "center" }}>
                   页面保持打开，自动处理下一批直到完成
@@ -230,25 +315,48 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
             {step === "done" && (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <p style={{ fontSize: 40, marginBottom: 8 }}>
-                  {status.matched > 0 ? "🎉" : "😅"}
+                  {status.matched + status.updated > 0 ? "🎉" : "😅"}
                 </p>
                 <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>匹配完成！</p>
-                <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "var(--success-color)" }}>{status.matched}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>匹配成功</div>
+
+                {isAllMode ? (
+                  <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "var(--success-color)" }}>{status.matched}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>新匹配</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "#2563eb" }}>{status.updated}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>已更新</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text-secondary)" }}>{status.skipped}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>无更优结果</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "var(--danger-color)" }}>{status.failed}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>未找到</div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "var(--danger-color)" }}>{status.failed}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>未找到</div>
+                ) : (
+                  <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "var(--success-color)" }}>{status.matched}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>匹配成功</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "var(--danger-color)" }}>{status.failed}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>未找到</div>
+                    </div>
                   </div>
-                </div>
+                )}
+
                 {remaining > 0 && (
                   <p style={{ color: "var(--text-tertiary)", fontSize: 12, marginBottom: 8 }}>
                     还有 {remaining} 个游戏待处理
                   </p>
                 )}
-                {status.failed > 0 && (
+                {(status.failed > 0 || status.skipped > 0) && (
                   <p style={{ color: "var(--text-tertiary)", fontSize: 12 }}>
                     中文名搜不到可手动补充
                   </p>
@@ -301,7 +409,7 @@ export default function ImageMatchModal({ onClose, onDone }: { onClose: () => vo
             </button>
             {step === "done" && (
               <button
-                onClick={() => { setStep("intro"); setStatus({ matched: 0, failed: 0, total: 0 }); setRemaining(0); setCurrentBatch(0); }}
+                onClick={() => { setStep("intro"); setStatus({ matched: 0, updated: 0, skipped: 0, failed: 0, total: 0 }); setRemaining(0); setCurrentBatch(0); }}
                 style={{
                   padding: "8px 20px",
                   background: "linear-gradient(90deg, #2563eb, #7c3aed)",
