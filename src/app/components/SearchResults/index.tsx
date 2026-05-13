@@ -4,27 +4,69 @@ import GameCard from "./GameCard";
 interface SearchResultsProps {
   games: Game[];
   loading: boolean;
-  hasMore: boolean;
-  onLoadMore: () => void;
+  currentPage: number;
+  totalCount: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
   onClose: () => void;
   onOpenQrModal: (src: string, title: string) => void;
+  sortBy?: "id" | "updatedate" | "hot";
+  onSortChange?: (sort: "id" | "updatedate" | "hot") => void;
 }
 
 export default function SearchResults({
   games,
   loading,
-  hasMore,
-  onLoadMore,
+  currentPage,
+  totalCount,
+  totalPages,
+  onPageChange,
   onClose,
   onOpenQrModal,
+  sortBy = "id",
+  onSortChange,
 }: SearchResultsProps) {
+  const startItem = (currentPage - 1) * 10 + 1;
+  const endItem = Math.min(currentPage * 10, totalCount);
+
   return (
     <div className="result-box">
       <div className="result-header">
-        搜索结果
-        <button className="close-btn" onClick={onClose}>
-          ×
-        </button>
+        <span>搜索结果</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
+          {/* 排序选择器 */}
+          {onSortChange && (
+            <div style={{ display: "flex", gap: "4px" }}>
+              {([
+                { key: "id", label: "入库时间" },
+                { key: "updatedate", label: "更新时间" },
+                { key: "hot", label: "热度排序" },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => onSortChange(key)}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "12px",
+                    border: "1px solid",
+                    borderColor: sortBy === key ? "var(--primary-color, #0078d7)" : "var(--border-light)",
+                    background: sortBy === key ? "var(--primary-color, #0078d7)" : "rgba(255,255,255,0.8)",
+                    color: sortBy === key ? "white" : "var(--text-secondary)",
+                    borderRadius: "var(--radius-sm)",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    fontWeight: sortBy === key ? 600 : 400,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          <button className="close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
       </div>
 
       <div className="loading" style={{ display: loading ? "flex" : "none" }}>
@@ -48,28 +90,68 @@ export default function SearchResults({
           </div>
         )}
 
-        {/* 加载更多按钮 */}
-        {hasMore && games.length > 0 && (
-          <div style={{ textAlign: "center", padding: "20px" }}>
+        {/* 翻页控件 */}
+        {totalCount > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "12px",
+              padding: "20px",
+              flexWrap: "wrap",
+            }}
+          >
             <button
-              onClick={onLoadMore}
-              disabled={loading}
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1 || loading}
               style={{
-                padding: "10px 30px",
-                fontSize: "16px",
-                backgroundColor: "var(--primary-color, #0078d7)",
-                color: "white",
+                padding: "8px 16px",
+                fontSize: "14px",
+                background: currentPage === 1 ? "#e0e0e0" : "var(--primary-color, #0078d7)",
+                color: currentPage === 1 ? "#aaa" : "white",
                 border: "none",
                 borderRadius: "6px",
-                cursor: loading ? "not-allowed" : "pointer",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer",
                 opacity: loading ? 0.6 : 1,
+                transition: "all 0.2s",
               }}
             >
-              {loading ? "加载中..." : "加载更多"}
+              上一页
             </button>
-            <div style={{ marginTop: "8px", color: "#666", fontSize: "14px" }}>
-              已显示 {games.length} 条
+
+            <div
+              style={{
+                fontSize: "14px",
+                color: "var(--text-secondary)",
+                padding: "4px 12px",
+                background: "rgba(255,255,255,0.8)",
+                borderRadius: "6px",
+                border: "1px solid var(--border-light)",
+                minWidth: "120px",
+                textAlign: "center",
+              }}
+            >
+              第 {currentPage} / {totalPages} 页 · 共 {totalCount} 条
             </div>
+
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages || loading}
+              style={{
+                padding: "8px 16px",
+                fontSize: "14px",
+                background: currentPage === totalPages ? "#e0e0e0" : "var(--primary-color, #0078d7)",
+                color: currentPage === totalPages ? "#aaa" : "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
+                transition: "all 0.2s",
+              }}
+            >
+              下一页
+            </button>
           </div>
         )}
       </div>

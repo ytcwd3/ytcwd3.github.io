@@ -106,8 +106,11 @@ export default function HomePage() {
 
   // 分页相关
   const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const PAGE_SIZE = 10;
+
+  // 排序相关
+  const [sortBy, setSortBy] = useState<"id" | "updatedate" | "hot">("id");
 
   // 加载数据 - 不再预加载所有数据
   useEffect(() => {
@@ -123,41 +126,57 @@ export default function HomePage() {
     setShowResult(true);
     setCurrentPage(1);
 
+    const from = 0;
+    const to = PAGE_SIZE - 1;
+
+    // 根据排序构建查询
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buildQuery = (baseQuery: any) => {
+      if (sortBy === "id") {
+        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: true });
+      } else if (sortBy === "updatedate") {
+        return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
+      } else {
+        // hot: 用 ID 降序替代
+        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: false });
+      }
+    };
+
     // 如果有选中子标签，在该子标签范围内搜索
     if (selectedTag) {
-      supabase
-        .from("games")
-        .select("*", { count: "exact" })
-        .contains("subcategory", [selectedTag.value])
-        .ilike("name", `%${keyword}%`)
-        .range(0, PAGE_SIZE - 1)
-        .order("id", { ascending: true })
-        .then(({ data, error }) => {
-          if (error) {
-            setFilteredGames([]);
-          } else {
-            setFilteredGames(data || []);
-            setHasMore(data?.length === PAGE_SIZE);
-          }
-          setLoading(false);
-        });
+      buildQuery(
+        supabase
+          .from("games")
+          .select("*", { count: "exact" })
+          .contains("subcategory", [selectedTag.value])
+          .ilike("name", `%${keyword}%`)
+          .range(from, to)
+      ).then(({ data, error, count }) => {
+        if (error) {
+          setFilteredGames([]);
+        } else {
+          setFilteredGames(data || []);
+          setTotalCount(count || 0);
+        }
+        setLoading(false);
+      });
     } else {
       // 全局搜索
-      supabase
-        .from("games")
-        .select("*", { count: "exact" })
-        .ilike("name", `%${keyword}%`)
-        .range(0, PAGE_SIZE - 1)
-        .order("id", { ascending: true })
-        .then(({ data, error }) => {
-          if (error) {
-            setFilteredGames([]);
-          } else {
-            setFilteredGames(data || []);
-            setHasMore(data?.length === PAGE_SIZE);
-          }
-          setLoading(false);
-        });
+      buildQuery(
+        supabase
+          .from("games")
+          .select("*", { count: "exact" })
+          .ilike("name", `%${keyword}%`)
+          .range(from, to)
+      ).then(({ data, error, count }) => {
+        if (error) {
+          setFilteredGames([]);
+        } else {
+          setFilteredGames(data || []);
+          setTotalCount(count || 0);
+        }
+        setLoading(false);
+      });
     }
   }
 
@@ -171,57 +190,85 @@ export default function HomePage() {
     setLoading(true);
     setShowResult(true);
 
-    // 构建查询 - 只加载前10条
-    let query = supabase
+    const from = 0;
+    const to = PAGE_SIZE - 1;
+
+    // 根据排序构建查询
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buildQuery = (baseQuery: any) => {
+      if (sortBy === "id") {
+        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: true });
+      } else if (sortBy === "updatedate") {
+        return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
+      } else {
+        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: false });
+      }
+    };
+
+    // 构建基础查询
+    let baseQuery = supabase
       .from("games")
-      .select("*")
-      .contains("subcategory", [value]) // 使用contains查询subcategory数组
-      .range(0, PAGE_SIZE - 1); // 分页：每页10条
+      .select("*", { count: "exact" })
+      .contains("subcategory", [value])
+      .range(from, to);
 
     // 如果有关键词，同时搜索名称
     if (searchKeyword.trim()) {
-      query = query.ilike("name", `%${searchKeyword}%`);
+      baseQuery = baseQuery.ilike("name", `%${searchKeyword}%`);
     }
 
-    query.order("id", { ascending: true }).then(({ data, error }) => {
+    buildQuery(baseQuery).then(({ data, error, count }) => {
       if (error) {
         setFilteredGames([]);
       } else {
         setFilteredGames(data || []);
-        setHasMore(data?.length === PAGE_SIZE);
+        setTotalCount(count || 0);
       }
       setLoading(false);
     });
   }
 
-  // 加载更多数据
-  function loadMore() {
-    if (loading || !hasMore) return;
+  // 翻页加载
+  function loadPage(page: number) {
+    if (loading) return;
 
     setLoading(true);
-    const nextPage = currentPage + 1;
-    const from = (nextPage - 1) * PAGE_SIZE;
-    const to = nextPage * PAGE_SIZE - 1;
+    setCurrentPage(page);
 
-    // 构建查询
-    let query = supabase
+    const from = (page - 1) * PAGE_SIZE;
+    const to = page * PAGE_SIZE - 1;
+
+    // 根据排序构建查询
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buildQuery = (baseQuery: any) => {
+      if (sortBy === "id") {
+        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: true });
+      } else if (sortBy === "updatedate") {
+        return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
+      } else {
+        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: false });
+      }
+    };
+
+    // 构建基础查询
+    let baseQuery = supabase
       .from("games")
-      .select("*")
-      .contains("subcategory", selectedTag ? [selectedTag.value] : [])
+      .select("*", { count: "exact" })
       .range(from, to);
 
-    // 如果有关键词
+    if (selectedTag) {
+      baseQuery = baseQuery.contains("subcategory", [selectedTag.value]);
+    }
     if (searchKeyword.trim()) {
-      query = query.ilike("name", `%${searchKeyword}%`);
+      baseQuery = baseQuery.ilike("name", `%${searchKeyword}%`);
     }
 
-    query.order("id", { ascending: true }).then(({ data, error }) => {
+    buildQuery(baseQuery).then(({ data, error, count }) => {
       if (error) {
-        // 加载失败，忽略
+        setFilteredGames([]);
       } else {
-        setFilteredGames((prev) => [...prev, ...(data || [])]);
-        setCurrentPage(nextPage);
-        setHasMore(data?.length === PAGE_SIZE);
+        setFilteredGames(data || []);
+        setTotalCount(count || 0);
       }
       setLoading(false);
     });
@@ -232,7 +279,50 @@ export default function HomePage() {
     setShowResult(false);
     setFilteredGames([]);
     setCurrentPage(1);
-    setHasMore(true);
+    setTotalCount(0);
+  }
+
+  // 排序切换
+  function handleSortChange(sort: "id" | "updatedate" | "hot") {
+    setSortBy(sort);
+    setCurrentPage(1);
+    if (showResult) {
+      const from = 0;
+      const to = PAGE_SIZE - 1;
+      setLoading(true);
+
+      const buildQuery = (baseQuery: any) => {
+        if (sort === "id") {
+          return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: true });
+        } else if (sort === "updatedate") {
+          return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
+        } else {
+          return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: false });
+        }
+      };
+
+      let baseQuery = supabase
+        .from("games")
+        .select("*", { count: "exact" })
+        .range(from, to);
+
+      if (selectedTag) {
+        baseQuery = baseQuery.contains("subcategory", [selectedTag.value]);
+      }
+      if (searchKeyword.trim()) {
+        baseQuery = baseQuery.ilike("name", `%${searchKeyword}%`);
+      }
+
+      buildQuery(baseQuery).then(({ data, error, count }) => {
+        if (error) {
+          setFilteredGames([]);
+        } else {
+          setFilteredGames(data || []);
+          setTotalCount(count || 0);
+        }
+        setLoading(false);
+      });
+    }
   }
 
   function openBigQrcode(src: string, title: string) {
@@ -399,10 +489,14 @@ export default function HomePage() {
           <SearchResults
             games={filteredGames}
             loading={loading}
-            hasMore={hasMore}
-            onLoadMore={loadMore}
+            currentPage={currentPage}
+            totalCount={totalCount}
+            totalPages={Math.ceil(totalCount / PAGE_SIZE) || 1}
+            onPageChange={loadPage}
             onClose={() => setShowResult(false)}
             onOpenQrModal={openBigQrcode}
+            sortBy={sortBy}
+            onSortChange={handleSortChange}
           />
         </div>
 
