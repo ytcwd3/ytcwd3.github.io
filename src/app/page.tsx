@@ -469,6 +469,17 @@ export default function HomePage() {
             搜索
           </button>
         </div>
+        <div
+          style={{
+            marginTop: "8px",
+            textAlign: "center",
+            color: "#7b2cbf",
+            fontSize: "14px",
+            lineHeight: 1.6,
+          }}
+        >
+          模拟器固件金手指等以及没搜到的英文游戏。可以选择对应平台在置顶词条里查看
+        </div>
 
         {/* 提示 - 有数据时隐藏 */}
         {filteredGames.length === 0 && showResult && !loading && (
