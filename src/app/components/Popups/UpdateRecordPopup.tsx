@@ -17,6 +17,16 @@ interface GameRecord {
   video?: string;
 }
 
+function parseUpdateDate(value: string) {
+  if (!value) return null;
+  const normalized = value.trim().replace(/\./g, "-").replace(/\//g, "-");
+  const parts = normalized.split("-").map((part) => Number(part));
+  if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) return null;
+  const [year, month, day] = parts;
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
   const [records, setRecords] = useState<GameRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +35,7 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
     supabase
       .from("games")
       .select("id, name, updatedate, category, subcategory, image, video")
+      .order("updatedate", { ascending: false })
       .order("id", { ascending: false })
       .limit(200)
       .then(({ data, error }) => {
@@ -32,7 +43,18 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
           console.error("加载更新记录失败:", error);
           setRecords([]);
         } else {
-          setRecords(data || []);
+          const sorted = [...(data || [])].sort((a, b) => {
+            const dateA = parseUpdateDate(a.updatedate);
+            const dateB = parseUpdateDate(b.updatedate);
+            if (!dateA && !dateB) return b.id - a.id;
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            if (dateA.getTime() !== dateB.getTime()) {
+              return dateB.getTime() - dateA.getTime();
+            }
+            return b.id - a.id;
+          });
+          setRecords(sorted);
         }
         setLoading(false);
       });
@@ -46,9 +68,12 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
     grouped[date].push(r);
   });
   const dates = Object.keys(grouped).sort((a, b) => {
-    const dateA = new Date(a.replace(/\./g, "-"));
-    const dateB = new Date(b.replace(/\./g, "-"));
-    return isNaN(dateA.getTime()) ? 1 : isNaN(dateB.getTime()) ? -1 : dateB.getTime() - dateA.getTime();
+    const dateA = parseUpdateDate(a);
+    const dateB = parseUpdateDate(b);
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return dateB.getTime() - dateA.getTime();
   });
 
   return (
