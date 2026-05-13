@@ -4,7 +4,9 @@ import { CARD_STYLE, INPUT_STYLE } from "./constants";
 
 interface ToolbarProps {
   searchKeyword: string;
+  sortBy: "default" | "name";
   onSearchChange: (v: string) => void;
+  onSortChange: (v: "default" | "name") => void;
   onSearch: () => void;
   onClearSearch: () => void;
   onOpenImport: () => void;
@@ -17,7 +19,9 @@ interface ToolbarProps {
 
 export default function Toolbar({
   searchKeyword,
+  sortBy,
   onSearchChange,
+  onSortChange,
   onSearch,
   onClearSearch,
   onOpenImport,
@@ -79,6 +83,20 @@ export default function Toolbar({
           </button>
         )}
       </div>
+
+      <select
+        value={sortBy}
+        onChange={(e) => onSortChange(e.target.value as "default" | "name")}
+        style={{
+          ...INPUT_STYLE,
+          width: "170px",
+          flex: "0 0 auto",
+          cursor: "pointer",
+        }}
+      >
+        <option value="default">默认排序</option>
+        <option value="name">名称首字母 A-Z</option>
+      </select>
 
       <button
         className="toolbar-btn"

@@ -25,6 +25,7 @@ export default function AdminDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>("pc");
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [sortBy, setSortBy] = useState<"default" | "name">("default");
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>(
@@ -91,10 +92,12 @@ export default function AdminDashboard() {
     cat?: string,
     sub?: string,
     keyword?: string,
+    sort?: "default" | "name",
   ) {
     const curCat = cat !== undefined ? cat : selectedCategory;
     const curSub = sub !== undefined ? sub : selectedSubcategory;
     const curKeyword = keyword !== undefined ? keyword : searchKeyword;
+    const curSort = sort !== undefined ? sort : sortBy;
     const reqId = Date.now();
     (window as any).__reqId = reqId;
     setLoading(true);
@@ -110,11 +113,17 @@ export default function AdminDashboard() {
       }
       if (curSub !== "all") query = query.contains("subcategory", [curSub]);
       if (curKeyword) query = query.ilike("name", `%${curKeyword}%`);
+      const orderedQuery =
+        curSort === "name"
+          ? query
+              .order("pinned", { ascending: false })
+              .order("name", { ascending: true })
+              .order("id", { ascending: true })
+          : query
+              .order("pinned", { ascending: false })
+              .order("id", { ascending: true });
 
-      const { data, error, count } = await query
-        .order("pinned", { ascending: false })
-        .order("id", { ascending: true })
-        .range(from, to);
+      const { data, error, count } = await orderedQuery.range(from, to);
 
       if ((window as any).__reqId !== reqId) return;
       if (error) throw error;
@@ -152,6 +161,11 @@ export default function AdminDashboard() {
 
   function handleSearch() {
     applyFilters(1);
+  }
+
+  function handleSortChange(nextSort: "default" | "name") {
+    setSortBy(nextSort);
+    applyFilters(1, undefined, undefined, undefined, nextSort);
   }
 
   function handleClearSearch() {
@@ -484,7 +498,9 @@ export default function AdminDashboard() {
         <Toolbar
           className="toolbar"
           searchKeyword={searchKeyword}
+          sortBy={sortBy}
           onSearchChange={setSearchKeyword}
+          onSortChange={handleSortChange}
           onSearch={handleSearch}
           onClearSearch={handleClearSearch}
           onOpenImport={openImportModal}
