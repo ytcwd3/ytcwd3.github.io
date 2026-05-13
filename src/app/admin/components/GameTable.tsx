@@ -155,6 +155,7 @@ export default function GameTable({
                     "主分类",
                     "子分类",
                     "网盘链接",
+                    "热度",
                     "更新日期",
                     "置顶",
                     "操作",
@@ -362,6 +363,16 @@ export default function GameTable({
                           padding: "11px 14px",
                           fontSize: "13px",
                           color: "var(--text-secondary)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {game.hot || 0}
+                      </td>
+                      <td
+                        style={{
+                          padding: "11px 14px",
+                          fontSize: "13px",
+                          color: "var(--text-secondary)",
                         }}
                       >
                         {game.updatedate || "-"}
@@ -501,6 +512,10 @@ export default function GameTable({
                         ))}
                       </>
                     )}
+                  </div>
+                  <div className="game-card-row">
+                    <span className="game-card-row-label">热度：</span>
+                    <span>{game.hot || 0}</span>
                   </div>
                   <div className="game-card-footer">
                     <div className="game-card-links">

@@ -72,6 +72,17 @@ function parseCodeFromUrl(url: string): string | null {
   return match ? match[1] : null;
 }
 
+function trackDownload(gameId: number, provider: "quark" | "baidu" | "thunder") {
+  fetch("/api/track-download", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ gameId, provider }),
+    keepalive: true,
+  }).catch(() => {
+    // Ignore tracking failures so downloads are never blocked.
+  });
+}
+
 export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) {
   const catColors: Record<string, string> = {
     "PC及安卓": "#9333ea", "任天堂": "#e53935", "索尼": "#1976d2",
@@ -164,6 +175,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="drive-link drive-link-quark"
+                onClick={() => trackDownload(game.id, "quark")}
               >
                 <QuarkIcon /> 夸克
                 <span className="drive-code">{getDisplayCode(game.quarkpan, (game as any).quarkcode || "")}</span>
@@ -184,6 +196,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="drive-link drive-link-baidu"
+                onClick={() => trackDownload(game.id, "baidu")}
               >
                 <BaiduIcon /> 百度
                 <span className="drive-code">{getDisplayCode(game.baidupan, (game as any).baiducode || "")}</span>
@@ -204,6 +217,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="drive-link drive-link-xunlei"
+                onClick={() => trackDownload(game.id, "thunder")}
               >
                 <XunleiIcon /> 迅雷
                 <span className="drive-code">{getDisplayCode(game.thunderpan, (game as any).thundercode || "")}</span>

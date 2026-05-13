@@ -23,6 +23,7 @@ export interface Game {
   image?: string;
   video?: string;
   pinned?: boolean;
+  hot?: number;
 }
 
 export interface Guestbook {

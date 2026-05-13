@@ -137,8 +137,7 @@ export default function HomePage() {
       } else if (sortBy === "updatedate") {
         return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
       } else {
-        // hot: 用 ID 降序替代
-        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: false });
+        return baseQuery.order("pinned", { ascending: false }).order("hot", { ascending: false }).order("id", { ascending: false });
       }
     };
 
@@ -201,7 +200,7 @@ export default function HomePage() {
       } else if (sortBy === "updatedate") {
         return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
       } else {
-        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: false });
+        return baseQuery.order("pinned", { ascending: false }).order("hot", { ascending: false }).order("id", { ascending: false });
       }
     };
 
@@ -246,7 +245,7 @@ export default function HomePage() {
       } else if (sortBy === "updatedate") {
         return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
       } else {
-        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: false });
+        return baseQuery.order("pinned", { ascending: false }).order("hot", { ascending: false }).order("id", { ascending: false });
       }
     };
 
@@ -297,7 +296,7 @@ export default function HomePage() {
         } else if (sort === "updatedate") {
           return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
         } else {
-          return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: false });
+          return baseQuery.order("pinned", { ascending: false }).order("hot", { ascending: false }).order("id", { ascending: false });
         }
       };
 
