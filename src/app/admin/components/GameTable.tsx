@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Game } from "@/lib/supabase";
+import { supabase, Game } from "@/lib/supabase";
 import {
   CATEGORY_NAMES,
   DB_TO_UI_KEY,
@@ -156,6 +156,7 @@ export default function GameTable({
                     "子分类",
                     "网盘链接",
                     "更新日期",
+                    "置顶",
                     "操作",
                   ].map((h) => (
                     <th
@@ -188,9 +189,11 @@ export default function GameTable({
                         transition: "background 0.2s",
                         background: selectedIds.has(game.id)
                           ? "rgba(229,57,53,0.06)"
-                          : idx % 2 === 0
-                            ? "rgba(255,255,255,0.5)"
-                            : "rgba(255,255,255,0.3)",
+                          : game.pinned
+                            ? "rgba(245,158,11,0.06)"
+                            : idx % 2 === 0
+                              ? "rgba(255,255,255,0.5)"
+                              : "rgba(255,255,255,0.3)",
                       }}
                       onMouseEnter={(e) => {
                         if (!selectedIds.has(game.id)) {
@@ -203,9 +206,11 @@ export default function GameTable({
                           game.id,
                         )
                           ? "rgba(229,57,53,0.06)"
-                          : idx % 2 === 0
-                            ? "rgba(255,255,255,0.5)"
-                            : "rgba(255,255,255,0.3)")
+                          : game.pinned
+                            ? "rgba(245,158,11,0.06)"
+                            : idx % 2 === 0
+                              ? "rgba(255,255,255,0.5)"
+                              : "rgba(255,255,255,0.3)")
                       }
                     >
                       <td style={{ padding: "11px 8px", textAlign: "center" }}>
@@ -361,6 +366,38 @@ export default function GameTable({
                       >
                         {game.updatedate || "-"}
                       </td>
+                      <td style={{ padding: "11px 8px", textAlign: "center" }}>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const newPinned = !(game as any).pinned;
+                            await supabase
+                              .from("games")
+                              .update({ pinned: newPinned })
+                              .eq("id", game.id);
+                            // Trigger parent refresh by dispatching a custom event
+                            window.dispatchEvent(new CustomEvent("adminRefreshGames"));
+                          }}
+                          title={game.pinned ? "取消置顶" : "设为置顶"}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "16px",
+                            padding: "4px",
+                            transition: "transform 0.2s",
+                            opacity: game.pinned ? 1 : 0.3,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "scale(1.2)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "scale(1)";
+                          }}
+                        >
+                          {game.pinned ? "📌" : "📍"}
+                        </button>
+                      </td>
                       <td style={{ padding: "11px 14px" }}>
                         <button
                           onClick={() => onEdit(game)}
@@ -440,7 +477,10 @@ export default function GameTable({
                       checked={selectedIds.has(game.id)}
                       onChange={() => toggleOne(game.id)}
                     />
-                    <span className="game-card-name">{game.name}</span>
+                    <span className="game-card-name">
+                      {game.pinned && <span style={{ marginRight: 4 }}>📌</span>}
+                      {game.name}
+                    </span>
                     <span
                       className="game-card-cat"
                       style={{

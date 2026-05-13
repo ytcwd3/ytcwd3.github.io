@@ -22,6 +22,7 @@ export interface Game {
   updatedate: string;
   image?: string;
   video?: string;
+  pinned?: boolean;
 }
 
 export interface Guestbook {

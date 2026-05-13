@@ -79,6 +79,11 @@ export default function AdminDashboard() {
     setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
     applyFilters(1);
     loadAllMeta();
+
+    // 监听置顶切换刷新事件
+    const handleRefresh = () => applyFilters(currentPage);
+    window.addEventListener("adminRefreshGames", handleRefresh);
+    return () => window.removeEventListener("adminRefreshGames", handleRefresh);
   }
 
   async function applyFilters(
@@ -107,6 +112,7 @@ export default function AdminDashboard() {
       if (curKeyword) query = query.ilike("name", `%${curKeyword}%`);
 
       const { data, error, count } = await query
+        .order("pinned", { ascending: false })
         .order("id", { ascending: true })
         .range(from, to);
 

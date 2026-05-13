@@ -33,6 +33,7 @@ interface FormData {
   updatedate: string;
   image: string;
   video: string;
+  pinned: boolean;
 }
 
 function getDefaultDate() {
@@ -63,6 +64,7 @@ function buildGameData(formData: FormData) {
     updatedate: formData.updatedate.trim() || getDefaultDate(),
     image: formData.image.trim(),
     video: formData.video.trim(),
+    pinned: formData.pinned,
   };
 }
 
@@ -85,6 +87,7 @@ function getFormDataFromGame(game: Game | null): FormData {
       updatedate: game.updatedate || "",
       image: game.image || "",
       video: game.video || "",
+      pinned: !!(game as any).pinned,
     };
   }
   return {
@@ -102,6 +105,7 @@ function getFormDataFromGame(game: Game | null): FormData {
     updatedate: getDefaultDate(),
     image: "",
     video: "",
+    pinned: false,
   };
 }
 
@@ -121,6 +125,7 @@ function buildInitialData(): FormData {
     updatedate: getDefaultDate(),
     image: "",
     video: "",
+    pinned: false,
   };
 }
 
@@ -161,7 +166,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
   function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
     if (key === "name") setNameError("");
-    if (["quarkpan", "baidupan", "thunderpan"].includes(key)) {
+    if (["quarkpan", "baidupan", "thunderpan"].includes(key as any)) {
       setLinkErrors((prev) => ({ ...prev, [key]: "" }));
       // 自动从链接识别提取码
       const detected = parseCodeFromUrl(value as string);
@@ -204,7 +209,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
     }
 
     // 链接格式校验
-    const linkFields: { key: keyof FormData; label: string }[] = [
+    const linkFields: { key: "quarkpan" | "baidupan" | "thunderpan"; label: string }[] = [
       { key: "quarkpan", label: "夸克网盘" },
       { key: "baidupan", label: "百度网盘" },
       { key: "thunderpan", label: "迅雷网盘" },
@@ -535,6 +540,22 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                   style={INPUT_STYLE}
                 />
               </div>
+            </div>
+
+            {/* 置顶选项 */}
+            <div className="form-group" style={{ marginBottom: "14px" }}>
+              <label style={{ ...LABEL_STYLE, display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="checkbox"
+                  checked={formData.pinned}
+                  onChange={(e) => setField("pinned", e.target.checked)}
+                  style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                />
+                <span>设为置顶词条</span>
+                <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
+                  （置顶词条会优先显示在搜索结果顶部）
+                </span>
+              </label>
             </div>
 
             {/* 底部按钮 */}
