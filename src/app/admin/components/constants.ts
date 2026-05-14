@@ -59,6 +59,7 @@ export const DB_TO_UI_KEY: Record<string, string> = {
   任天堂掌机: "handheld",
   任天堂主机: "console",
   索尼: "sony",
+  Other: "other",
   Ohter: "other",
 };
 
@@ -107,6 +108,7 @@ export const SHEET_DB_CAT: Record<string, string> = {
   任天堂掌机: "任天堂掌机",
   任天堂主机: "任天堂主机",
   索尼: "索尼",
+  Other: "Ohter",
   other: "Ohter",
 };
 
@@ -115,6 +117,7 @@ export const UI_CAT_TO_DB: Record<string, string> = {
   NS: "NS",
   PC及安卓: "PC",
   索尼: "索尼",
+  Other: "Ohter",
   其他平台: "Ohter",
   任天堂: "NS",
 };

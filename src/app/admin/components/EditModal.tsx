@@ -18,6 +18,11 @@ interface EditModalProps {
 
 const CATEGORIES = ["PC", "NS", "任天堂掌机", "任天堂主机", "索尼", "Other"];
 
+function invalidateAdminMetaCache() {
+  localStorage.removeItem("admin_game_meta");
+  localStorage.removeItem("admin_game_meta_v2");
+}
+
 interface FormData {
   name: string;
   category: string;
@@ -72,9 +77,15 @@ function getFormDataFromGame(game: Game | null): FormData {
   if (game) {
     const cats = game.category || [];
     const subcats = game.subcategory || [];
+    const normalizedCategory =
+      subcats[0] === "安卓"
+        ? "Ohter"
+        : cats[0] === "Other"
+          ? "Ohter"
+          : cats[0] || "";
     return {
       name: game.name || "",
-      category: cats[0] || "",
+      category: normalizedCategory,
       subcategory: subcats[0] || "",
       code: game.code || "",
       unzipcode: game.unzipcode || "",
@@ -263,7 +274,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
         if (error) throw error;
       }
       // 清除元数据缓存，下次加载会重新拉取
-      localStorage.removeItem("admin_game_meta");
+      invalidateAdminMetaCache();
       onSaved(false);
     } catch (err: any) {
       alert("操作失败: " + err.message);
@@ -593,7 +604,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                         setSaving(false);
                         return;
                       }
-                      localStorage.removeItem("admin_game_meta");
+                      invalidateAdminMetaCache();
                       // 重置表单，继续添加
                       setFormData(buildInitialData());
                       setSaving(false);

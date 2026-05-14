@@ -32,32 +32,57 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("games")
-      .select("id, name, updatedate, category, subcategory, image, video")
-      .order("updatedate", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(200)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("加载更新记录失败:", error);
-          setRecords([]);
-        } else {
-          const sorted = [...(data || [])].sort((a, b) => {
-            const dateA = parseUpdateDate(a.updatedate);
-            const dateB = parseUpdateDate(b.updatedate);
-            if (!dateA && !dateB) return b.id - a.id;
-            if (!dateA) return 1;
-            if (!dateB) return -1;
-            if (dateA.getTime() !== dateB.getTime()) {
-              return dateB.getTime() - dateA.getTime();
-            }
-            return b.id - a.id;
-          });
-          setRecords(sorted);
+    let cancelled = false;
+
+    async function loadRecords() {
+      const allRecords: GameRecord[] = [];
+      const batchSize = 1000;
+      let page = 0;
+
+      try {
+        while (true) {
+          const from = page * batchSize;
+          const to = from + batchSize - 1;
+          const { data, error } = await supabase
+            .from("games")
+            .select("id, name, updatedate, category, subcategory, image, video")
+            .order("id", { ascending: false })
+            .range(from, to);
+
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+
+          allRecords.push(...data);
+          if (data.length < batchSize) break;
+          page++;
         }
-        setLoading(false);
-      });
+
+        const sorted = [...allRecords].sort((a, b) => {
+          const dateA = parseUpdateDate(a.updatedate);
+          const dateB = parseUpdateDate(b.updatedate);
+          if (!dateA && !dateB) return b.id - a.id;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          if (dateA.getTime() !== dateB.getTime()) {
+            return dateB.getTime() - dateA.getTime();
+          }
+          return b.id - a.id;
+        });
+
+        if (!cancelled) setRecords(sorted);
+      } catch (error) {
+        console.error("加载更新记录失败:", error);
+        if (!cancelled) setRecords([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadRecords();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 按日期分组

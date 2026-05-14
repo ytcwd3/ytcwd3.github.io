@@ -18,6 +18,17 @@ import ImportModal from "./components/ImportModal";
 import ConfirmModal from "./components/ConfirmModal";
 import ImageMatchModal from "./components/ImageMatchModal";
 
+function normalizeMetaCategory(category: string, subcategory: string) {
+  if (subcategory === "安卓") return "Ohter";
+  if (category === "Other") return "Ohter";
+  return category;
+}
+
+function invalidateAdminMetaCache() {
+  localStorage.removeItem("admin_game_meta");
+  localStorage.removeItem("admin_game_meta_v2");
+}
+
 export default function AdminDashboard() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -108,8 +119,14 @@ export default function AdminDashboard() {
       let query = supabase.from("games").select("*", { count: "exact" });
 
       if (curCat !== "all") {
-        const catName = CATEGORY_DB_VALUE[curCat];
-        if (catName) query = query.contains("category", [catName]);
+        if (curCat === "pc") {
+          query = query.contains("category", ["PC"]).not("subcategory", "cs", '{"安卓"}');
+        } else if (curCat === "other") {
+          query = query.or("category.cs.{Ohter},category.cs.{Other},subcategory.cs.{安卓}");
+        } else {
+          const catName = CATEGORY_DB_VALUE[curCat];
+          if (catName) query = query.contains("category", [catName]);
+        }
       }
       if (curSub !== "all") query = query.contains("subcategory", [curSub]);
       if (curKeyword) query = query.ilike("name", `%${curKeyword}%`);
@@ -183,7 +200,7 @@ export default function AdminDashboard() {
 
   // 一次性批量加载所有元数据，从内存计算所有统计
   async function loadAllMeta() {
-    const cacheKey = "admin_game_meta";
+    const cacheKey = "admin_game_meta_v2";
     const cached = localStorage.getItem(cacheKey);
 
     if (cached) {
@@ -194,11 +211,15 @@ export default function AdminDashboard() {
           .select("id", { count: "exact", head: true });
 
         if (count === total) {
-          setAllGameMeta(meta);
+          const normalizedMeta = meta.map((g: any) => ({
+            category: normalizeMetaCategory(g.category, g.subcategory),
+            subcategory: g.subcategory,
+          }));
+          setAllGameMeta(normalizedMeta);
           const catCounts: Record<string, number> = {};
           for (const catKey of Object.keys(CATEGORY_DB_VALUE)) {
             const catName = CATEGORY_DB_VALUE[catKey];
-            catCounts[catKey] = meta.filter(
+            catCounts[catKey] = normalizedMeta.filter(
               (g: any) => g.category === catName,
             ).length;
           }
@@ -208,7 +229,7 @@ export default function AdminDashboard() {
           const subcatCountsNew: Record<string, number> = {};
           (CATEGORY_SUBCATEGORIES[selectedCategory] || []).forEach(
             (sub: string) => {
-              subcatCountsNew[sub] = meta.filter(
+              subcatCountsNew[sub] = normalizedMeta.filter(
                 (g: any) => g.category === catName && g.subcategory === sub,
               ).length;
             },
@@ -237,7 +258,7 @@ export default function AdminDashboard() {
       if (error || !data || data.length === 0) break;
       data.forEach((g: any) =>
         allMeta.push({
-          category: g.category?.[0] || "",
+          category: normalizeMetaCategory(g.category?.[0] || "", g.subcategory?.[0] || ""),
           subcategory: g.subcategory?.[0] || "",
         }),
       );
@@ -434,7 +455,8 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase.from("games").delete().eq("id", id);
       if (error) throw error;
-      localStorage.removeItem("admin_game_meta");
+      invalidateAdminMetaCache();
+      await loadAllMeta();
       // 如果当前页只有1条，删后回退到上一页
       if (filteredGames.length === 1 && currentPage > 1) {
         applyFilters(currentPage - 1);
@@ -454,7 +476,8 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase.from("games").delete().in("id", ids);
       if (error) throw error;
-      localStorage.removeItem("admin_game_meta");
+      invalidateAdminMetaCache();
+      await loadAllMeta();
       alert(`批量删除成功，共删除 ${ids.length} 条数据`);
       // 如果删完当前页空了，回退
       const remaining = filteredGames.length - ids.length;
@@ -530,6 +553,8 @@ export default function AdminDashboard() {
           onClose={() => setShowEditModal(false)}
           onSaved={() => {
             setShowEditModal(false);
+            invalidateAdminMetaCache();
+            loadAllMeta();
             applyFilters(currentPage);
           }}
         />
@@ -540,6 +565,8 @@ export default function AdminDashboard() {
           onClose={() => setShowImportModal(false)}
           onImported={() => {
             setShowImportModal(false);
+            invalidateAdminMetaCache();
+            loadAllMeta();
             applyFilters(currentPage);
           }}
         />
@@ -550,6 +577,8 @@ export default function AdminDashboard() {
           onClose={() => setShowImageMatchModal(false)}
           onDone={() => {
             setShowImageMatchModal(false);
+            invalidateAdminMetaCache();
+            loadAllMeta();
             applyFilters(currentPage);
           }}
         />

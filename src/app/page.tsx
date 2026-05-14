@@ -52,6 +52,7 @@ const CATEGORIES: Record<string, { name: string; tags: string[] }[]> = {
         "步步高电子词典",
         "JAVA",
         "J2ME（诺基亚时代java）",
+        "安卓",
       ],
     },
   ],
@@ -80,13 +81,38 @@ const CATEGORIES: Record<string, { name: string; tags: string[] }[]> = {
         "修改器金手指",
         "互动影游",
         "网游单机",
-        "安卓",
       ],
     },
   ],
 };
 
 const MAIN_CATEGORIES = ["任天堂", "索尼", "其他平台", "PC及安卓"];
+
+function parseUpdateDate(value: string) {
+  if (!value) return null;
+  const normalized = value.trim().replace(/\./g, "-").replace(/\//g, "-");
+  const parts = normalized.split("-").map((part) => Number(part));
+  if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) return null;
+  const [year, month, day] = parts;
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function sortGamesByUpdateDate(games: Game[]) {
+  return [...games].sort((a, b) => {
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+
+    const dateA = parseUpdateDate(a.updatedate);
+    const dateB = parseUpdateDate(b.updatedate);
+    if (!dateA && !dateB) return b.id - a.id;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    if (dateA.getTime() !== dateB.getTime()) {
+      return dateB.getTime() - dateA.getTime();
+    }
+    return b.id - a.id;
+  });
+}
 
 export default function HomePage() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
@@ -110,13 +136,100 @@ export default function HomePage() {
   const PAGE_SIZE = 10;
 
   // 排序相关
-  const [sortBy, setSortBy] = useState<"id" | "updatedate" | "hot">("id");
+  const [sortBy, setSortBy] = useState<"updatedate" | "hot">("updatedate");
 
   // 加载数据 - 不再预加载所有数据
   useEffect(() => {
     localStorage.clear();
     sessionStorage.clear();
   }, []);
+
+  async function fetchGamesByUpdateDate(
+    page: number,
+    tagValue?: string,
+    keyword?: string,
+  ) {
+    const allGames: Game[] = [];
+    const batchSize = 1000;
+    let batchPage = 0;
+
+    while (true) {
+      const from = batchPage * batchSize;
+      const to = from + batchSize - 1;
+      let query = supabase
+        .from("games")
+        .select("*")
+        .order("pinned", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
+
+      if (tagValue) {
+        query = query.contains("subcategory", [tagValue]);
+      }
+      if (keyword) {
+        query = query.ilike("name", `%${keyword}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+
+      allGames.push(...(data as Game[]));
+      if (data.length < batchSize) break;
+      batchPage++;
+    }
+
+    const sorted = sortGamesByUpdateDate(allGames);
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE;
+
+    return {
+      data: sorted.slice(from, to),
+      count: sorted.length,
+    };
+  }
+
+  async function loadGames(
+    page: number,
+    options?: {
+      tagValue?: string;
+      keyword?: string;
+      sort?: "updatedate" | "hot";
+    },
+  ) {
+    const tagValue = options?.tagValue ?? selectedTag?.value;
+    const keyword = (options?.keyword ?? searchKeyword).trim();
+    const activeSort = options?.sort ?? sortBy;
+
+    if (activeSort === "updatedate") {
+      return fetchGamesByUpdateDate(page, tagValue, keyword);
+    }
+
+    const from = (page - 1) * PAGE_SIZE;
+    const to = page * PAGE_SIZE - 1;
+    let query = supabase
+      .from("games")
+      .select("*", { count: "exact" })
+      .order("pinned", { ascending: false })
+      .order("hot", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
+
+    if (tagValue) {
+      query = query.contains("subcategory", [tagValue]);
+    }
+    if (keyword) {
+      query = query.ilike("name", `%${keyword}%`);
+    }
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+
+    return {
+      data: (data as Game[]) || [],
+      count: count || 0,
+    };
+  }
 
   function handleSearch() {
     const keyword = searchKeyword.trim();
@@ -125,58 +238,18 @@ export default function HomePage() {
     setLoading(true);
     setShowResult(true);
     setCurrentPage(1);
-
-    const from = 0;
-    const to = PAGE_SIZE - 1;
-
-    // 根据排序构建查询
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buildQuery = (baseQuery: any) => {
-      if (sortBy === "id") {
-        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: true });
-      } else if (sortBy === "updatedate") {
-        return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
-      } else {
-        return baseQuery.order("pinned", { ascending: false }).order("hot", { ascending: false }).order("id", { ascending: false });
-      }
-    };
-
-    // 如果有选中子标签，在该子标签范围内搜索
-    if (selectedTag) {
-      buildQuery(
-        supabase
-          .from("games")
-          .select("*", { count: "exact" })
-          .contains("subcategory", [selectedTag.value])
-          .ilike("name", `%${keyword}%`)
-          .range(from, to)
-      ).then(({ data, error, count }) => {
-        if (error) {
-          setFilteredGames([]);
-        } else {
-          setFilteredGames(data || []);
-          setTotalCount(count || 0);
-        }
+    loadGames(1, { keyword })
+      .then(({ data, count }) => {
+        setFilteredGames(data);
+        setTotalCount(count);
+      })
+      .catch(() => {
+        setFilteredGames([]);
+        setTotalCount(0);
+      })
+      .finally(() => {
         setLoading(false);
       });
-    } else {
-      // 全局搜索
-      buildQuery(
-        supabase
-          .from("games")
-          .select("*", { count: "exact" })
-          .ilike("name", `%${keyword}%`)
-          .range(from, to)
-      ).then(({ data, error, count }) => {
-        if (error) {
-          setFilteredGames([]);
-        } else {
-          setFilteredGames(data || []);
-          setTotalCount(count || 0);
-        }
-        setLoading(false);
-      });
-    }
   }
 
   function selectTag(category: string, value: string) {
@@ -188,43 +261,18 @@ export default function HomePage() {
     // 直接从数据库查询该子类的数据
     setLoading(true);
     setShowResult(true);
-
-    const from = 0;
-    const to = PAGE_SIZE - 1;
-
-    // 根据排序构建查询
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buildQuery = (baseQuery: any) => {
-      if (sortBy === "id") {
-        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: true });
-      } else if (sortBy === "updatedate") {
-        return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
-      } else {
-        return baseQuery.order("pinned", { ascending: false }).order("hot", { ascending: false }).order("id", { ascending: false });
-      }
-    };
-
-    // 构建基础查询
-    let baseQuery = supabase
-      .from("games")
-      .select("*", { count: "exact" })
-      .contains("subcategory", [value])
-      .range(from, to);
-
-    // 如果有关键词，同时搜索名称
-    if (searchKeyword.trim()) {
-      baseQuery = baseQuery.ilike("name", `%${searchKeyword}%`);
-    }
-
-    buildQuery(baseQuery).then(({ data, error, count }) => {
-      if (error) {
+    loadGames(1, { tagValue: value })
+      .then(({ data, count }) => {
+        setFilteredGames(data);
+        setTotalCount(count);
+      })
+      .catch(() => {
         setFilteredGames([]);
-      } else {
-        setFilteredGames(data || []);
-        setTotalCount(count || 0);
-      }
-      setLoading(false);
-    });
+        setTotalCount(0);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   // 翻页加载
@@ -234,43 +282,18 @@ export default function HomePage() {
     setLoading(true);
     setCurrentPage(page);
 
-    const from = (page - 1) * PAGE_SIZE;
-    const to = page * PAGE_SIZE - 1;
-
-    // 根据排序构建查询
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buildQuery = (baseQuery: any) => {
-      if (sortBy === "id") {
-        return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: true });
-      } else if (sortBy === "updatedate") {
-        return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
-      } else {
-        return baseQuery.order("pinned", { ascending: false }).order("hot", { ascending: false }).order("id", { ascending: false });
-      }
-    };
-
-    // 构建基础查询
-    let baseQuery = supabase
-      .from("games")
-      .select("*", { count: "exact" })
-      .range(from, to);
-
-    if (selectedTag) {
-      baseQuery = baseQuery.contains("subcategory", [selectedTag.value]);
-    }
-    if (searchKeyword.trim()) {
-      baseQuery = baseQuery.ilike("name", `%${searchKeyword}%`);
-    }
-
-    buildQuery(baseQuery).then(({ data, error, count }) => {
-      if (error) {
+    loadGames(page)
+      .then(({ data, count }) => {
+        setFilteredGames(data);
+        setTotalCount(count);
+      })
+      .catch(() => {
         setFilteredGames([]);
-      } else {
-        setFilteredGames(data || []);
-        setTotalCount(count || 0);
-      }
-      setLoading(false);
-    });
+        setTotalCount(0);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   function clearTag() {
@@ -282,45 +305,23 @@ export default function HomePage() {
   }
 
   // 排序切换
-  function handleSortChange(sort: "id" | "updatedate" | "hot") {
+  function handleSortChange(sort: "updatedate" | "hot") {
     setSortBy(sort);
     setCurrentPage(1);
     if (showResult) {
-      const from = 0;
-      const to = PAGE_SIZE - 1;
       setLoading(true);
-
-      const buildQuery = (baseQuery: any) => {
-        if (sort === "id") {
-          return baseQuery.order("pinned", { ascending: false }).order("id", { ascending: true });
-        } else if (sort === "updatedate") {
-          return baseQuery.order("pinned", { ascending: false }).order("updatedate", { ascending: false }).order("id", { ascending: false });
-        } else {
-          return baseQuery.order("pinned", { ascending: false }).order("hot", { ascending: false }).order("id", { ascending: false });
-        }
-      };
-
-      let baseQuery = supabase
-        .from("games")
-        .select("*", { count: "exact" })
-        .range(from, to);
-
-      if (selectedTag) {
-        baseQuery = baseQuery.contains("subcategory", [selectedTag.value]);
-      }
-      if (searchKeyword.trim()) {
-        baseQuery = baseQuery.ilike("name", `%${searchKeyword}%`);
-      }
-
-      buildQuery(baseQuery).then(({ data, error, count }) => {
-        if (error) {
+      loadGames(1, { sort })
+        .then(({ data, count }) => {
+          setFilteredGames(data);
+          setTotalCount(count);
+        })
+        .catch(() => {
           setFilteredGames([]);
-        } else {
-          setFilteredGames(data || []);
-          setTotalCount(count || 0);
-        }
-        setLoading(false);
-      });
+          setTotalCount(0);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }
 
