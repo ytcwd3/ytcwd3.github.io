@@ -164,6 +164,7 @@ export default function GuestbookPopup({
         display: "flex",
         flexDirection: "column",
         margin: embedded ? "18px auto 0" : undefined,
+        textAlign: "left",
       }}
       onClick={(e) => {
         if (!embedded) e.stopPropagation();
@@ -175,6 +176,7 @@ export default function GuestbookPopup({
           padding: "20px 20px 16px",
           borderBottom: "1px solid rgba(216, 87, 232, 0.1)",
           flexShrink: 0,
+          background: embedded ? "rgba(255,255,255,0.96)" : undefined,
         }}
       >
         <div
@@ -188,22 +190,19 @@ export default function GuestbookPopup({
             <h2
               style={{
                 margin: 0,
-                fontSize: "18px",
+                fontSize: embedded ? "20px" : "18px",
                 fontWeight: 700,
-                background:
-                  "linear-gradient(90deg, var(--primary-color), var(--accent-color))",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
+                color: "var(--text-primary)",
+                letterSpacing: "0.01em",
               }}
             >
               💬 留言板
             </h2>
             <p
               style={{
-                margin: "2px 0 0",
-                fontSize: "12px",
-                color: "var(--text-tertiary)",
+                margin: "6px 0 0",
+                fontSize: embedded ? "13px" : "12px",
+                color: "rgba(55, 65, 81, 0.88)",
               }}
             >
               有任何问题或建议欢迎留言
@@ -237,7 +236,7 @@ export default function GuestbookPopup({
       <div
         style={{
           padding: "16px 20px",
-          background: "rgba(216, 87, 232, 0.03)",
+          background: embedded ? "rgba(255,255,255,0.92)" : "rgba(216, 87, 232, 0.03)",
           borderBottom: "1px solid rgba(216, 87, 232, 0.08)",
           flexShrink: 0,
         }}
@@ -267,6 +266,7 @@ export default function GuestbookPopup({
               ...inputStyle,
               resize: "none",
               lineHeight: "1.6",
+              minHeight: embedded ? "92px" : undefined,
             }}
             onFocus={(e) =>
               (e.target.style.borderColor = "var(--accent-color)")
@@ -343,7 +343,7 @@ export default function GuestbookPopup({
             style={{
               fontSize: "13px",
               fontWeight: 600,
-              color: "var(--text-secondary)",
+              color: "rgba(31, 41, 55, 0.88)",
             }}
           >
             全部留言 ({mainMessages.length})
@@ -399,11 +399,11 @@ export default function GuestbookPopup({
                   key={item.id}
                   style={{
                     padding: "14px",
-                    background: "rgba(255,255,255,0.7)",
+                    background: "rgba(255,255,255,0.92)",
                     borderRadius: "var(--radius-md)",
-                    border: "1px solid rgba(255,255,255,0.8)",
+                    border: "1px solid rgba(216, 87, 232, 0.1)",
                     marginBottom: "10px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                    boxShadow: "0 8px 22px rgba(15, 23, 42, 0.05)",
                   }}
                 >
                   {/* 主留言 */}
@@ -451,7 +451,7 @@ export default function GuestbookPopup({
                     <span
                       style={{
                         fontSize: "11px",
-                        color: "var(--text-tertiary)",
+                        color: "rgba(75, 85, 99, 0.78)",
                       }}
                     >
                       {new Date(item.created_at).toLocaleString("zh-CN", {
@@ -466,9 +466,9 @@ export default function GuestbookPopup({
                   <p
                     style={{
                       margin: 0,
-                      color: "var(--text-secondary)",
+                      color: "rgba(17, 24, 39, 0.9)",
                       fontSize: "14px",
-                      lineHeight: "1.6",
+                      lineHeight: "1.75",
                     }}
                   >
                     {item.message}
