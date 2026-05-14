@@ -4,10 +4,14 @@ import { useState, useEffect } from "react";
 import { supabase, Guestbook } from "@/lib/supabase";
 
 interface GuestbookPopupProps {
-  onClose: () => void;
+  onClose?: () => void;
+  embedded?: boolean;
 }
 
-export default function GuestbookPopup({ onClose }: GuestbookPopupProps) {
+export default function GuestbookPopup({
+  onClose,
+  embedded = false,
+}: GuestbookPopupProps) {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -151,15 +155,19 @@ export default function GuestbookPopup({ onClose }: GuestbookPopupProps) {
 
   return (
     <div
-      className="popup-content"
+      className={embedded ? "guestbook-embedded" : "popup-content"}
       style={{
-        maxWidth: "560px",
-        maxHeight: "85vh",
+        maxWidth: embedded ? "860px" : "560px",
+        width: "100%",
+        maxHeight: embedded ? "none" : "85vh",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
+        margin: embedded ? "18px auto 0" : undefined,
       }}
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        if (!embedded) e.stopPropagation();
+      }}
     >
       {/* 头部 */}
       <div
@@ -201,25 +209,27 @@ export default function GuestbookPopup({ onClose }: GuestbookPopupProps) {
               有任何问题或建议欢迎留言
             </p>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "rgba(216, 87, 232, 0.08)",
-              border: "1px solid rgba(216, 87, 232, 0.15)",
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              fontSize: "18px",
-              cursor: "pointer",
-              color: "var(--text-secondary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s",
-            }}
-          >
-            ×
-          </button>
+          {!embedded && onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: "rgba(216, 87, 232, 0.08)",
+                border: "1px solid rgba(216, 87, 232, 0.15)",
+                borderRadius: "50%",
+                width: "32px",
+                height: "32px",
+                fontSize: "18px",
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s",
+              }}
+            >
+              ×
+            </button>
+          )}
         </div>
       </div>
 
@@ -375,13 +385,13 @@ export default function GuestbookPopup({ onClose }: GuestbookPopupProps) {
             还没有留言，来说点什么吧
           </div>
         ) : (
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "0 20px 20px",
-            }}
-          >
+        <div
+          style={{
+            flex: 1,
+            overflowY: embedded ? "visible" : "auto",
+            padding: "0 20px 20px",
+          }}
+        >
             {mainMessages.map((item) => {
               const itemReplies = repliesByParent[item.id] || [];
               return (

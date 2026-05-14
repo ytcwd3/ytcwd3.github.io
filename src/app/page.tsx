@@ -513,23 +513,20 @@ export default function HomePage() {
 
         {/* 底部按钮 */}
         <div className="footer-popup-container">
-          <button className="popup-btn" onClick={() => togglePopup("popup1")}>
-            留言板
-          </button>
           <button className="popup-btn" onClick={() => togglePopup("popup2")}>
             模拟器大全
           </button>
           <button className="popup-btn" onClick={() => togglePopup("popup3")}>
             粉丝群
           </button>
-          <button className="popup-btn" onClick={() => togglePopup("popup4")}>
-            打赏捐赠
-          </button>
           <button className="popup-btn" onClick={() => togglePopup("popup6")}>
             工具补丁
           </button>
           <button className="popup-btn" onClick={() => togglePopup("popup7")}>
             帮助中心
+          </button>
+          <button className="popup-btn" onClick={() => togglePopup("popup4")}>
+            打赏捐赠
           </button>
         </div>
 
@@ -542,6 +539,8 @@ export default function HomePage() {
             资源更新记录
           </button>
         </div>
+
+        <GuestbookPopup embedded />
 
         {/* 页脚 */}
         <div className="footer">
@@ -561,17 +560,6 @@ export default function HomePage() {
           </p>
         </div>
       </div>
-
-      {/* 留言板弹窗 */}
-      {showPopups["popup1"] && (
-        <div
-          className="popup-mask"
-          style={{ display: "flex" }}
-          onClick={() => togglePopup("popup1")}
-        >
-          <GuestbookPopup onClose={() => togglePopup("popup1")} />
-        </div>
-      )}
 
       {/* 模拟器弹窗 */}
       {showPopups["popup2"] && (
