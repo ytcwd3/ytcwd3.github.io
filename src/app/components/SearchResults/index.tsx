@@ -10,8 +10,8 @@ interface SearchResultsProps {
   onPageChange: (page: number) => void;
   onClose: () => void;
   onOpenQrModal: (src: string, title: string) => void;
-  sortBy?: "id" | "updatedate" | "hot";
-  onSortChange?: (sort: "id" | "updatedate" | "hot") => void;
+  sortBy?: "updatedate" | "hot";
+  onSortChange?: (sort: "updatedate" | "hot") => void;
 }
 
 export default function SearchResults({
@@ -23,12 +23,9 @@ export default function SearchResults({
   onPageChange,
   onClose,
   onOpenQrModal,
-  sortBy = "id",
+  sortBy = "updatedate",
   onSortChange,
 }: SearchResultsProps) {
-  const startItem = (currentPage - 1) * 10 + 1;
-  const endItem = Math.min(currentPage * 10, totalCount);
-
   return (
     <div className="result-box">
       <div className="result-header">
@@ -38,7 +35,6 @@ export default function SearchResults({
           {onSortChange && (
             <div style={{ display: "flex", gap: "4px" }}>
               {([
-                { key: "id", label: "入库时间" },
                 { key: "updatedate", label: "更新时间" },
                 { key: "hot", label: "热度排序" },
               ] as const).map(({ key, label }) => (
