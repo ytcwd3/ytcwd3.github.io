@@ -17,7 +17,7 @@ export default function GuestbookPopup({
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [guestbooks, setGuestbooks] = useState<Guestbook[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!embedded);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
@@ -25,6 +25,7 @@ export default function GuestbookPopup({
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [replySubmitting, setReplySubmitting] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(!embedded);
 
   useEffect(() => {
     function checkAdminStatus() {
@@ -33,12 +34,14 @@ export default function GuestbookPopup({
     checkAdminStatus();
     window.addEventListener("storage", checkAdminStatus);
     const intervalId = setInterval(checkAdminStatus, 1000);
-    loadGuestbooks(1, false);
+    if (!embedded) {
+      loadGuestbooks(1, false);
+    }
     return () => {
       window.removeEventListener("storage", checkAdminStatus);
       clearInterval(intervalId);
     };
-  }, []);
+  }, [embedded]);
 
   async function loadGuestbooks(page = 1, append = false) {
     setLoading(true);
@@ -72,6 +75,14 @@ export default function GuestbookPopup({
     loadGuestbooks(currentPage + 1, true);
   }
 
+  function showHistory() {
+    if (historyVisible) return;
+    setHistoryVisible(true);
+    if (guestbooks.length === 0) {
+      loadGuestbooks(1, false);
+    }
+  }
+
   async function handleSubmit() {
     if (!name.trim() || !message.trim()) return;
     setSubmitting(true);
@@ -83,6 +94,7 @@ export default function GuestbookPopup({
       setSuccess(true);
       setName("");
       setMessage("");
+      setHistoryVisible(true);
       loadGuestbooks(1, false);
       setTimeout(() => setSuccess(false), 3000);
     } catch {
@@ -99,7 +111,7 @@ export default function GuestbookPopup({
       const adminUser = JSON.parse(localStorage.getItem("admin_user") || "{}");
       const { error } = await supabase.from("guestbook").insert([
         {
-          name: adminUser.github || adminUser.email || "管理员",
+          name: "管理员",
           message: replyContent.trim(),
           parent_id: parentId,
           admin_id: adminUser.github || adminUser.email,
@@ -109,6 +121,7 @@ export default function GuestbookPopup({
       if (error) throw error;
       setReplyContent("");
       setReplyingTo(null);
+      setHistoryVisible(true);
       loadGuestbooks(1, false);
     } catch {
       alert("回复失败，请重试");
@@ -122,6 +135,7 @@ export default function GuestbookPopup({
     try {
       const { error } = await supabase.from("guestbook").delete().eq("id", id);
       if (error) throw error;
+      setHistoryVisible(true);
       loadGuestbooks(1, false);
     } catch {
       alert("删除失败，请重试");
@@ -130,6 +144,9 @@ export default function GuestbookPopup({
 
   const mainMessages = guestbooks.filter((g) => !g.is_reply && !g.parent_id);
   const replies = guestbooks.filter((g) => g.is_reply || g.parent_id);
+  function getReplyDisplayName(reply: Guestbook) {
+    return reply.admin_id ? "管理员" : reply.name;
+  }
   const repliesByParent = replies.reduce(
     (acc, reply) => {
       const parentId = reply.parent_id;
@@ -330,6 +347,33 @@ export default function GuestbookPopup({
           flexDirection: "column",
         }}
       >
+        {embedded && !historyVisible ? (
+          <div
+            style={{
+              padding: "18px 20px 22px",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <button
+              onClick={showHistory}
+              style={{
+                padding: "9px 24px",
+                fontSize: "13px",
+                background: "rgba(216, 87, 232, 0.08)",
+                color: "var(--accent-color)",
+                border: "1px solid rgba(216, 87, 232, 0.2)",
+                borderRadius: "var(--radius-sm)",
+                cursor: "pointer",
+                fontWeight: 600,
+                transition: "all 0.2s",
+              }}
+            >
+              加载历史留言
+            </button>
+          </div>
+        ) : (
+          <>
         <div
           style={{
             padding: "12px 20px 8px",
@@ -625,7 +669,7 @@ export default function GuestbookPopup({
                                 color: "var(--accent-color)",
                               }}
                             >
-                              🛡 {reply.name}
+                              🛡 {getReplyDisplayName(reply)}
                             </span>
                             <span
                               style={{
@@ -701,6 +745,8 @@ export default function GuestbookPopup({
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
