@@ -8,6 +8,39 @@ interface GuestbookPopupProps {
   embedded?: boolean;
 }
 
+const ADMIN_GITHUB_USERS = ["anyebojue", "ytcwd3"];
+
+function isAllowedAdminId(adminId?: string) {
+  return !!adminId && ADMIN_GITHUB_USERS.includes(adminId);
+}
+
+function getAdminDisplayName(adminId?: string) {
+  return isAllowedAdminId(adminId) ? `管理员(${adminId})` : null;
+}
+
+async function getCurrentAdminUser() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session || session.user.app_metadata?.provider !== "github") {
+    return null;
+  }
+
+  const githubUsername =
+    session.user.user_metadata?.user_name ||
+    session.user.user_metadata?.preferred_username;
+
+  if (!isAllowedAdminId(githubUsername)) {
+    return null;
+  }
+
+  return {
+    email: session.user.email,
+    github: githubUsername,
+  };
+}
+
 export default function GuestbookPopup({
   onClose,
   embedded = false,
@@ -23,22 +56,49 @@ export default function GuestbookPopup({
   const PAGE_SIZE = 10;
   const [isAdmin, setIsAdmin] = useState(false);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
   const [replyContent, setReplyContent] = useState("");
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(!embedded);
 
   useEffect(() => {
-    function checkAdminStatus() {
-      setIsAdmin(localStorage.getItem("admin_logged_in") === "true");
+    async function checkAdminStatus() {
+      const cachedLoggedIn = localStorage.getItem("admin_logged_in") === "true";
+      const cachedUser = JSON.parse(localStorage.getItem("admin_user") || "{}");
+      if (cachedLoggedIn && isAllowedAdminId(cachedUser.github)) {
+        setIsAdmin(true);
+        return;
+      }
+
+      const adminUser = await getCurrentAdminUser();
+      if (adminUser?.github) {
+        localStorage.setItem("admin_logged_in", "true");
+        localStorage.setItem("admin_user", JSON.stringify(adminUser));
+        setIsAdmin(true);
+        return;
+      }
+
+      setIsAdmin(false);
     }
     checkAdminStatus();
-    window.addEventListener("storage", checkAdminStatus);
-    const intervalId = setInterval(checkAdminStatus, 1000);
+    const handleStorage = () => {
+      void checkAdminStatus();
+    };
+    window.addEventListener("storage", handleStorage);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void checkAdminStatus();
+    });
+    const intervalId = setInterval(() => {
+      void checkAdminStatus();
+    }, 1000);
     if (!embedded) {
       loadGuestbooks(1, false);
     }
     return () => {
-      window.removeEventListener("storage", checkAdminStatus);
+      window.removeEventListener("storage", handleStorage);
+      subscription.unsubscribe();
       clearInterval(intervalId);
     };
   }, [embedded]);
@@ -55,9 +115,34 @@ export default function GuestbookPopup({
         .range(from, to);
       if (error) throw error;
       if (append) {
-        setGuestbooks((prev) => [...prev, ...(data || [])]);
+        setGuestbooks((prev) => {
+          const nextGuestbooks = [...prev, ...(data || [])];
+          const replyParentIds = Array.from(
+            new Set(
+              nextGuestbooks
+                .filter((item) => item.is_reply || item.parent_id)
+                .map((item) => item.parent_id)
+                .filter((parentId): parentId is number => typeof parentId === "number"),
+            ),
+          );
+          setExpandedReplies((current) =>
+            Array.from(new Set([...current, ...replyParentIds])),
+          );
+          return nextGuestbooks;
+        });
       } else {
-        setGuestbooks(data || []);
+        const nextGuestbooks = data || [];
+        setGuestbooks(nextGuestbooks);
+        setExpandedReplies(
+          Array.from(
+            new Set(
+              nextGuestbooks
+                .filter((item) => item.is_reply || item.parent_id)
+                .map((item) => item.parent_id)
+                .filter((parentId): parentId is number => typeof parentId === "number"),
+            ),
+          ),
+        );
       }
       setHasMore(
         (data?.length || 0) === PAGE_SIZE && (count || 0) > page * PAGE_SIZE,
@@ -83,6 +168,14 @@ export default function GuestbookPopup({
     }
   }
 
+  function toggleReplies(parentId: number) {
+    setExpandedReplies((prev) =>
+      prev.includes(parentId)
+        ? prev.filter((id) => id !== parentId)
+        : [...prev, parentId],
+    );
+  }
+
   async function handleSubmit() {
     if (!name.trim() || !message.trim()) return;
     setSubmitting(true);
@@ -106,15 +199,21 @@ export default function GuestbookPopup({
 
   async function handleReply(parentId: number) {
     if (!replyContent.trim()) return;
+    if (!isAdmin) return;
     setReplySubmitting(true);
     try {
       const adminUser = JSON.parse(localStorage.getItem("admin_user") || "{}");
+      const liveAdminUser = (await getCurrentAdminUser()) || adminUser;
+      const adminId = liveAdminUser.github || liveAdminUser.email;
+      if (!isAllowedAdminId(adminId)) {
+        throw new Error("Unauthorized admin reply");
+      }
       const { error } = await supabase.from("guestbook").insert([
         {
-          name: "管理员",
+          name: getAdminDisplayName(adminId),
           message: replyContent.trim(),
           parent_id: parentId,
-          admin_id: adminUser.github || adminUser.email,
+          admin_id: adminId,
           is_reply: true,
         },
       ]);
@@ -145,7 +244,7 @@ export default function GuestbookPopup({
   const mainMessages = guestbooks.filter((g) => !g.is_reply && !g.parent_id);
   const replies = guestbooks.filter((g) => g.is_reply || g.parent_id);
   function getReplyDisplayName(reply: Guestbook) {
-    return reply.admin_id ? "管理员" : reply.name;
+    return getAdminDisplayName(reply.admin_id) || reply.name;
   }
   const repliesByParent = replies.reduce(
     (acc, reply) => {
@@ -438,6 +537,7 @@ export default function GuestbookPopup({
         >
             {mainMessages.map((item) => {
               const itemReplies = repliesByParent[item.id] || [];
+              const repliesExpanded = expandedReplies.includes(item.id);
               return (
                 <div
                   key={item.id}
@@ -528,26 +628,46 @@ export default function GuestbookPopup({
                       borderTop: "1px solid rgba(0,0,0,0.04)",
                     }}
                   >
-                    <button
-                      onClick={() =>
-                        setReplyingTo(replyingTo === item.id ? null : item.id)
-                      }
-                      style={{
-                        padding: "4px 12px",
-                        fontSize: "12px",
-                        background: "rgba(216, 87, 232, 0.08)",
-                        color: "var(--accent-color)",
-                        border: "1px solid rgba(216, 87, 232, 0.15)",
-                        borderRadius: "var(--radius-sm)",
-                        cursor: "pointer",
-                        fontWeight: 500,
-                        transition: "all 0.2s",
-                      }}
-                    >
-                      {replyingTo === item.id
-                        ? "收起"
-                        : `回复${itemReplies.length > 0 ? `(${itemReplies.length})` : ""}`}
-                    </button>
+                    {itemReplies.length > 0 && (
+                      <button
+                        onClick={() => toggleReplies(item.id)}
+                        style={{
+                          padding: "4px 12px",
+                          fontSize: "12px",
+                          background: "rgba(216, 87, 232, 0.08)",
+                          color: "var(--accent-color)",
+                          border: "1px solid rgba(216, 87, 232, 0.15)",
+                          borderRadius: "var(--radius-sm)",
+                          cursor: "pointer",
+                          fontWeight: 500,
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {repliesExpanded
+                          ? "收起回复"
+                          : `查看回复(${itemReplies.length})`}
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() =>
+                          setReplyingTo(replyingTo === item.id ? null : item.id)
+                        }
+                        style={{
+                          padding: "4px 12px",
+                          fontSize: "12px",
+                          background: "rgba(216, 87, 232, 0.08)",
+                          color: "var(--accent-color)",
+                          border: "1px solid rgba(216, 87, 232, 0.15)",
+                          borderRadius: "var(--radius-sm)",
+                          cursor: "pointer",
+                          fontWeight: 500,
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {replyingTo === item.id ? "收起回复框" : "回复"}
+                      </button>
+                    )}
                     {isAdmin && (
                       <button
                         onClick={() => handleDelete(item.id)}
@@ -569,7 +689,7 @@ export default function GuestbookPopup({
                   </div>
 
                   {/* 回复表单 */}
-                  {replyingTo === item.id && (
+                  {replyingTo === item.id && isAdmin && (
                     <div
                       style={{
                         marginTop: "12px",
@@ -641,82 +761,90 @@ export default function GuestbookPopup({
                   )}
 
                   {/* 回复列表 */}
-                  {itemReplies.length > 0 && (
+                  {itemReplies.length > 0 && repliesExpanded && (
                     <div style={{ marginTop: "10px" }}>
-                      {itemReplies.map((reply) => (
-                        <div
-                          key={reply.id}
-                          style={{
-                            marginLeft: "16px",
-                            padding: "10px 12px",
-                            background: "rgba(216, 87, 232, 0.04)",
-                            borderRadius: "var(--radius-sm)",
-                            borderLeft: "2px solid var(--accent-color)",
-                            marginBottom: "6px",
-                          }}
-                        >
+                      {itemReplies.map((reply) => {
+                        const isAdminReply = isAllowedAdminId(reply.admin_id);
+                        return (
                           <div
+                            key={reply.id}
                             style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              marginBottom: "4px",
+                              marginLeft: "16px",
+                              padding: "10px 12px",
+                              background: "rgba(216, 87, 232, 0.04)",
+                              borderRadius: "var(--radius-sm)",
+                              borderLeft: isAdminReply
+                                ? "2px solid var(--accent-color)"
+                                : "2px solid rgba(148, 163, 184, 0.45)",
+                              marginBottom: "6px",
                             }}
                           >
-                            <span
+                            <div
                               style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "13px",
+                                  fontWeight: 600,
+                                  color: isAdminReply
+                                    ? "var(--accent-color)"
+                                    : "var(--text-primary)",
+                                }}
+                              >
+                                {isAdminReply ? "🛡 " : ""}
+                                {getReplyDisplayName(reply)}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  color: "var(--text-tertiary)",
+                                }}
+                              >
+                                {new Date(reply.created_at).toLocaleString(
+                                  "zh-CN",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
+                              </span>
+                            </div>
+                            <p
+                              style={{
+                                margin: 0,
                                 fontSize: "13px",
-                                fontWeight: 600,
-                                color: "var(--accent-color)",
+                                color: "var(--text-secondary)",
+                                lineHeight: "1.5",
                               }}
                             >
-                              🛡 {getReplyDisplayName(reply)}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "11px",
-                                color: "var(--text-tertiary)",
-                              }}
-                            >
-                              {new Date(reply.created_at).toLocaleString(
-                                "zh-CN",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )}
-                            </span>
+                              {reply.message}
+                            </p>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleDelete(reply.id)}
+                                style={{
+                                  marginTop: "6px",
+                                  padding: "2px 8px",
+                                  fontSize: "11px",
+                                  background: "rgba(229, 57, 53, 0.06)",
+                                  color: "#dc2626",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                删除
+                              </button>
+                            )}
                           </div>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: "13px",
-                              color: "var(--text-secondary)",
-                              lineHeight: "1.5",
-                            }}
-                          >
-                            {reply.message}
-                          </p>
-                          {isAdmin && (
-                            <button
-                              onClick={() => handleDelete(reply.id)}
-                              style={{
-                                marginTop: "6px",
-                                padding: "2px 8px",
-                                fontSize: "11px",
-                                background: "rgba(229, 57, 53, 0.06)",
-                                color: "#dc2626",
-                                border: "none",
-                                borderRadius: "4px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              删除
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
