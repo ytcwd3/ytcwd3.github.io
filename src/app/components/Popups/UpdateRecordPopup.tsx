@@ -32,43 +32,11 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [nextCursorDate, setNextCursorDate] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 30;
 
-  function formatDateVariants(date: Date) {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    return Array.from(
-      new Set([
-        `${year}.${month}.${day}`,
-        `${year}.${String(month).padStart(2, "0")}.${day}`,
-        `${year}.${month}.${String(day).padStart(2, "0")}`,
-        `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`,
-      ]),
-    );
-  }
-
-  function shiftDate(date: Date, days: number) {
-    const next = new Date(date);
-    next.setDate(next.getDate() + days);
-    return next;
-  }
-
-  function toCursorValue(date: Date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  function fromCursorValue(value: string) {
-    const [year, month, day] = value.split("-").map(Number);
-    return new Date(year, month - 1, day);
-  }
-
-  async function loadRecords(append = false) {
-    const isInitialLoad = !append;
+  async function loadRecords(page: number, append = false) {
+    const isInitialLoad = page === 1 && !append;
     if (isInitialLoad) {
       setLoading(true);
     } else {
@@ -76,52 +44,30 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
     }
 
     try {
-      const collected: GameRecord[] = [];
-      const seenIds = new Set<number>();
-      const startDate = append && nextCursorDate
-        ? fromCursorValue(nextCursorDate)
-        : new Date();
+      const from = (page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error } = await supabase
+        .from("games")
+        .select("id, name, updatedate, category, subcategory, image, video")
+        .order("updatedate", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
 
-      if (append) {
-        records.forEach((record) => seenIds.add(record.id));
-      }
+      if (error) throw error;
 
-      let cursor = new Date(startDate);
-      let scannedDays = 0;
-      const maxDays = 3660;
+      const nextRecords = (data || []).map((item) => ({
+        id: item.id,
+        name: item.name,
+        updatedate: item.updatedate,
+        category: item.category,
+        subcategory: item.subcategory,
+        image: item.image || undefined,
+        video: item.video || undefined,
+      }));
 
-      while (collected.length < PAGE_SIZE && scannedDays < maxDays) {
-        const variants = formatDateVariants(cursor);
-        const { data, error } = await supabase
-          .from("games")
-          .select("id, name, updatedate, category, subcategory, image, video")
-          .in("updatedate", variants)
-          .order("id", { ascending: false });
-
-        if (error) throw error;
-
-        for (const item of data || []) {
-          if (seenIds.has(item.id)) continue;
-          seenIds.add(item.id);
-          collected.push({
-            id: item.id,
-            name: item.name,
-            updatedate: item.updatedate,
-            category: item.category,
-            subcategory: item.subcategory,
-            image: item.image || undefined,
-            video: item.video || undefined,
-          });
-          if (collected.length >= PAGE_SIZE) break;
-        }
-
-        cursor = shiftDate(cursor, -1);
-        scannedDays++;
-      }
-
-      setRecords((prev) => (append ? [...prev, ...collected] : collected));
-      setHasMore(scannedDays < maxDays);
-      setNextCursorDate(toCursorValue(cursor));
+      setRecords((prev) => (append ? [...prev, ...nextRecords] : nextRecords));
+      setHasMore(nextRecords.length === PAGE_SIZE);
+      setCurrentPage(page);
     } catch (error) {
       console.error("加载更新记录失败:", error);
       if (!append) {
@@ -138,12 +84,12 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
   }
 
   useEffect(() => {
-    loadRecords(false);
+    loadRecords(1, false);
   }, []);
 
   async function loadMore() {
     if (loading || loadingMore || !hasMore) return;
-    await loadRecords(true);
+    await loadRecords(currentPage + 1, true);
   }
 
   const grouped: Record<string, GameRecord[]> = {};
