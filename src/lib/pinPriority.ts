@@ -1,0 +1,82 @@
+import { supabase } from "./supabase";
+
+const PIN_PRIORITY_PREFIX = "__pin_order__:";
+
+type PinPriorityRow = {
+  id?: number;
+  name: string;
+  url: string;
+  type?: "tool" | "help";
+};
+
+export function getPinPriorityName(gameId: number) {
+  return `${PIN_PRIORITY_PREFIX}${gameId}`;
+}
+
+export function parsePinPriority(value: string | number | null | undefined) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+  const parsed = Number(String(value ?? "").trim());
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.floor(parsed));
+}
+
+export async function fetchPinPriorityMap() {
+  const { data, error } = await supabase
+    .from("site_links")
+    .select("name, url")
+    .like("name", `${PIN_PRIORITY_PREFIX}%`);
+
+  if (error) {
+    console.error("加载置顶优先级失败:", error);
+    return {} as Record<number, number>;
+  }
+
+  const map: Record<number, number> = {};
+  for (const row of (data || []) as PinPriorityRow[]) {
+    const id = Number(row.name.slice(PIN_PRIORITY_PREFIX.length));
+    if (!Number.isInteger(id) || id <= 0) continue;
+    map[id] = parsePinPriority(row.url);
+  }
+  return map;
+}
+
+export async function savePinPriority(
+  gameId: number,
+  pinned: boolean,
+  priority: number,
+) {
+  const name = getPinPriorityName(gameId);
+
+  if (!pinned) {
+    const { error } = await supabase.from("site_links").delete().eq("name", name);
+    if (error) throw error;
+    return;
+  }
+
+  const normalizedPriority = parsePinPriority(priority);
+  const { data, error } = await supabase
+    .from("site_links")
+    .select("id")
+    .eq("name", name)
+    .limit(1);
+
+  if (error) throw error;
+
+  if (data && data.length > 0) {
+    const { error: updateError } = await supabase
+      .from("site_links")
+      .update({ url: String(normalizedPriority), type: "help" })
+      .eq("id", data[0].id);
+    if (updateError) throw updateError;
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("site_links").insert({
+    name,
+    url: String(normalizedPriority),
+    type: "help",
+  });
+  if (insertError) throw insertError;
+}

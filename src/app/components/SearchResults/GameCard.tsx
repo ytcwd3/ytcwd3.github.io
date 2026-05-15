@@ -92,6 +92,13 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
 
+  function getPinPriority() {
+    if (!game.pinned) return null;
+    return typeof game.pinPriority === "number" && Number.isFinite(game.pinPriority)
+      ? game.pinPriority
+      : 0;
+  }
+
   function getDisplayCode(url: string, code: string): string {
     return parseCodeFromUrl(url) || code || "8888";
   }
@@ -118,7 +125,11 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
   }
 
   return (
-    <div className="result-item" data-category={game.category?.[0]}>
+    <div
+      className="result-item"
+      data-category={game.category?.[0]}
+      data-pinned={game.pinned ? "true" : "false"}
+    >
       {/* 左侧：缩略图 */}
       <div className="game-thumb">
         {game.image ? (
@@ -156,6 +167,9 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
         <div className="game-title-row">
           <span className="game-index" style={{ color: catColor }}>{index + 1}.</span>
           <span className="game-name-text">{game.name}</span>
+          {game.pinned && (
+            <span className="game-pinned-tag">{`置顶 ${getPinPriority()}`}</span>
+          )}
           <span className="game-cat-tag" style={{ background: `${catColor}18`, color: catColor, border: `1px solid ${catColor}40` }}>
             {game.category?.[0] || ""}
           </span>

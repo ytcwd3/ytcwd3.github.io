@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, Game } from "@/lib/supabase";
+import { parsePinPriority, savePinPriority } from "@/lib/pinPriority";
 import {
   INPUT_STYLE,
   LABEL_STYLE,
@@ -39,6 +40,15 @@ interface FormData {
   image: string;
   video: string;
   pinned: boolean;
+  pinOrder: string;
+}
+
+function normalizePinOrder(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.floor(parsed));
 }
 
 function normalizeUpdateDate(value: string) {
@@ -109,6 +119,7 @@ function getFormDataFromGame(game: Game | null): FormData {
       image: game.image || "",
       video: game.video || "",
       pinned: !!(game as any).pinned,
+      pinOrder: game.pinned ? String((game as any).pinPriority ?? 0) : "",
     };
   }
   return {
@@ -127,6 +138,7 @@ function getFormDataFromGame(game: Game | null): FormData {
     image: "",
     video: "",
     pinned: false,
+    pinOrder: "",
   };
 }
 
@@ -147,6 +159,7 @@ function buildInitialData(): FormData {
     image: "",
     video: "",
     pinned: false,
+    pinOrder: "",
   };
 }
 
@@ -187,6 +200,15 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
   function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
     if (key === "name") setNameError("");
+    if (key === "pinned") {
+      const checked = value as boolean;
+      setFormData((prev) => ({
+        ...prev,
+        pinned: checked,
+        pinOrder: checked ? prev.pinOrder || "0" : "",
+      }));
+      return;
+    }
     if (["quarkpan", "baidupan", "thunderpan"].includes(key as any)) {
       setLinkErrors((prev) => ({ ...prev, [key]: "" }));
       // 自动从链接识别提取码
@@ -271,6 +293,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
     }
 
     const gameData = buildGameData(formData);
+    const pinPriority = parsePinPriority(normalizePinOrder(formData.pinOrder) ?? 0);
 
     try {
       if (game) {
@@ -279,9 +302,17 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
           .update(gameData)
           .eq("id", game.id);
         if (error) throw error;
+        await savePinPriority(game.id, !!gameData.pinned, pinPriority);
       } else {
-        const { error } = await supabase.from("games").insert([gameData]);
+        const { data, error } = await supabase
+          .from("games")
+          .insert([gameData])
+          .select("id");
         if (error) throw error;
+        const insertedId = data?.[0]?.id;
+        if (insertedId) {
+          await savePinPriority(insertedId, !!gameData.pinned, pinPriority);
+        }
       }
       // 清除元数据缓存，下次加载会重新拉取
       invalidateAdminMetaCache();
@@ -565,7 +596,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
             {/* 置顶选项 */}
             <div className="form-group" style={{ marginBottom: "14px" }}>
-              <label style={{ ...LABEL_STYLE, display: "flex", alignItems: "center", gap: "8px" }}>
+              <label style={{ ...LABEL_STYLE, display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                 <input
                   type="checkbox"
                   checked={formData.pinned}
@@ -577,6 +608,26 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                   （置顶词条会优先显示在搜索结果顶部）
                 </span>
               </label>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.pinOrder}
+                  onChange={(e) => setField("pinOrder", e.target.value)}
+                  disabled={!formData.pinned}
+                  placeholder="0"
+                  style={{
+                    ...INPUT_STYLE,
+                    width: "120px",
+                    opacity: formData.pinned ? 1 : 0.5,
+                    cursor: formData.pinned ? "text" : "not-allowed",
+                  }}
+                />
+                <span style={{ fontSize: "12px", color: "var(--text-tertiary)" }}>
+                  0 最优先，然后是 1、2、3……
+                </span>
+              </div>
             </div>
 
             {/* 底部按钮 */}
@@ -594,7 +645,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
               {!game && (
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     // 保存后继续添加
                     setSaving(true);
                     setNameError("");
@@ -608,18 +659,32 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                     }
 
                     const gameData = buildGameData(formData);
-                    supabase.from("games").insert([gameData]).then(({ error }) => {
+                    const pinPriority = parsePinPriority(
+                      normalizePinOrder(formData.pinOrder) ?? 0,
+                    );
+                    try {
+                      const { data, error } = await supabase
+                      .from("games")
+                      .insert([gameData])
+                      .select("id");
                       if (error) {
                         alert("操作失败: " + error.message);
                         setSaving(false);
                         return;
+                      }
+                      const insertedId = data?.[0]?.id;
+                      if (insertedId) {
+                        await savePinPriority(insertedId, !!gameData.pinned, pinPriority);
                       }
                       invalidateAdminMetaCache();
                       // 重置表单，继续添加
                       setFormData(buildInitialData());
                       setSaving(false);
                       alert("添加成功，继续添加下一条！");
-                    });
+                    } catch (error: any) {
+                      alert("操作失败: " + error.message);
+                      setSaving(false);
+                    }
                   }}
                   disabled={saving || checkingDup}
                   style={{

@@ -3,6 +3,7 @@ import "./admin.css";
 
 import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
+import { fetchPinPriorityMap } from "@/lib/pinPriority";
 import {
   CATEGORY_SUBCATEGORIES,
   CATEGORY_DB_VALUE,
@@ -37,6 +38,15 @@ function parseUpdateDate(value: string) {
   const [year, month, day] = parts;
   const parsed = new Date(year, month - 1, day);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getPinPriority(
+  game: { id: number; pinned?: boolean },
+  pinPriorityMap: Record<number, number>,
+) {
+  if (!game.pinned) return Number.MAX_SAFE_INTEGER;
+  const raw = pinPriorityMap[game.id];
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
 }
 
 export default function AdminDashboard() {
@@ -128,45 +138,80 @@ export default function AdminDashboard() {
     try {
       const from = (page - 1) * PAGE_SIZE;
       const to = page * PAGE_SIZE - 1;
-      let query = supabase.from("games").select("*", { count: "exact" });
-      let sortMetaQuery = supabase.from("games").select("id, updatedate, pinned");
 
-      if (curCat !== "all") {
-        if (curCat === "pc") {
-          query = query.contains("category", ["PC"]).not("subcategory", "cs", '{"安卓"}');
-          sortMetaQuery = sortMetaQuery
-            .contains("category", ["PC"])
-            .not("subcategory", "cs", '{"安卓"}');
-        } else if (curCat === "other") {
-          query = query.or("category.cs.{Ohter},category.cs.{Other},subcategory.cs.{安卓}");
-          sortMetaQuery = sortMetaQuery.or(
-            "category.cs.{Ohter},category.cs.{Other},subcategory.cs.{安卓}",
-          );
-        } else {
-          const catName = CATEGORY_DB_VALUE[curCat];
-          if (catName) {
-            query = query.contains("category", [catName]);
-            sortMetaQuery = sortMetaQuery.contains("category", [catName]);
+      function buildSortMetaQuery() {
+        let metaQuery = supabase.from("games").select("id, name, updatedate, pinned");
+
+        if (curCat !== "all") {
+          if (curCat === "pc") {
+            metaQuery = metaQuery
+              .contains("category", ["PC"])
+              .not("subcategory", "cs", '{"安卓"}');
+          } else if (curCat === "other") {
+            metaQuery = metaQuery.or(
+              "category.cs.{Ohter},category.cs.{Other},subcategory.cs.{安卓}",
+            );
+          } else {
+            const catName = CATEGORY_DB_VALUE[curCat];
+            if (catName) {
+              metaQuery = metaQuery.contains("category", [catName]);
+            }
           }
         }
-      }
-      if (curSub !== "all") {
-        query = query.contains("subcategory", [curSub]);
-        sortMetaQuery = sortMetaQuery.contains("subcategory", [curSub]);
-      }
-      if (curKeyword) {
-        query = query.ilike("name", `%${curKeyword}%`);
-        sortMetaQuery = sortMetaQuery.ilike("name", `%${curKeyword}%`);
+
+        if (curSub !== "all") {
+          metaQuery = metaQuery.contains("subcategory", [curSub]);
+        }
+        if (curKeyword) {
+          metaQuery = metaQuery.ilike("name", `%${curKeyword}%`);
+        }
+
+        return metaQuery;
       }
 
-      if (curSort === "updatedate_desc" || curSort === "updatedate_asc") {
-        const { data: metaData, error: metaError } = await sortMetaQuery;
+      const metaData: {
+        id: number;
+        name?: string;
+        updatedate: string;
+        pinned?: boolean;
+      }[] = [];
+      const META_BATCH = 1000;
+      let metaPage = 0;
+
+      while (true) {
+        const metaFrom = metaPage * META_BATCH;
+        const metaTo = metaFrom + META_BATCH - 1;
+        const { data, error } = await buildSortMetaQuery()
+          .order("id", { ascending: true })
+          .range(metaFrom, metaTo);
+
         if ((window as any).__reqId !== reqId) return;
-        if (metaError) throw metaError;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
 
-        const sortedMeta = [...(metaData || [])].sort((a, b) => {
-          if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+        metaData.push(...data);
+        if (data.length < META_BATCH) break;
+        metaPage++;
+      }
 
+      const pinPriorityMap = await fetchPinPriorityMap();
+      if ((window as any).__reqId !== reqId) return;
+
+      const sortedMeta = [...metaData].sort((a, b) => {
+        if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+        if (a.pinned && b.pinned) {
+          const pinOrderDiff =
+            getPinPriority(a, pinPriorityMap) - getPinPriority(b, pinPriorityMap);
+          if (pinOrderDiff !== 0) return pinOrderDiff;
+        }
+
+        if (curSort === "name") {
+          const nameDiff = (a.name || "").localeCompare(b.name || "", "zh-CN");
+          if (nameDiff !== 0) return nameDiff;
+          return a.id - b.id;
+        }
+
+        if (curSort === "updatedate_desc" || curSort === "updatedate_asc") {
           const dateA = parseUpdateDate(a.updatedate);
           const dateB = parseUpdateDate(b.updatedate);
           if (!dateA && !dateB) {
@@ -180,50 +225,38 @@ export default function AdminDashboard() {
               : dateA.getTime() - dateB.getTime();
           }
           return curSort === "updatedate_desc" ? b.id - a.id : a.id - b.id;
-        });
-
-        const pageIds = sortedMeta.slice(from, to + 1).map((item) => item.id);
-        if (pageIds.length === 0) {
-          setFilteredGames([]);
-          setTotalCount(sortedMeta.length);
-          setCurrentPage(page);
-          return;
         }
 
-        const { data, error } = await supabase
-          .from("games")
-          .select("*")
-          .in("id", pageIds);
+        return a.id - b.id;
+      });
 
-        if ((window as any).__reqId !== reqId) return;
-        if (error) throw error;
-
-        const gamesById = new Map((data || []).map((item) => [item.id, item]));
-        setFilteredGames(
-          pageIds.map((id) => gamesById.get(id)).filter(Boolean) as Game[],
-        );
+      const pageIds = sortedMeta.slice(from, to + 1).map((item) => item.id);
+      if (pageIds.length === 0) {
+        setFilteredGames([]);
         setTotalCount(sortedMeta.length);
         setCurrentPage(page);
-      } else {
-        const orderedQuery =
-          curSort === "name"
-          ? query
-              .order("pinned", { ascending: false })
-              .order("name", { ascending: true })
-              .order("id", { ascending: true })
-            : query
-                .order("pinned", { ascending: false })
-                .order("id", { ascending: true });
-
-        const { data, error, count } = await orderedQuery.range(from, to);
-
-        if ((window as any).__reqId !== reqId) return;
-        if (error) throw error;
-
-        setFilteredGames(data || []);
-        setTotalCount(count || 0);
-        setCurrentPage(page);
+        return;
       }
+
+      const { data, error } = await supabase.from("games").select("*").in("id", pageIds);
+      if ((window as any).__reqId !== reqId) return;
+      if (error) throw error;
+
+      const gamesById = new Map((data || []).map((item) => [item.id, item]));
+      setFilteredGames(
+        pageIds
+          .map((id) => {
+            const game = gamesById.get(id);
+            if (!game) return null;
+            return {
+              ...game,
+              pinPriority: game.pinned ? pinPriorityMap[id] ?? 0 : null,
+            };
+          })
+          .filter(Boolean) as Game[],
+      );
+      setTotalCount(sortedMeta.length);
+      setCurrentPage(page);
     } catch (error: any) {
       alert("筛选失败: " + error.message);
     }

@@ -16,6 +16,7 @@ export default function ToolPatchPopup({ onClose }: ToolPatchPopupProps) {
       .from("site_links")
       .select("*")
       .eq("type", "tool")
+      .not("name", "like", "__pin_order__:%")
       .order("id", { ascending: true })
       .then(({ data, error }) => {
         if (error) {

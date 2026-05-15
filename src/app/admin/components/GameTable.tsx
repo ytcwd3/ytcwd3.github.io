@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
+import { savePinPriority } from "@/lib/pinPriority";
 import {
   CATEGORY_NAMES,
   DB_TO_UI_KEY,
@@ -43,6 +44,13 @@ export default function GameTable({
   const [showBatchBar, setShowBatchBar] = useState(false);
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [pageError, setPageError] = useState("");
+
+  function getPinPriority(game: Game) {
+    if (!game.pinned) return null;
+    return typeof game.pinPriority === "number" && Number.isFinite(game.pinPriority)
+      ? game.pinPriority
+      : 0;
+  }
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -388,6 +396,11 @@ export default function GameTable({
                               .from("games")
                               .update({ pinned: newPinned })
                               .eq("id", game.id);
+                            await savePinPriority(
+                              game.id,
+                              newPinned,
+                              getPinPriority(game) ?? 0,
+                            );
                             // Trigger parent refresh by dispatching a custom event
                             window.dispatchEvent(new CustomEvent("adminRefreshGames"));
                           }}
@@ -410,6 +423,18 @@ export default function GameTable({
                         >
                           {game.pinned ? "📌" : "📍"}
                         </button>
+                        {game.pinned && (
+                          <div
+                            style={{
+                              marginTop: "4px",
+                              fontSize: "11px",
+                              color: "#b45309",
+                              fontWeight: 700,
+                            }}
+                          >
+                            P{getPinPriority(game)}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: "11px 14px" }}>
                         <button
@@ -493,7 +518,11 @@ export default function GameTable({
                       onChange={() => toggleOne(game.id)}
                     />
                     <span className="game-card-name">
-                      {game.pinned && <span style={{ marginRight: 4 }}>📌</span>}
+                      {game.pinned && (
+                        <span style={{ marginRight: 4 }}>
+                          {`📌${getPinPriority(game)}`}
+                        </span>
+                      )}
                       {game.name}
                     </span>
                     <span

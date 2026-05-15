@@ -21,6 +21,7 @@ export default function SiteLinksManager() {
     supabase
       .from("site_links")
       .select("*")
+      .not("name", "like", "__pin_order__:%")
       .order("type", { ascending: true })
       .order("id", { ascending: true })
       .then(({ data }) => {

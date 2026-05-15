@@ -16,6 +16,7 @@ export default function HelpCenterPopup({ onClose }: HelpCenterPopupProps) {
       .from("site_links")
       .select("*")
       .eq("type", "help")
+      .not("name", "like", "__pin_order__:%")
       .order("id", { ascending: true })
       .then(({ data, error }) => {
         if (error) {

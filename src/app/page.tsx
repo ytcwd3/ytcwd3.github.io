@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
+import { fetchPinPriorityMap } from "@/lib/pinPriority";
 import SearchResults from "./components/SearchResults";
 import GuestbookPopup from "./components/Popups/GuestbookPopup";
 import EmulatorPopup from "./components/Popups/EmulatorPopup";
@@ -98,9 +99,30 @@ function parseUpdateDate(value: string) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function sortGamesByUpdateDate(games: Game[]) {
+function getPinPriority(game: Game, pinPriorityMap: Record<number, number>) {
+  if (!game.pinned) return Number.MAX_SAFE_INTEGER;
+  const raw = pinPriorityMap[game.id];
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+}
+
+function sortGames(
+  games: Game[],
+  sortBy: "updatedate" | "hot",
+  pinPriorityMap: Record<number, number>,
+) {
   return [...games].sort((a, b) => {
     if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+    if (a.pinned && b.pinned) {
+      const pinOrderDiff =
+        getPinPriority(a, pinPriorityMap) - getPinPriority(b, pinPriorityMap);
+      if (pinOrderDiff !== 0) return pinOrderDiff;
+    }
+
+    if (sortBy === "hot") {
+      const hotDiff = (b.hot || 0) - (a.hot || 0);
+      if (hotDiff !== 0) return hotDiff;
+      return b.id - a.id;
+    }
 
     const dateA = parseUpdateDate(a.updatedate);
     const dateB = parseUpdateDate(b.updatedate);
@@ -144,8 +166,9 @@ export default function HomePage() {
     sessionStorage.clear();
   }, []);
 
-  async function fetchGamesByUpdateDate(
+  async function fetchGamesWithLocalSort(
     page: number,
+    sort: "updatedate" | "hot",
     tagValue?: string,
     keyword?: string,
   ) {
@@ -159,7 +182,6 @@ export default function HomePage() {
       let query = supabase
         .from("games")
         .select("*")
-        .order("pinned", { ascending: false })
         .order("id", { ascending: false })
         .range(from, to);
 
@@ -179,7 +201,11 @@ export default function HomePage() {
       batchPage++;
     }
 
-    const sorted = sortGamesByUpdateDate(allGames);
+    const pinPriorityMap = await fetchPinPriorityMap();
+    const sorted = sortGames(allGames, sort, pinPriorityMap).map((game) => ({
+      ...game,
+      pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null,
+    }));
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE;
 
@@ -201,34 +227,7 @@ export default function HomePage() {
     const keyword = (options?.keyword ?? searchKeyword).trim();
     const activeSort = options?.sort ?? sortBy;
 
-    if (activeSort === "updatedate") {
-      return fetchGamesByUpdateDate(page, tagValue, keyword);
-    }
-
-    const from = (page - 1) * PAGE_SIZE;
-    const to = page * PAGE_SIZE - 1;
-    let query = supabase
-      .from("games")
-      .select("*", { count: "exact" })
-      .order("pinned", { ascending: false })
-      .order("hot", { ascending: false })
-      .order("id", { ascending: false })
-      .range(from, to);
-
-    if (tagValue) {
-      query = query.contains("subcategory", [tagValue]);
-    }
-    if (keyword) {
-      query = query.ilike("name", `%${keyword}%`);
-    }
-
-    const { data, error, count } = await query;
-    if (error) throw error;
-
-    return {
-      data: (data as Game[]) || [],
-      count: count || 0,
-    };
+    return fetchGamesWithLocalSort(page, activeSort, tagValue, keyword);
   }
 
   function handleSearch() {
