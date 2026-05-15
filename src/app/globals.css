@@ -1624,8 +1624,11 @@ body {
 .update-record-popup {
   max-width: 800px !important; /* 加宽弹窗以容纳记录列表 */
   max-height: 85vh;
-  overflow-y: auto; /* 垂直滚动 */
   padding: 20px 25px !important;
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 更新记录标题（适配网站渐变风格） */
@@ -1634,6 +1637,15 @@ body {
   margin-bottom: 20px;
   border-bottom: 2px solid var(--accent-color);
   padding-bottom: 10px;
+}
+
+.update-record-popup-text {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 10px;
+  margin-right: -10px;
 }
 
 /* 更新记录容器 */
@@ -1759,23 +1771,23 @@ body {
 }
 
 /* 滚动条优化（适配网站风格） */
-.update-record-popup::-webkit-scrollbar {
+.update-record-popup-text::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-.update-record-popup::-webkit-scrollbar-track {
+.update-record-popup-text::-webkit-scrollbar-track {
   background: var(--bg-light);
   border-radius: 3px;
 }
-.update-record-popup::-webkit-scrollbar-thumb {
+.update-record-popup-text::-webkit-scrollbar-thumb {
   background: var(--border-hover);
   border-radius: 3px;
 }
-.update-record-popup::-webkit-scrollbar-thumb:hover {
+.update-record-popup-text::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color);
 }
 /* 兼容Firefox */
-.update-record-popup {
+.update-record-popup-text {
   scrollbar-width: thin;
   scrollbar-color: var(--border-hover) var(--bg-light);
 }
@@ -1785,6 +1797,10 @@ body {
   .update-record-popup {
     max-width: 95% !important;
     padding: 15px 20px !important;
+  }
+  .update-record-popup-text {
+    padding-right: 8px;
+    margin-right: -8px;
   }
   .update-record-item {
     flex-direction: column;

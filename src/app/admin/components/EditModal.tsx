@@ -41,8 +41,18 @@ interface FormData {
   pinned: boolean;
 }
 
+function normalizeUpdateDate(value: string) {
+  const normalized = value.trim().replace(/\./g, "-").replace(/\//g, "-");
+  const parts = normalized.split("-").map((part) => Number(part));
+  if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) {
+    return value.trim();
+  }
+  const [year, month, day] = parts;
+  return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
+}
+
 function getDefaultDate() {
-  return new Date().toLocaleDateString("zh-CN").replace(/\//g, ".");
+  return normalizeUpdateDate(new Date().toLocaleDateString("zh-CN"));
 }
 
 function parseCodeFromUrl(url: string): string | null {
@@ -66,7 +76,7 @@ function buildGameData(formData: FormData) {
     baiducode: formData.baiducode.trim(),
     thunderpan: formData.thunderpan.trim(),
     thundercode: formData.thundercode.trim(),
-    updatedate: formData.updatedate.trim() || getDefaultDate(),
+    updatedate: normalizeUpdateDate(formData.updatedate) || getDefaultDate(),
     image: formData.image.trim(),
     video: formData.video.trim(),
     pinned: formData.pinned,

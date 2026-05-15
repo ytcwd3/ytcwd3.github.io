@@ -15,6 +15,16 @@ interface DiffResult {
   unchanged: any[];
 }
 
+function normalizeUpdateDate(value: string) {
+  const normalized = value.trim().replace(/\./g, "-").replace(/\//g, "-");
+  const parts = normalized.split("-").map((part) => Number(part));
+  if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) {
+    return value.trim();
+  }
+  const [year, month, day] = parts;
+  return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
+}
+
 export default function ImportModal({ onClose, onImported }: ImportModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [excelData, setExcelData] = useState<any[]>([]);
@@ -79,7 +89,7 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
               baiducode: String(row[7] || "").trim(),
               thunderpan: String(row[8] || "").trim(),
               thundercode: String(row[9] || "").trim(),
-              updatedate: String(row[10] || "").trim(),
+              updatedate: normalizeUpdateDate(String(row[10] || "").trim()),
               image: String(row[11] || "").trim(),
               video: String(row[12] || "").trim(),
             });
@@ -132,6 +142,7 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
           excelGame.baidupan !== existing.baidupan ||
           excelGame.thunderpan !== existing.thunderpan ||
           excelGame.code !== existing.code ||
+          excelGame.updatedate !== (existing.updatedate || "") ||
           (excelGame.image || "") !== (existing.image || "") ||
           (excelGame.video || "") !== (existing.video || "") ||
           JSON.stringify(excelGame.category) !==
