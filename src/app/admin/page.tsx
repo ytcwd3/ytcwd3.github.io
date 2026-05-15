@@ -36,9 +36,9 @@ export default function AdminDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>("pc");
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [sortBy, setSortBy] = useState<"default" | "name" | "updatedate">(
-    "default",
-  );
+  const [sortBy, setSortBy] = useState<
+    "default" | "name" | "updatedate_desc" | "updatedate_asc"
+  >("default");
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>(
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
     cat?: string,
     sub?: string,
     keyword?: string,
-    sort?: "default" | "name" | "updatedate",
+    sort?: "default" | "name" | "updatedate_desc" | "updatedate_asc",
   ) {
     const curCat = cat !== undefined ? cat : selectedCategory;
     const curSub = sub !== undefined ? sub : selectedSubcategory;
@@ -138,11 +138,16 @@ export default function AdminDashboard() {
               .order("pinned", { ascending: false })
               .order("name", { ascending: true })
               .order("id", { ascending: true })
-          : curSort === "updatedate"
+          : curSort === "updatedate_desc"
             ? query
                 .order("pinned", { ascending: false })
                 .order("updatedate", { ascending: false })
                 .order("id", { ascending: false })
+            : curSort === "updatedate_asc"
+              ? query
+                  .order("pinned", { ascending: false })
+                  .order("updatedate", { ascending: true })
+                  .order("id", { ascending: true })
             : query
                 .order("pinned", { ascending: false })
                 .order("id", { ascending: true });
@@ -187,7 +192,9 @@ export default function AdminDashboard() {
     applyFilters(1);
   }
 
-  function handleSortChange(nextSort: "default" | "name" | "updatedate") {
+  function handleSortChange(
+    nextSort: "default" | "name" | "updatedate_desc" | "updatedate_asc",
+  ) {
     setSortBy(nextSort);
     applyFilters(1, undefined, undefined, undefined, nextSort);
   }
