@@ -136,6 +136,46 @@ function sortGames(
   });
 }
 
+function buildGameQuery(
+  tagValue?: string,
+  keyword?: string,
+  pinned?: boolean,
+) {
+  let query = supabase.from("games").select("*", { count: "exact" });
+
+  if (typeof pinned === "boolean") {
+    query = query.eq("pinned", pinned);
+  }
+  if (tagValue) {
+    query = query.contains("subcategory", [tagValue]);
+  }
+  if (keyword) {
+    query = query.ilike("name", `%${keyword}%`);
+  }
+
+  return query;
+}
+
+function buildGameCountQuery(
+  tagValue?: string,
+  keyword?: string,
+  pinned?: boolean,
+) {
+  let query = supabase.from("games").select("id", { count: "exact", head: true });
+
+  if (typeof pinned === "boolean") {
+    query = query.eq("pinned", pinned);
+  }
+  if (tagValue) {
+    query = query.contains("subcategory", [tagValue]);
+  }
+  if (keyword) {
+    query = query.ilike("name", `%${keyword}%`);
+  }
+
+  return query;
+}
+
 export default function HomePage() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -151,6 +191,7 @@ export default function HomePage() {
   const [qrModalSrc, setQrModalSrc] = useState("");
   const [qrModalTitle, setQrModalTitle] = useState("");
   const [showPopups, setShowPopups] = useState<Record<string, boolean>>({});
+  const [pinPriorityMap, setPinPriorityMap] = useState<Record<number, number>>({});
 
   // 分页相关
   const [currentPage, setCurrentPage] = useState(1);
@@ -166,52 +207,73 @@ export default function HomePage() {
     sessionStorage.clear();
   }, []);
 
+  useEffect(() => {
+    fetchPinPriorityMap()
+      .then(setPinPriorityMap)
+      .catch(() => setPinPriorityMap({}));
+  }, []);
+
   async function fetchGamesWithLocalSort(
     page: number,
     sort: "updatedate" | "hot",
     tagValue?: string,
     keyword?: string,
   ) {
-    const allGames: Game[] = [];
-    const batchSize = 1000;
-    let batchPage = 0;
+    const safePage = Math.max(1, page);
+    const pageStart = (safePage - 1) * PAGE_SIZE;
+    const pageEnd = pageStart + PAGE_SIZE;
 
-    while (true) {
-      const from = batchPage * batchSize;
-      const to = from + batchSize - 1;
-      let query = supabase
-        .from("games")
-        .select("*")
-        .order("id", { ascending: false })
-        .range(from, to);
+    const pinnedRes = await buildGameQuery(tagValue, keyword, true);
+    const { data: pinnedData, error: pinnedError, count: pinnedCountRaw } = await pinnedRes;
+    if (pinnedError) throw pinnedError;
 
-      if (tagValue) {
-        query = query.contains("subcategory", [tagValue]);
-      }
-      if (keyword) {
-        query = query.ilike("name", `%${keyword}%`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      if (!data || data.length === 0) break;
-
-      allGames.push(...(data as Game[]));
-      if (data.length < batchSize) break;
-      batchPage++;
-    }
-
-    const pinPriorityMap = await fetchPinPriorityMap();
-    const sorted = sortGames(allGames, sort, pinPriorityMap).map((game) => ({
+    const sortedPinned = sortGames(
+      (pinnedData || []) as Game[],
+      sort,
+      pinPriorityMap,
+    ).map((game) => ({
       ...game,
       pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null,
     }));
-    const from = (page - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE;
+
+    const pinnedCount = pinnedCountRaw || sortedPinned.length;
+    const visiblePinned = sortedPinned.slice(pageStart, pageEnd);
+    const remainingSlots = PAGE_SIZE - visiblePinned.length;
+    const nonPinnedOffset = Math.max(0, pageStart - pinnedCount);
+
+    let nonPinnedGames: Game[] = [];
+    let nonPinnedCount = 0;
+
+    if (remainingSlots > 0) {
+      let nonPinnedQuery = buildGameQuery(tagValue, keyword, false);
+      nonPinnedQuery =
+        sort === "hot"
+          ? nonPinnedQuery.order("hot", { ascending: false, nullsFirst: false }).order("id", { ascending: false })
+          : nonPinnedQuery.order("updatedate", { ascending: false }).order("id", { ascending: false });
+
+      const {
+        data: nonPinnedData,
+        error: nonPinnedError,
+        count: nonPinnedCountRaw,
+      } = await nonPinnedQuery.range(
+        nonPinnedOffset,
+        nonPinnedOffset + remainingSlots - 1,
+      );
+
+      if (nonPinnedError) throw nonPinnedError;
+      nonPinnedGames = ((nonPinnedData || []) as Game[]).map((game) => ({
+        ...game,
+        pinPriority: null,
+      }));
+      nonPinnedCount = nonPinnedCountRaw || 0;
+    } else {
+      const { count } = await buildGameCountQuery(tagValue, keyword, false);
+      nonPinnedCount = count || 0;
+    }
 
     return {
-      data: sorted.slice(from, to),
-      count: sorted.length,
+      data: [...visiblePinned, ...nonPinnedGames],
+      count: pinnedCount + nonPinnedCount,
     };
   }
 
@@ -338,10 +400,6 @@ export default function HomePage() {
     <>
       <div
         className="container"
-        style={{
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
-        }}
       >
         <h1 className="title">单游仓鼠-主机掌机+PC一键检索</h1>
         <p className="sub-title">缺游戏，资源有问题-B站，QQ群联系均可！</p>
