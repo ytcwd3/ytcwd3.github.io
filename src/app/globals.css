@@ -72,7 +72,7 @@ body {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 .container {
@@ -99,8 +99,6 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.8);
   position: relative;
   overflow: visible;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   isolation: isolate;
 }
 
@@ -734,6 +732,9 @@ body {
   gap: 14px;
   align-items: flex-start;
   position: relative;
+  content-visibility: auto;
+  contain: layout paint style;
+  contain-intrinsic-size: 260px;
 }
 
 .result-item[data-pinned="true"] {
@@ -745,16 +746,29 @@ body {
 
 /* 游戏缩略图 */
 .game-thumb {
-  width: 64px;
-  height: 64px;
-  border-radius: 8px;
-  overflow: hidden;
+  width: 104px;
+  align-self: flex-start;
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.05);
-  display: flex;
+  display: block;
+}
+
+.game-thumb-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.1);
+}
+
+.thumb-ph {
+  width: 100%;
+  min-height: 138px;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  font-size: 26px;
+  font-weight: 700;
+  color: white;
+  border-radius: 8px;
 }
 
 /* 中间区域 */
@@ -938,6 +952,20 @@ body {
   background:
     linear-gradient(180deg, rgba(255, 245, 200, 0.96), rgba(255, 255, 255, 0.93));
   box-shadow: 0 14px 30px rgba(245, 158, 11, 0.14);
+}
+
+@media (hover: none) {
+  .result-item:hover {
+    background-color: rgba(255, 255, 255, 0.85);
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .result-item[data-pinned="true"]:hover {
+    background:
+      linear-gradient(180deg, rgba(255, 248, 219, 0.92), rgba(255, 255, 255, 0.9));
+    box-shadow: 0 10px 24px rgba(245, 158, 11, 0.1);
+  }
 }
 
 /* 空状态（原始样式） */
@@ -1508,8 +1536,7 @@ body {
     flex-wrap: wrap;
   }
   .game-thumb {
-    width: 56px;
-    height: 56px;
+    width: 88px;
   }
   .result-middle {
     width: 100%;

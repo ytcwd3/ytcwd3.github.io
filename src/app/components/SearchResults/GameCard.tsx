@@ -134,28 +134,21 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
       <div className="game-thumb">
         {game.image ? (
           <img
+            className="game-thumb-img"
             src={game.image}
             alt={game.name}
             loading="lazy"
-            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
             onError={(e) => {
               const el = e.target as HTMLImageElement;
               el.style.display = "none";
-              const ph = el.parentElement?.querySelector(".thumb-ph") as HTMLElement;
+              const ph = el.parentElement?.querySelector(".thumb-ph") as HTMLElement | null;
               if (ph) ph.style.display = "flex";
             }}
           />
         ) : null}
         <div
           className="thumb-ph"
-          style={{
-            display: game.image ? "none" : "flex",
-            width: "100%", height: "100%",
-            alignItems: "center", justifyContent: "center",
-            fontSize: 22, fontWeight: 700, color: "white",
-            background: `linear-gradient(135deg, ${catColor}, #d857e8)`,
-            borderRadius: 8,
-          }}
+          style={{ display: game.image ? "none" : "flex", background: `linear-gradient(135deg, ${catColor}, #d857e8)` }}
         >
           {game.name.charAt(0)}
         </div>
