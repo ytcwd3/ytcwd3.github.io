@@ -122,7 +122,10 @@ export default function GuestbookPopup({
               nextGuestbooks
                 .filter((item) => item.is_reply || item.parent_id)
                 .map((item) => item.parent_id)
-                .filter((parentId): parentId is number => typeof parentId === "number"),
+                .filter(
+                  (parentId): parentId is number =>
+                    typeof parentId === "number",
+                ),
             ),
           );
           setExpandedReplies((current) =>
@@ -139,7 +142,10 @@ export default function GuestbookPopup({
               nextGuestbooks
                 .filter((item) => item.is_reply || item.parent_id)
                 .map((item) => item.parent_id)
-                .filter((parentId): parentId is number => typeof parentId === "number"),
+                .filter(
+                  (parentId): parentId is number =>
+                    typeof parentId === "number",
+                ),
             ),
           ),
         );
@@ -319,9 +325,13 @@ export default function GuestbookPopup({
                 margin: "6px 0 0",
                 fontSize: embedded ? "13px" : "12px",
                 color: "rgba(55, 65, 81, 0.88)",
+                lineHeight: 1.7,
+                whiteSpace: "pre-line",
               }}
             >
-              有任何问题或建议欢迎留言
+              {
+                "有任何问题或建议欢迎留言\n如有网站加载慢或者是异常情况，请联系 qq:786658882   微信:Ytc3334  "
+              }
             </p>
           </div>
           {!embedded && onClose && (
@@ -352,7 +362,9 @@ export default function GuestbookPopup({
       <div
         style={{
           padding: "16px 20px",
-          background: embedded ? "rgba(255,255,255,0.92)" : "rgba(216, 87, 232, 0.03)",
+          background: embedded
+            ? "rgba(255,255,255,0.92)"
+            : "rgba(216, 87, 232, 0.03)",
           borderBottom: "1px solid rgba(216, 87, 232, 0.08)",
           flexShrink: 0,
         }}
@@ -473,407 +485,414 @@ export default function GuestbookPopup({
           </div>
         ) : (
           <>
-        <div
-          style={{
-            padding: "12px 20px 8px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexShrink: 0,
-          }}
-        >
-          <span
-            style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "rgba(31, 41, 55, 0.88)",
-            }}
-          >
-            全部留言 ({mainMessages.length})
-          </span>
-        </div>
-
-        {loading ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "40px",
-              color: "var(--text-tertiary)",
-              fontSize: "14px",
-            }}
-          >
             <div
               style={{
-                width: "24px",
-                height: "24px",
-                border: "2px solid rgba(216,87,232,0.15)",
-                borderTopColor: "var(--accent-color)",
-                borderRadius: "50%",
-                animation: "spin 1s linear infinite",
-                margin: "0 auto 10px",
+                padding: "12px 20px 8px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexShrink: 0,
               }}
-            />
-            加载中...
-          </div>
-        ) : mainMessages.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "40px",
-              color: "var(--text-tertiary)",
-              fontSize: "14px",
-            }}
-          >
-            <div style={{ fontSize: "32px", marginBottom: "8px" }}>💭</div>
-            还没有留言，来说点什么吧
-          </div>
-        ) : (
-        <div
-          style={{
-            flex: 1,
-            overflowY: embedded ? "visible" : "auto",
-            padding: "0 20px 20px",
-          }}
-        >
-            {mainMessages.map((item) => {
-              const itemReplies = repliesByParent[item.id] || [];
-              const repliesExpanded = expandedReplies.includes(item.id);
-              return (
+            >
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "rgba(31, 41, 55, 0.88)",
+                }}
+              >
+                全部留言 ({mainMessages.length})
+              </span>
+            </div>
+
+            {loading ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "40px",
+                  color: "var(--text-tertiary)",
+                  fontSize: "14px",
+                }}
+              >
                 <div
-                  key={item.id}
                   style={{
-                    padding: "14px",
-                    background: "rgba(255,255,255,0.92)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid rgba(216, 87, 232, 0.1)",
-                    marginBottom: "10px",
-                    boxShadow: "0 8px 22px rgba(15, 23, 42, 0.05)",
+                    width: "24px",
+                    height: "24px",
+                    border: "2px solid rgba(216,87,232,0.15)",
+                    borderTopColor: "var(--accent-color)",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                    margin: "0 auto 10px",
                   }}
-                >
-                  {/* 主留言 */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "8px",
-                    }}
-                  >
+                />
+                加载中...
+              </div>
+            ) : mainMessages.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "40px",
+                  color: "var(--text-tertiary)",
+                  fontSize: "14px",
+                }}
+              >
+                <div style={{ fontSize: "32px", marginBottom: "8px" }}>💭</div>
+                还没有留言，来说点什么吧
+              </div>
+            ) : (
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: embedded ? "visible" : "auto",
+                  padding: "0 20px 20px",
+                }}
+              >
+                {mainMessages.map((item) => {
+                  const itemReplies = repliesByParent[item.id] || [];
+                  const repliesExpanded = expandedReplies.includes(item.id);
+                  return (
                     <div
+                      key={item.id}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "inline-block",
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg, var(--primary-color), var(--accent-color))",
-                          color: "white",
-                          fontSize: "13px",
-                          fontWeight: 700,
-                          textAlign: "center",
-                          lineHeight: "28px",
-                        }}
-                      >
-                        {item.name.charAt(0).toUpperCase()}
-                      </span>
-                      <strong
-                        style={{
-                          fontSize: "14px",
-                          color: "var(--text-primary)",
-                        }}
-                      >
-                        {item.name}
-                      </strong>
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        color: "rgba(75, 85, 99, 0.78)",
-                      }}
-                    >
-                      {new Date(item.created_at).toLocaleString("zh-CN", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-
-                  <p
-                    style={{
-                      margin: 0,
-                      color: "rgba(17, 24, 39, 0.9)",
-                      fontSize: "14px",
-                      lineHeight: "1.75",
-                    }}
-                  >
-                    {item.message}
-                  </p>
-
-                  {/* 操作按钮 */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      marginTop: "10px",
-                      paddingTop: "10px",
-                      borderTop: "1px solid rgba(0,0,0,0.04)",
-                    }}
-                  >
-                    {itemReplies.length > 0 && (
-                      <button
-                        onClick={() => toggleReplies(item.id)}
-                        style={{
-                          padding: "4px 12px",
-                          fontSize: "12px",
-                          background: "rgba(216, 87, 232, 0.08)",
-                          color: "var(--accent-color)",
-                          border: "1px solid rgba(216, 87, 232, 0.15)",
-                          borderRadius: "var(--radius-sm)",
-                          cursor: "pointer",
-                          fontWeight: 500,
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        {repliesExpanded
-                          ? "收起回复"
-                          : `查看回复(${itemReplies.length})`}
-                      </button>
-                    )}
-                    {isAdmin && (
-                      <button
-                        onClick={() =>
-                          setReplyingTo(replyingTo === item.id ? null : item.id)
-                        }
-                        style={{
-                          padding: "4px 12px",
-                          fontSize: "12px",
-                          background: "rgba(216, 87, 232, 0.08)",
-                          color: "var(--accent-color)",
-                          border: "1px solid rgba(216, 87, 232, 0.15)",
-                          borderRadius: "var(--radius-sm)",
-                          cursor: "pointer",
-                          fontWeight: 500,
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        {replyingTo === item.id ? "收起回复框" : "回复"}
-                      </button>
-                    )}
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        style={{
-                          padding: "4px 12px",
-                          fontSize: "12px",
-                          background: "rgba(229, 57, 53, 0.06)",
-                          color: "#dc2626",
-                          border: "1px solid rgba(229, 57, 53, 0.12)",
-                          borderRadius: "var(--radius-sm)",
-                          cursor: "pointer",
-                          fontWeight: 500,
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        删除
-                      </button>
-                    )}
-                  </div>
-
-                  {/* 回复表单 */}
-                  {replyingTo === item.id && isAdmin && (
-                    <div
-                      style={{
-                        marginTop: "12px",
-                        padding: "12px",
-                        background: "rgba(216, 87, 232, 0.04)",
-                        borderRadius: "var(--radius-sm)",
+                        padding: "14px",
+                        background: "rgba(255,255,255,0.92)",
+                        borderRadius: "var(--radius-md)",
                         border: "1px solid rgba(216, 87, 232, 0.1)",
+                        marginBottom: "10px",
+                        boxShadow: "0 8px 22px rgba(15, 23, 42, 0.05)",
                       }}
                     >
-                      <textarea
-                        value={replyContent}
-                        onChange={(e) => setReplyContent(e.target.value)}
-                        placeholder="输入管理员回复..."
-                        rows={2}
+                      {/* 主留言 */}
+                      <div
                         style={{
-                          ...inputStyle,
-                          resize: "none",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                           marginBottom: "8px",
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor = "var(--accent-color)")
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            "rgba(216, 87, 232, 0.2)")
-                        }
-                      />
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: "28px",
+                              height: "28px",
+                              borderRadius: "50%",
+                              background:
+                                "linear-gradient(135deg, var(--primary-color), var(--accent-color))",
+                              color: "white",
+                              fontSize: "13px",
+                              fontWeight: 700,
+                              textAlign: "center",
+                              lineHeight: "28px",
+                            }}
+                          >
+                            {item.name.charAt(0).toUpperCase()}
+                          </span>
+                          <strong
+                            style={{
+                              fontSize: "14px",
+                              color: "var(--text-primary)",
+                            }}
+                          >
+                            {item.name}
+                          </strong>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "rgba(75, 85, 99, 0.78)",
+                          }}
+                        >
+                          {new Date(item.created_at).toLocaleString("zh-CN", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+
+                      <p
+                        style={{
+                          margin: 0,
+                          color: "rgba(17, 24, 39, 0.9)",
+                          fontSize: "14px",
+                          lineHeight: "1.75",
+                        }}
+                      >
+                        {item.message}
+                      </p>
+
+                      {/* 操作按钮 */}
                       <div
                         style={{
                           display: "flex",
                           gap: "8px",
-                          justifyContent: "flex-end",
+                          marginTop: "10px",
+                          paddingTop: "10px",
+                          borderTop: "1px solid rgba(0,0,0,0.04)",
                         }}
                       >
-                        <button
-                          onClick={() => setReplyingTo(null)}
-                          style={{
-                            padding: "6px 14px",
-                            fontSize: "12px",
-                            background: "rgba(255,255,255,0.9)",
-                            color: "var(--text-secondary)",
-                            border: "1px solid var(--border-light)",
-                            borderRadius: "var(--radius-sm)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          取消
-                        </button>
-                        <button
-                          onClick={() => handleReply(item.id)}
-                          disabled={replySubmitting}
-                          style={{
-                            padding: "6px 14px",
-                            fontSize: "12px",
-                            background:
-                              "linear-gradient(90deg, var(--primary-color), var(--accent-color))",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "var(--radius-sm)",
-                            cursor: replySubmitting ? "not-allowed" : "pointer",
-                            fontWeight: 600,
-                            opacity: replySubmitting ? 0.6 : 1,
-                          }}
-                        >
-                          {replySubmitting ? "..." : "发送"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 回复列表 */}
-                  {itemReplies.length > 0 && repliesExpanded && (
-                    <div style={{ marginTop: "10px" }}>
-                      {itemReplies.map((reply) => {
-                        const isAdminReply = isAllowedAdminId(reply.admin_id);
-                        return (
-                          <div
-                            key={reply.id}
+                        {itemReplies.length > 0 && (
+                          <button
+                            onClick={() => toggleReplies(item.id)}
                             style={{
-                              marginLeft: "16px",
-                              padding: "10px 12px",
-                              background: "rgba(216, 87, 232, 0.04)",
+                              padding: "4px 12px",
+                              fontSize: "12px",
+                              background: "rgba(216, 87, 232, 0.08)",
+                              color: "var(--accent-color)",
+                              border: "1px solid rgba(216, 87, 232, 0.15)",
                               borderRadius: "var(--radius-sm)",
-                              borderLeft: isAdminReply
-                                ? "2px solid var(--accent-color)"
-                                : "2px solid rgba(148, 163, 184, 0.45)",
-                              marginBottom: "6px",
+                              cursor: "pointer",
+                              fontWeight: 500,
+                              transition: "all 0.2s",
                             }}
                           >
-                            <div
+                            {repliesExpanded
+                              ? "收起回复"
+                              : `查看回复(${itemReplies.length})`}
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            onClick={() =>
+                              setReplyingTo(
+                                replyingTo === item.id ? null : item.id,
+                              )
+                            }
+                            style={{
+                              padding: "4px 12px",
+                              fontSize: "12px",
+                              background: "rgba(216, 87, 232, 0.08)",
+                              color: "var(--accent-color)",
+                              border: "1px solid rgba(216, 87, 232, 0.15)",
+                              borderRadius: "var(--radius-sm)",
+                              cursor: "pointer",
+                              fontWeight: 500,
+                              transition: "all 0.2s",
+                            }}
+                          >
+                            {replyingTo === item.id ? "收起回复框" : "回复"}
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            style={{
+                              padding: "4px 12px",
+                              fontSize: "12px",
+                              background: "rgba(229, 57, 53, 0.06)",
+                              color: "#dc2626",
+                              border: "1px solid rgba(229, 57, 53, 0.12)",
+                              borderRadius: "var(--radius-sm)",
+                              cursor: "pointer",
+                              fontWeight: 500,
+                              transition: "all 0.2s",
+                            }}
+                          >
+                            删除
+                          </button>
+                        )}
+                      </div>
+
+                      {/* 回复表单 */}
+                      {replyingTo === item.id && isAdmin && (
+                        <div
+                          style={{
+                            marginTop: "12px",
+                            padding: "12px",
+                            background: "rgba(216, 87, 232, 0.04)",
+                            borderRadius: "var(--radius-sm)",
+                            border: "1px solid rgba(216, 87, 232, 0.1)",
+                          }}
+                        >
+                          <textarea
+                            value={replyContent}
+                            onChange={(e) => setReplyContent(e.target.value)}
+                            placeholder="输入管理员回复..."
+                            rows={2}
+                            style={{
+                              ...inputStyle,
+                              resize: "none",
+                              marginBottom: "8px",
+                            }}
+                            onFocus={(e) =>
+                              (e.target.style.borderColor =
+                                "var(--accent-color)")
+                            }
+                            onBlur={(e) =>
+                              (e.target.style.borderColor =
+                                "rgba(216, 87, 232, 0.2)")
+                            }
+                          />
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              justifyContent: "flex-end",
+                            }}
+                          >
+                            <button
+                              onClick={() => setReplyingTo(null)}
                               style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                marginBottom: "4px",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: "13px",
-                                  fontWeight: 600,
-                                  color: isAdminReply
-                                    ? "var(--accent-color)"
-                                    : "var(--text-primary)",
-                                }}
-                              >
-                                {isAdminReply ? "🛡 " : ""}
-                                {getReplyDisplayName(reply)}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "11px",
-                                  color: "var(--text-tertiary)",
-                                }}
-                              >
-                                {new Date(reply.created_at).toLocaleString(
-                                  "zh-CN",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )}
-                              </span>
-                            </div>
-                            <p
-                              style={{
-                                margin: 0,
-                                fontSize: "13px",
+                                padding: "6px 14px",
+                                fontSize: "12px",
+                                background: "rgba(255,255,255,0.9)",
                                 color: "var(--text-secondary)",
-                                lineHeight: "1.5",
+                                border: "1px solid var(--border-light)",
+                                borderRadius: "var(--radius-sm)",
+                                cursor: "pointer",
                               }}
                             >
-                              {reply.message}
-                            </p>
-                            {isAdmin && (
-                              <button
-                                onClick={() => handleDelete(reply.id)}
+                              取消
+                            </button>
+                            <button
+                              onClick={() => handleReply(item.id)}
+                              disabled={replySubmitting}
+                              style={{
+                                padding: "6px 14px",
+                                fontSize: "12px",
+                                background:
+                                  "linear-gradient(90deg, var(--primary-color), var(--accent-color))",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "var(--radius-sm)",
+                                cursor: replySubmitting
+                                  ? "not-allowed"
+                                  : "pointer",
+                                fontWeight: 600,
+                                opacity: replySubmitting ? 0.6 : 1,
+                              }}
+                            >
+                              {replySubmitting ? "..." : "发送"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 回复列表 */}
+                      {itemReplies.length > 0 && repliesExpanded && (
+                        <div style={{ marginTop: "10px" }}>
+                          {itemReplies.map((reply) => {
+                            const isAdminReply = isAllowedAdminId(
+                              reply.admin_id,
+                            );
+                            return (
+                              <div
+                                key={reply.id}
                                 style={{
-                                  marginTop: "6px",
-                                  padding: "2px 8px",
-                                  fontSize: "11px",
-                                  background: "rgba(229, 57, 53, 0.06)",
-                                  color: "#dc2626",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  cursor: "pointer",
+                                  marginLeft: "16px",
+                                  padding: "10px 12px",
+                                  background: "rgba(216, 87, 232, 0.04)",
+                                  borderRadius: "var(--radius-sm)",
+                                  borderLeft: isAdminReply
+                                    ? "2px solid var(--accent-color)"
+                                    : "2px solid rgba(148, 163, 184, 0.45)",
+                                  marginBottom: "6px",
                                 }}
                               >
-                                删除
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontSize: "13px",
+                                      fontWeight: 600,
+                                      color: isAdminReply
+                                        ? "var(--accent-color)"
+                                        : "var(--text-primary)",
+                                    }}
+                                  >
+                                    {isAdminReply ? "🛡 " : ""}
+                                    {getReplyDisplayName(reply)}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: "11px",
+                                      color: "var(--text-tertiary)",
+                                    }}
+                                  >
+                                    {new Date(reply.created_at).toLocaleString(
+                                      "zh-CN",
+                                      {
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      },
+                                    )}
+                                  </span>
+                                </div>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: "13px",
+                                    color: "var(--text-secondary)",
+                                    lineHeight: "1.5",
+                                  }}
+                                >
+                                  {reply.message}
+                                </p>
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => handleDelete(reply.id)}
+                                    style={{
+                                      marginTop: "6px",
+                                      padding: "2px 8px",
+                                      fontSize: "11px",
+                                      background: "rgba(229, 57, 53, 0.06)",
+                                      color: "#dc2626",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    删除
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-            {hasMore && (
-              <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
-                <button
-                  onClick={loadMore}
-                  disabled={loading}
-                  style={{
-                    padding: "8px 28px",
-                    fontSize: "13px",
-                    background: "rgba(216, 87, 232, 0.08)",
-                    color: "var(--accent-color)",
-                    border: "1px solid rgba(216, 87, 232, 0.2)",
-                    borderRadius: "var(--radius-sm)",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    fontWeight: 600,
-                    opacity: loading ? 0.5 : 1,
-                    transition: "all 0.2s",
-                  }}
-                >
-                  {loading ? "加载中..." : "加载更多"}
-                </button>
+                  );
+                })}
+                {hasMore && (
+                  <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
+                    <button
+                      onClick={loadMore}
+                      disabled={loading}
+                      style={{
+                        padding: "8px 28px",
+                        fontSize: "13px",
+                        background: "rgba(216, 87, 232, 0.08)",
+                        color: "var(--accent-color)",
+                        border: "1px solid rgba(216, 87, 232, 0.2)",
+                        borderRadius: "var(--radius-sm)",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        fontWeight: 600,
+                        opacity: loading ? 0.5 : 1,
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {loading ? "加载中..." : "加载更多"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
           </>
         )}
       </div>
