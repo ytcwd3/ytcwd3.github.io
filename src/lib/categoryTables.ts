@@ -43,6 +43,7 @@ type SubcategoryRow = {
 };
 
 const BATCH_SIZE = 1000;
+const OPERATOR_NAME = "admin";
 
 function uniq(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
@@ -54,6 +55,26 @@ function replaceValue(values: string[] | null | undefined, oldValue: string, new
 
 function removeValue(values: string[] | null | undefined, valueToRemove: string) {
   return uniq((values || []).filter((value) => value !== valueToRemove));
+}
+
+async function logCategoryOperation(params: {
+  action: string;
+  targetType: string;
+  targetId?: number | null;
+  targetName?: string | null;
+  beforeData?: unknown;
+  afterData?: unknown;
+}) {
+  const { error } = await supabase.from("category_operation_logs").insert({
+    action: params.action,
+    target_type: params.targetType,
+    target_id: params.targetId ?? null,
+    target_name: params.targetName ?? null,
+    before_data: params.beforeData ?? null,
+    after_data: params.afterData ?? null,
+    actor: OPERATOR_NAME,
+  });
+  if (error) throw error;
 }
 
 async function fetchCategoriesRaw() {
@@ -225,6 +246,13 @@ export async function addDbCategory(name: string) {
     sort_order: await getNextCategorySortOrder(),
   });
   if (error) throw error;
+
+  await logCategoryOperation({
+    action: "create_category",
+    targetType: "category",
+    targetName: cleanName,
+    afterData: { name: cleanName },
+  });
 }
 
 export async function addDbSubcategory(categoryId: number, categoryName: string, subcategoryName: string) {
@@ -248,6 +276,14 @@ export async function addDbSubcategory(categoryId: number, categoryName: string,
     sort_order: await getNextSubcategorySortOrder(categoryId),
   });
   if (error) throw error;
+
+  await logCategoryOperation({
+    action: "create_subcategory",
+    targetType: "subcategory",
+    targetId: categoryId,
+    targetName: cleanName,
+    afterData: { categoryId, categoryName, name: cleanName },
+  });
 }
 
 export async function renameDbCategory(categoryId: number, oldName: string, newName: string) {
@@ -270,6 +306,15 @@ export async function renameDbCategory(categoryId: number, oldName: string, newN
       .eq("id", row.id);
     if (error) throw error;
   }
+
+  await logCategoryOperation({
+    action: "rename_category",
+    targetType: "category",
+    targetId: categoryId,
+    targetName: cleanName,
+    beforeData: { name: oldName },
+    afterData: { name: cleanName },
+  });
 }
 
 export async function renameDbSubcategory(
@@ -298,6 +343,15 @@ export async function renameDbSubcategory(
       .eq("id", row.id);
     if (error) throw error;
   }
+
+  await logCategoryOperation({
+    action: "rename_subcategory",
+    targetType: "subcategory",
+    targetId: subcategoryId,
+    targetName: cleanName,
+    beforeData: { categoryName, name: oldName },
+    afterData: { categoryName, name: cleanName },
+  });
 }
 
 export async function moveDbSubcategoryToCategory(
@@ -353,6 +407,14 @@ export async function moveDbSubcategoryToCategory(
   if (duplicate && duplicate.length > 0) {
     const { error } = await supabase.from("subcategories").delete().eq("id", subcategoryId);
     if (error) throw error;
+    await logCategoryOperation({
+      action: "move_subcategory",
+      targetType: "subcategory",
+      targetId: subcategoryId,
+      targetName: subcategoryName,
+      beforeData: { fromCategoryId, fromCategoryName, toCategoryId, toCategoryName },
+      afterData: { fromCategoryId, fromCategoryName, toCategoryId, toCategoryName, deleted: true },
+    });
     return;
   }
 
@@ -361,6 +423,15 @@ export async function moveDbSubcategoryToCategory(
     .update({ category_id: toCategoryId })
     .eq("id", subcategoryId);
   if (error) throw error;
+
+  await logCategoryOperation({
+    action: "move_subcategory",
+    targetType: "subcategory",
+    targetId: subcategoryId,
+    targetName: subcategoryName,
+    beforeData: { fromCategoryId, fromCategoryName },
+    afterData: { toCategoryId, toCategoryName },
+  });
 }
 
 export async function deleteDbCategory(categoryId: number, categoryName: string) {
@@ -377,6 +448,14 @@ export async function deleteDbCategory(categoryId: number, categoryName: string)
 
   const { error } = await supabase.from("categories").delete().eq("id", categoryId);
   if (error) throw error;
+
+  await logCategoryOperation({
+    action: "delete_category",
+    targetType: "category",
+    targetId: categoryId,
+    targetName: categoryName,
+    beforeData: { name: categoryName },
+  });
 }
 
 export async function deleteDbSubcategory(
@@ -398,4 +477,12 @@ export async function deleteDbSubcategory(
 
   const { error } = await supabase.from("subcategories").delete().eq("id", subcategoryId);
   if (error) throw error;
+
+  await logCategoryOperation({
+    action: "delete_subcategory",
+    targetType: "subcategory",
+    targetId: subcategoryId,
+    targetName: subcategoryName,
+    beforeData: { categoryName, name: subcategoryName },
+  });
 }
