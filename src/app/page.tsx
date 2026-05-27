@@ -2,11 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
-import {
-  DEFAULT_HOME_CATEGORIES,
-  HomeCategory,
-  fetchHomeCategories,
-} from "@/lib/homeCategories";
+import { HomeCategory, fetchHomeCategories } from "@/lib/homeDisplay";
+import { DEFAULT_HOME_CATEGORIES } from "@/lib/homeCategories";
 import { fetchPinPriorityMap } from "@/lib/pinPriority";
 import SearchResults from "./components/SearchResults";
 import GuestbookPopup from "./components/Popups/GuestbookPopup";

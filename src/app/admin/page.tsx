@@ -20,8 +20,8 @@ import ConfirmModal from "./components/ConfirmModal";
 import ImageMatchModal from "./components/ImageMatchModal";
 
 function normalizeMetaCategory(category: string, subcategory: string) {
-  if (subcategory === "安卓") return "Ohter";
-  if (category === "Other") return "Ohter";
+  if (subcategory === "安卓") return "Other";
+  if (category === "Other") return "Other";
   return category;
 }
 
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
               .not("subcategory", "cs", '{"安卓"}');
           } else if (curCat === "other") {
             metaQuery = metaQuery.or(
-              "category.cs.{Ohter},category.cs.{Other},subcategory.cs.{安卓}",
+              "category.cs.{Other},subcategory.cs.{安卓}",
             );
           } else {
             const catName = CATEGORY_DB_VALUE[curCat];

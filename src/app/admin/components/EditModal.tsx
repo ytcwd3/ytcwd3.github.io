@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, Game } from "@/lib/supabase";
 import { parsePinPriority, savePinPriority } from "@/lib/pinPriority";
+import { DbCategory, fetchDbCategories } from "@/lib/categoryTables";
 import {
   INPUT_STYLE,
   LABEL_STYLE,
@@ -17,7 +18,7 @@ interface EditModalProps {
   onSaved: (added?: boolean) => void;
 }
 
-const CATEGORIES = ["PC", "NS", "任天堂掌机", "任天堂主机", "索尼", "Other"];
+const FALLBACK_CATEGORIES = ["PC", "NS", "任天堂掌机", "任天堂主机", "索尼", "Other"];
 
 function invalidateAdminMetaCache() {
   localStorage.removeItem("admin_game_meta");
@@ -97,12 +98,7 @@ function getFormDataFromGame(game: Game | null): FormData {
   if (game) {
     const cats = game.category || [];
     const subcats = game.subcategory || [];
-    const normalizedCategory =
-      subcats[0] === "安卓"
-        ? "Ohter"
-        : cats[0] === "Other"
-          ? "Ohter"
-          : cats[0] || "";
+    const normalizedCategory = cats[0] || "";
     return {
       name: game.name || "",
       category: normalizedCategory,
@@ -175,6 +171,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
   const [nameError, setNameError] = useState("");
   const [linkErrors, setLinkErrors] = useState<Record<string, string>>({});
   const [showDirtyConfirm, setShowDirtyConfirm] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<DbCategory[]>([]);
 
   const isDirty = JSON.stringify(formData) !== JSON.stringify(initialDataRef.current);
 
@@ -197,6 +194,12 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [tryClose]);
+
+  useEffect(() => {
+    fetchDbCategories()
+      .then(setCategoryOptions)
+      .catch(() => setCategoryOptions([]));
+  }, []);
 
   function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
     if (key === "name") setNameError("");
@@ -331,11 +334,19 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
     // 这里改为：保存成功后，重新打开添加弹窗
   }
 
+  const categoryNames =
+    categoryOptions.length > 0
+      ? categoryOptions.map((category) => category.name)
+      : FALLBACK_CATEGORIES;
+  const selectedCategory = categoryOptions.find(
+    (category) => category.name === formData.category,
+  );
   const uiKey = formData.category
     ? DB_TO_UI_KEY[formData.category] || formData.category.toLowerCase()
     : "";
   const currentSubcats =
-    uiKey && CATEGORY_SUBCATEGORIES[uiKey] ? CATEGORY_SUBCATEGORIES[uiKey] : [];
+    selectedCategory?.subcategories.map((subcategory) => subcategory.name) ||
+    (uiKey && CATEGORY_SUBCATEGORIES[uiKey] ? CATEGORY_SUBCATEGORIES[uiKey] : []);
 
   return (
     <>
@@ -429,7 +440,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                   style={INPUT_STYLE}
                 >
                   <option value="">选择分类</option>
-                  {CATEGORIES.map((cat) => (
+                  {categoryNames.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>

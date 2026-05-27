@@ -188,7 +188,7 @@ export default function GameTable({
               <tbody>
                 {games.map((game, idx) => {
                   const dbCat = game.subcategory?.includes("安卓")
-                    ? "Ohter"
+                    ? "Other"
                     : game.category?.[0] || "";
                   const catKey = DB_TO_UI_KEY[dbCat] || "pc";
 
@@ -491,7 +491,7 @@ export default function GameTable({
           <div className="game-card-list">
             {games.map((game) => {
               const dbCat = game.subcategory?.includes("安卓")
-                ? "Ohter"
+                ? "Other"
                 : game.category?.[0] || "";
               const catKey = DB_TO_UI_KEY[dbCat] || "pc";
               return (
