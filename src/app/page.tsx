@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
+import {
+  DEFAULT_HOME_CATEGORIES,
+  HomeCategory,
+  fetchHomeCategories,
+} from "@/lib/homeCategories";
 import { fetchPinPriorityMap } from "@/lib/pinPriority";
 import SearchResults from "./components/SearchResults";
 import GuestbookPopup from "./components/Popups/GuestbookPopup";
@@ -12,82 +17,6 @@ import UpdateRecordPopup from "./components/Popups/UpdateRecordPopup";
 import ToolPatchPopup from "./components/Popups/ToolPatchPopup";
 import HelpCenterPopup from "./components/Popups/HelpCenterPopup";
 import QrCodeModal from "./components/QrCode/QrCodeModal";
-
-// 子分类数据
-const CATEGORIES: Record<string, { name: string; tags: string[] }[]> = {
-  任天堂: [
-    {
-      name: "任天堂",
-      tags: [
-        "NS",
-        "NS乙女",
-        "GBA",
-        "NDS",
-        "3DS",
-        "GB",
-        "GBC",
-        "Wii",
-        "NGC",
-        "Wii U",
-        "FC",
-        "N64",
-        "SFC",
-      ],
-    },
-  ],
-  索尼: [
-    { name: "索尼", tags: ["PS2", "PS3", "PS1", "PSP", "PS Vita", "PS4"] },
-  ],
-  其他平台: [
-    {
-      name: "其他平台",
-      tags: [
-        "MD",
-        "SS",
-        "DC",
-        "Xbox",
-        "街机",
-        "Neogeo",
-        "DOS",
-        "文曲星",
-        "步步高电子词典",
-        "JAVA",
-        "J2ME（诺基亚时代java）",
-        "安卓",
-      ],
-    },
-  ],
-  PC及安卓: [
-    {
-      name: "PC及安卓",
-      tags: [
-        "必备软件",
-        "各种合集",
-        "横版过关",
-        "平台跳跃",
-        "战棋策略",
-        "RPG",
-        "双人",
-        "射击",
-        "动作",
-        "经营",
-        "魂类",
-        "竞速运动",
-        "潜行",
-        "解谜",
-        "格斗无双",
-        "恐怖",
-        "不正经",
-        "小游戏",
-        "修改器金手指",
-        "互动影游",
-        "网游单机",
-      ],
-    },
-  ],
-};
-
-const MAIN_CATEGORIES = ["任天堂", "索尼", "其他平台", "PC及安卓"];
 
 function parseUpdateDate(value: string) {
   if (!value) return null;
@@ -192,6 +121,9 @@ export default function HomePage() {
   const [qrModalTitle, setQrModalTitle] = useState("");
   const [showPopups, setShowPopups] = useState<Record<string, boolean>>({});
   const [pinPriorityMap, setPinPriorityMap] = useState<Record<number, number>>({});
+  const [homeCategories, setHomeCategories] = useState<HomeCategory[]>(
+    DEFAULT_HOME_CATEGORIES,
+  );
 
   // 分页相关
   const [currentPage, setCurrentPage] = useState(1);
@@ -211,6 +143,12 @@ export default function HomePage() {
     fetchPinPriorityMap()
       .then(setPinPriorityMap)
       .catch(() => setPinPriorityMap({}));
+  }, []);
+
+  useEffect(() => {
+    fetchHomeCategories()
+      .then(setHomeCategories)
+      .catch(() => setHomeCategories(DEFAULT_HOME_CATEGORIES));
   }, []);
 
   async function fetchGamesWithLocalSort(
@@ -406,35 +344,35 @@ export default function HomePage() {
 
         {/* 母标签栏 */}
         <div className="tab-header">
-          {MAIN_CATEGORIES.map((cat) => (
+          {homeCategories.map((category) => (
             <button
-              key={cat}
-              className={`tab-btn ${selectedCategory === cat ? "active" : ""}`}
-              data-category={cat}
+              key={category.name}
+              className={`tab-btn ${selectedCategory === category.name ? "active" : ""}`}
+              data-category={category.name}
               onClick={() => {
-                setSelectedCategory(cat);
-                setShowPanel(showPanel === cat ? null : cat);
+                setSelectedCategory(category.name);
+                setShowPanel(showPanel === category.name ? null : category.name);
               }}
             >
-              {cat}
+              {category.name}
             </button>
           ))}
         </div>
 
         {/* 标签面板 */}
         <div className="tab-panel-wrapper">
-          {MAIN_CATEGORIES.map((cat) => (
+          {homeCategories.map((category) => (
             <div
-              key={cat}
-              className={`tab-panel ${showPanel === cat ? "show" : ""}`}
-              id={`panel-${cat}`}
+              key={category.name}
+              className={`tab-panel ${showPanel === category.name ? "show" : ""}`}
+              id={`panel-${category.name}`}
             >
-              {CATEGORIES[cat]?.[0]?.tags.map((tag) => (
+              {category.tags.map((tag) => (
                 <div
                   key={tag}
                   className={`tag-item ${selectedTag?.value === tag ? "active" : ""}`}
-                  data-category={cat}
-                  onClick={() => selectTag(cat, tag)}
+                  data-category={category.name}
+                  onClick={() => selectTag(category.name, tag)}
                 >
                   {tag}
                 </div>
