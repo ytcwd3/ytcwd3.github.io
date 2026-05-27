@@ -21,11 +21,10 @@ export default function SiteLinksManager() {
     supabase
       .from("site_links")
       .select("*")
-      .not("name", "like", "__pin_order__:%")
       .order("type", { ascending: true })
       .order("id", { ascending: true })
       .then(({ data }) => {
-        setLinks(data || []);
+        setLinks((data || []).filter((link) => !link.name.startsWith("__")));
         setLoading(false);
       });
   }
@@ -70,7 +69,7 @@ export default function SiteLinksManager() {
   const filtered = filterType === "all" ? links : links.filter((l) => l.type === filterType);
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div>
       <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>工具补丁 & 帮助中心管理</h2>
 
       {/* 筛选 */}

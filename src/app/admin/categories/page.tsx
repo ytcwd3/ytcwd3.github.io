@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import AdminHeader from "../components/Header";
-import SiteLinksManager from "../components/SiteLinksManager";
+import DatabaseCategoryManager from "../components/DatabaseCategoryManager";
+import HomeDisplayManager from "../components/HomeDisplayManager";
 
-export default function SiteLinksPage() {
+export default function CategoryPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -21,18 +21,12 @@ export default function SiteLinksPage() {
     setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    localStorage.removeItem("admin_logged_in");
-    localStorage.removeItem("admin_user");
-    window.location.href = "/admin/login";
-  }
-
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
       <AdminHeader user={user} />
       <div style={{ padding: "20px" }}>
-        <SiteLinksManager />
+        <DatabaseCategoryManager />
+        <HomeDisplayManager />
       </div>
     </div>
   );
