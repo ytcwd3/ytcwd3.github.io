@@ -52,34 +52,37 @@ export default function DatabaseCategoryManager() {
     return true;
   }
 
-  function loadCategories() {
+  async function loadCategories(withCounts = false) {
     if (guardMoving()) return;
     setLoading(true);
-    fetchDbCategoryOptions()
-      .then((data) => {
-        setCategories(data);
-        setSelectedId((current) => {
-          if (current && data.some((category) => category.id === current)) return current;
-          return data[0]?.id ?? null;
-        });
+    try {
+      const data = withCounts ? await fetchDbCategories() : await fetchDbCategoryOptions();
+      setCategories(data);
+      setSelectedId((current) => {
+        if (current && data.some((category) => category.id === current)) return current;
+        return data[0]?.id ?? null;
+      });
+      if (!withCounts) {
         refreshCounts();
-      })
-      .catch((error: any) => setMsg("加载失败: " + error.message))
-      .finally(() => setLoading(false));
+      }
+    } catch (error: any) {
+      setMsg("加载失败: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function refreshCounts() {
-    fetchDbCategories()
-      .then((data) => {
-        setCategories(data);
-        setSelectedId((current) => {
-          if (current && data.some((category) => category.id === current)) return current;
-          return data[0]?.id ?? null;
-        });
-      })
-      .catch(() => {
-        // 数量不是首屏阻塞项。
+  async function refreshCounts() {
+    try {
+      const data = await fetchDbCategories();
+      setCategories(data);
+      setSelectedId((current) => {
+        if (current && data.some((category) => category.id === current)) return current;
+        return data[0]?.id ?? null;
       });
+    } catch {
+      // 数量不是首屏阻塞项。
+    }
   }
 
   async function run(actionName: string, action: () => Promise<void>) {
@@ -89,7 +92,7 @@ export default function DatabaseCategoryManager() {
     try {
       await action();
       setMsg("操作成功");
-      await loadCategories();
+      await loadCategories(true);
     } catch (error: any) {
       setMsg("操作失败: " + error.message);
     } finally {
@@ -144,6 +147,11 @@ export default function DatabaseCategoryManager() {
         setMsg("迁移完成");
         setMoveProgress(null);
         setSelectedId(toCategory.id);
+        setPendingParentBySubcategory((prev) => {
+          const next = { ...prev };
+          delete next[subcategory.id];
+          return next;
+        });
         return fetchDbCategories();
       })
       .then((data) => {
@@ -182,7 +190,7 @@ export default function DatabaseCategoryManager() {
           </p>
         </div>
         <button
-          onClick={loadCategories}
+          onClick={() => loadCategories(true)}
           disabled={loading && !isMoving}
           style={{ height: 32, padding: "0 12px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", cursor: loading && !isMoving ? "not-allowed" : "pointer", fontSize: "13px" }}
         >

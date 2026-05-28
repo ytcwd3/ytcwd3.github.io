@@ -5,8 +5,6 @@ export type DbSubcategory = {
   categoryId: number;
   name: string;
   gameCount: number;
-  showOnHome?: boolean;
-  homeSortOrder?: number;
 };
 
 export type DbCategory = {
@@ -14,8 +12,6 @@ export type DbCategory = {
   name: string;
   subcategories: DbSubcategory[];
   gameCount: number;
-  showOnHome?: boolean;
-  homeSortOrder?: number;
 };
 
 export type CategoryMoveProgress = {
@@ -39,8 +35,6 @@ type CategoryRow = {
   id: number;
   name: string;
   sort_order: number | null;
-  show_on_home?: boolean | null;
-  home_sort_order?: number | null;
 };
 
 type SubcategoryRow = {
@@ -48,8 +42,6 @@ type SubcategoryRow = {
   category_id: number;
   name: string;
   sort_order: number | null;
-  show_on_home?: boolean | null;
-  home_sort_order?: number | null;
 };
 
 type GameCategoryCountRow = {
@@ -67,16 +59,12 @@ function normalizeDbCategories(value: unknown): DbCategory[] | null {
     id: Number(category.id),
     name: String(category.name || ""),
     gameCount: Number(category.gameCount || 0),
-    showOnHome: category.showOnHome ?? true,
-    homeSortOrder: Number(category.homeSortOrder || 0),
     subcategories: Array.isArray(category.subcategories)
       ? category.subcategories.map((subcategory: any) => ({
           id: Number(subcategory.id),
           categoryId: Number(subcategory.categoryId),
           name: String(subcategory.name || ""),
           gameCount: Number(subcategory.gameCount || 0),
-          showOnHome: subcategory.showOnHome ?? true,
-          homeSortOrder: Number(subcategory.homeSortOrder || 0),
         }))
       : [],
   }));
@@ -113,7 +101,7 @@ async function logCategoryOperation(params: {
 async function fetchCategoriesRaw() {
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, sort_order, show_on_home, home_sort_order")
+    .select("id, name, sort_order")
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   if (error) throw error;
@@ -123,7 +111,7 @@ async function fetchCategoriesRaw() {
 async function fetchSubcategoriesRaw() {
   const { data, error } = await supabase
     .from("subcategories")
-    .select("id, category_id, name, sort_order, show_on_home, home_sort_order")
+    .select("id, category_id, name, sort_order")
     .order("category_id", { ascending: true })
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
@@ -184,8 +172,6 @@ function buildDbCategoryTree(categoriesRaw: CategoryRow[], subcategoriesRaw: Sub
       name: row.name,
       subcategories: [],
       gameCount: 0,
-      showOnHome: row.show_on_home ?? true,
-      homeSortOrder: row.home_sort_order ?? row.sort_order ?? 0,
     });
   }
 
@@ -197,8 +183,6 @@ function buildDbCategoryTree(categoriesRaw: CategoryRow[], subcategoriesRaw: Sub
       categoryId: row.category_id,
       name: row.name,
       gameCount: 0,
-      showOnHome: row.show_on_home ?? true,
-      homeSortOrder: row.home_sort_order ?? row.sort_order ?? 0,
     });
   }
 
@@ -245,6 +229,12 @@ async function updateGameRows(
       .eq("id", row.id);
     if (error) throw error;
   }
+}
+
+async function tryRpc(name: string, params: Record<string, unknown>) {
+  const { data, error } = await supabase.rpc(name, params);
+  if (error) return null;
+  return data;
 }
 
 export async function fetchDbCategories() {
@@ -330,8 +320,6 @@ export async function addDbCategory(name: string) {
   const { error } = await supabase.from("categories").insert({
     name: cleanName,
     sort_order: sortOrder,
-    show_on_home: true,
-    home_sort_order: sortOrder,
   });
   if (error) throw error;
 
@@ -363,8 +351,6 @@ export async function addDbSubcategory(categoryId: number, categoryName: string,
     category_id: categoryId,
     name: cleanName,
     sort_order: sortOrder,
-    show_on_home: true,
-    home_sort_order: sortOrder,
   });
   if (error) throw error;
 
@@ -400,15 +386,22 @@ export async function renameDbCategory(categoryId: number, oldName: string, newN
     .eq("id", categoryId);
   if (updateCategoryError) throw updateCategoryError;
 
-  const rows = (await fetchGameCategoryRows()).filter((row) =>
-    (row.category || []).includes(oldName),
-  );
-  for (const row of rows) {
-    const { error } = await supabase
-      .from("games")
-      .update({ category: replaceValue(row.category, oldName, cleanName) })
-      .eq("id", row.id);
-    if (error) throw error;
+  const rpcResult = await tryRpc("sync_games_after_category_rename", {
+    p_category_id: categoryId,
+    p_old_name: oldName,
+    p_new_name: cleanName,
+  });
+  if (rpcResult === null) {
+    const rows = (await fetchGameCategoryRows()).filter((row) =>
+      (row.category || []).includes(oldName),
+    );
+    for (const row of rows) {
+      const { error } = await supabase
+        .from("games")
+        .update({ category: replaceValue(row.category, oldName, cleanName) })
+        .eq("id", row.id);
+      if (error) throw error;
+    }
   }
 
   await logCategoryOperation({
@@ -450,15 +443,22 @@ export async function renameDbSubcategory(
     .eq("id", subcategoryId);
   if (updateSubcategoryError) throw updateSubcategoryError;
 
-  const rows = (await fetchGameCategoryRows()).filter((row) =>
-    (row.subcategory || []).includes(oldName),
-  );
-  for (const row of rows) {
-    const { error } = await supabase
-      .from("games")
-      .update({ subcategory: replaceValue(row.subcategory, oldName, cleanName) })
-      .eq("id", row.id);
-    if (error) throw error;
+  const rpcResult = await tryRpc("sync_games_after_subcategory_rename", {
+    p_subcategory_id: subcategoryId,
+    p_old_name: oldName,
+    p_new_name: cleanName,
+  });
+  if (rpcResult === null) {
+    const rows = (await fetchGameCategoryRows()).filter((row) =>
+      (row.subcategory || []).includes(oldName),
+    );
+    for (const row of rows) {
+      const { error } = await supabase
+        .from("games")
+        .update({ subcategory: replaceValue(row.subcategory, oldName, cleanName) })
+        .eq("id", row.id);
+      if (error) throw error;
+    }
   }
 
   await logCategoryOperation({
@@ -482,13 +482,6 @@ export async function moveDbSubcategoryToCategory(
 ) {
   if (fromCategoryId === toCategoryId) return;
 
-  const rows = (await fetchGameCategoryRows()).filter(
-    (row) =>
-      ((row.category || []).includes(fromCategoryName) &&
-        (row.subcategory || []).includes(subcategoryName)) ||
-      row.subcategory_id === subcategoryId,
-  );
-
   const { data: duplicate, error: duplicateError } = await supabase
     .from("subcategories")
     .select("id")
@@ -497,6 +490,51 @@ export async function moveDbSubcategoryToCategory(
     .limit(1);
   if (duplicateError) throw duplicateError;
   const targetSubcategoryId = duplicate?.[0]?.id ?? subcategoryId;
+
+  const rpcResult = await tryRpc("move_subcategory_fast", {
+    p_subcategory_id: subcategoryId,
+    p_subcategory_name: subcategoryName,
+    p_from_category_id: fromCategoryId,
+    p_from_category_name: fromCategoryName,
+    p_to_category_id: toCategoryId,
+    p_to_category_name: toCategoryName,
+    p_target_subcategory_id: targetSubcategoryId,
+  });
+  if (rpcResult !== null) {
+    const movedCount = Number((rpcResult as any)?.moved_games_count || 0);
+    onProgress?.({
+      total: movedCount,
+      done: movedCount,
+      subcategory: subcategoryName,
+      from: fromCategoryName,
+      to: toCategoryName,
+    });
+
+    await logCategoryOperation({
+      action: "move_subcategory",
+      targetType: "subcategory",
+      targetId: subcategoryId,
+      targetName: subcategoryName,
+      beforeData: { fromCategoryId, fromCategoryName, toCategoryId, toCategoryName },
+      afterData: {
+        fromCategoryId,
+        fromCategoryName,
+        toCategoryId,
+        toCategoryName,
+        targetSubcategoryId,
+        movedGamesCount: movedCount,
+        deleted: duplicate && duplicate.length > 0,
+      },
+    });
+    return;
+  }
+
+  const rows = (await fetchGameCategoryRows()).filter(
+    (row) =>
+      ((row.category || []).includes(fromCategoryName) &&
+        (row.subcategory || []).includes(subcategoryName)) ||
+      row.subcategory_id === subcategoryId,
+  );
 
   onProgress?.({
     total: rows.length,
@@ -559,13 +597,19 @@ export async function moveDbSubcategoryToCategory(
 }
 
 export async function deleteDbCategory(categoryId: number, categoryName: string) {
-  await updateGameRows(
-    (row) => (row.category || []).includes(categoryName) || row.category_id === categoryId,
-    () => ({
-      category: [],
-      category_id: null,
-    }),
-  );
+  const rpcResult = await tryRpc("clear_games_for_category_delete", {
+    p_category_id: categoryId,
+    p_category_name: categoryName,
+  });
+  if (rpcResult === null) {
+    await updateGameRows(
+      (row) => (row.category || []).includes(categoryName) || row.category_id === categoryId,
+      () => ({
+        category: [],
+        category_id: null,
+      }),
+    );
+  }
 
   const { error } = await supabase.from("categories").delete().eq("id", categoryId);
   if (error) throw error;
@@ -584,16 +628,23 @@ export async function deleteDbSubcategory(
   categoryName: string,
   subcategoryName: string,
 ) {
-  await updateGameRows(
-    (row) =>
-      ((row.category || []).includes(categoryName) &&
-        (row.subcategory || []).includes(subcategoryName)) ||
-      row.subcategory_id === subcategoryId,
-    () => ({
-      subcategory: [],
-      subcategory_id: null,
-    }),
-  );
+  const rpcResult = await tryRpc("clear_games_for_subcategory_delete", {
+    p_subcategory_id: subcategoryId,
+    p_category_name: categoryName,
+    p_subcategory_name: subcategoryName,
+  });
+  if (rpcResult === null) {
+    await updateGameRows(
+      (row) =>
+        ((row.category || []).includes(categoryName) &&
+          (row.subcategory || []).includes(subcategoryName)) ||
+        row.subcategory_id === subcategoryId,
+      () => ({
+        subcategory: [],
+        subcategory_id: null,
+      }),
+    );
+  }
 
   const { error } = await supabase.from("subcategories").delete().eq("id", subcategoryId);
   if (error) throw error;
