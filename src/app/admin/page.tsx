@@ -4,11 +4,7 @@ import "./admin.css";
 import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
 import { fetchPinPriorityMap } from "@/lib/pinPriority";
-import {
-  CATEGORY_SUBCATEGORIES,
-  CATEGORY_DB_VALUE,
-  PAGE_SIZE,
-} from "./components/constants";
+import { PAGE_SIZE } from "./components/constants";
 import AdminHeader from "./components/Header";
 import StatsCards from "./components/StatsCards";
 import SubcategoryFilter from "./components/SubcategoryFilter";
@@ -18,12 +14,7 @@ import EditModal from "./components/EditModal";
 import ImportModal from "./components/ImportModal";
 import ConfirmModal from "./components/ConfirmModal";
 import ImageMatchModal from "./components/ImageMatchModal";
-
-function normalizeMetaCategory(category: string, subcategory: string) {
-  if (subcategory === "安卓") return "Other";
-  if (category === "Other") return "Other";
-  return category;
-}
+import { DbCategory, fetchDbCategories, fetchDbCategoryOptions } from "@/lib/categoryTables";
 
 function invalidateAdminMetaCache() {
   localStorage.removeItem("admin_game_meta");
@@ -49,26 +40,54 @@ function getPinPriority(
   return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
 }
 
+async function fetchAdminGamesPageFast(params: {
+  categoryId: number | null;
+  subcategoryId: number | "all";
+  keyword: string;
+  sort: "default" | "name" | "updatedate_desc" | "updatedate_asc";
+  page: number;
+  pageSize: number;
+}) {
+  const args = {
+    p_category_id: params.categoryId,
+    p_subcategory_id: params.subcategoryId === "all" ? null : params.subcategoryId,
+    p_keyword: params.keyword || null,
+    p_page: params.page,
+    p_page_size: params.pageSize,
+  };
+
+  const sortedArgs = {
+    ...args,
+    p_sort: params.sort,
+  };
+
+  const sortedResult = await supabase.rpc("get_admin_games_page_sorted_fast", sortedArgs);
+  const { data, error } =
+    sortedResult.error && params.sort === "default"
+      ? await supabase.rpc("get_admin_games_page_fast", args)
+      : sortedResult;
+
+  if (error || !data || typeof data !== "object") return null;
+  const payload = data as any;
+  return {
+    data: Array.isArray(payload.data) ? (payload.data as Game[]) : [],
+    total: Number(payload.total || 0),
+  };
+}
+
 export default function AdminDashboard() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState<string>("pc");
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
+  const [categories, setCategories] = useState<DbCategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | "all">("all");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [sortBy, setSortBy] = useState<
     "default" | "name" | "updatedate_desc" | "updatedate_asc"
   >("default");
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>(
-    {},
-  );
-  const [subcatCounts, setSubcatCounts] = useState<Record<string, number>>({});
-  const [allGameMeta, setAllGameMeta] = useState<
-    { category: string; subcategory: string }[]
-  >([]);
-  const [statsLoaded, setStatsLoaded] = useState(false);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -111,8 +130,9 @@ export default function AdminDashboard() {
       return;
     }
     setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
-    applyFilters(1);
-    loadAllMeta();
+    const dbCategories = await loadCategories();
+    applyFilters(1, dbCategories[0]?.id ?? null, "all");
+    refreshCategoryCounts();
 
     // 监听置顶切换刷新事件
     const handleRefresh = () => applyFilters(currentPage);
@@ -120,15 +140,40 @@ export default function AdminDashboard() {
     return () => window.removeEventListener("adminRefreshGames", handleRefresh);
   }
 
+  async function loadCategories() {
+    const dbCategories = await fetchDbCategoryOptions();
+    setCategories(dbCategories);
+    if (!selectedCategoryId && dbCategories.length > 0) {
+      setSelectedCategoryId(dbCategories[0].id);
+      setSelectedSubcategoryId("all");
+    } else if (selectedCategoryId) {
+      const exists = dbCategories.some((category) => category.id === selectedCategoryId);
+      if (!exists && dbCategories.length > 0) {
+        setSelectedCategoryId(dbCategories[0].id);
+        setSelectedSubcategoryId("all");
+      }
+    }
+    return dbCategories;
+  }
+
+  async function refreshCategoryCounts() {
+    try {
+      const countedCategories = await fetchDbCategories();
+      setCategories(countedCategories);
+    } catch {
+      // 数量加载失败不阻塞数据管理。
+    }
+  }
+
   async function applyFilters(
     page: number = 1,
-    cat?: string,
-    sub?: string,
+    categoryId?: number | null,
+    subcategoryId?: number | "all",
     keyword?: string,
     sort?: "default" | "name" | "updatedate_desc" | "updatedate_asc",
   ) {
-    const curCat = cat !== undefined ? cat : selectedCategory;
-    const curSub = sub !== undefined ? sub : selectedSubcategory;
+    const curCat = categoryId !== undefined ? categoryId : selectedCategoryId;
+    const curSub = subcategoryId !== undefined ? subcategoryId : selectedSubcategoryId;
     const curKeyword = keyword !== undefined ? keyword : searchKeyword;
     const curSort = sort !== undefined ? sort : sortBy;
     const reqId = Date.now();
@@ -138,35 +183,104 @@ export default function AdminDashboard() {
     try {
       const from = (page - 1) * PAGE_SIZE;
       const to = page * PAGE_SIZE - 1;
-
-      function buildSortMetaQuery() {
-        let metaQuery = supabase.from("games").select("id, name, updatedate, pinned");
-
-        if (curCat !== "all") {
-          if (curCat === "pc") {
-            metaQuery = metaQuery
-              .contains("category", ["PC"])
-              .not("subcategory", "cs", '{"安卓"}');
-          } else if (curCat === "other") {
-            metaQuery = metaQuery.or(
-              "category.cs.{Other},subcategory.cs.{安卓}",
-            );
-          } else {
-            const catName = CATEGORY_DB_VALUE[curCat];
-            if (catName) {
-              metaQuery = metaQuery.contains("category", [catName]);
-            }
-          }
+      function applyGameFilters(query: any) {
+        if (curCat) {
+          query = query.eq("category_id", curCat);
         }
-
         if (curSub !== "all") {
-          metaQuery = metaQuery.contains("subcategory", [curSub]);
+          query = query.eq("subcategory_id", curSub);
         }
         if (curKeyword) {
-          metaQuery = metaQuery.ilike("name", `%${curKeyword}%`);
+          query = query.ilike("name", `%${curKeyword}%`);
+        }
+        return query;
+      }
+
+      const fastPage = await fetchAdminGamesPageFast({
+        categoryId: curCat || null,
+        subcategoryId: curSub,
+        keyword: curKeyword,
+        sort: curSort,
+        page,
+        pageSize: PAGE_SIZE,
+      });
+      if ((window as any).__reqId !== reqId) return;
+      if (fastPage) {
+        setFilteredGames(fastPage.data);
+        setTotalCount(fastPage.total);
+        setCurrentPage(page);
+        return;
+      }
+
+      if (curSort === "default") {
+        const pinPriorityMap = await fetchPinPriorityMap();
+        if ((window as any).__reqId !== reqId) return;
+
+        const pinnedQuery = applyGameFilters(
+          supabase.from("games").select("*", { count: "planned" }).eq("pinned", true),
+        );
+        const { data: pinnedRaw, error: pinnedError, count: pinnedCountRaw } =
+          await pinnedQuery.order("id", { ascending: true });
+        if ((window as any).__reqId !== reqId) return;
+        if (pinnedError) throw pinnedError;
+
+        const pinnedGames = ((pinnedRaw || []) as Game[])
+          .sort((a, b) => {
+            const pinOrderDiff =
+              getPinPriority(a, pinPriorityMap) - getPinPriority(b, pinPriorityMap);
+            if (pinOrderDiff !== 0) return pinOrderDiff;
+            return a.id - b.id;
+          })
+          .map((game) => ({
+            ...game,
+            pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null,
+          }));
+
+        const pinnedCount = pinnedCountRaw || pinnedGames.length;
+        const visiblePinned = pinnedGames.slice(from, to + 1);
+        const remainingSlots = PAGE_SIZE - visiblePinned.length;
+        const nonPinnedOffset = Math.max(0, from - pinnedCount);
+
+        let nonPinnedGames: Game[] = [];
+        let nonPinnedCount = 0;
+        if (remainingSlots > 0) {
+          const nonPinnedQuery = applyGameFilters(
+            supabase.from("games").select("*", { count: "planned" }).eq("pinned", false),
+          );
+          const {
+            data: nonPinnedRaw,
+            error: nonPinnedError,
+            count: nonPinnedCountRaw,
+          } = await nonPinnedQuery
+            .order("id", { ascending: true })
+            .range(nonPinnedOffset, nonPinnedOffset + remainingSlots - 1);
+          if ((window as any).__reqId !== reqId) return;
+          if (nonPinnedError) throw nonPinnedError;
+          nonPinnedGames = ((nonPinnedRaw || []) as Game[]).map((game) => ({
+            ...game,
+            pinPriority: null,
+          }));
+          nonPinnedCount = nonPinnedCountRaw || 0;
+        } else {
+          const nonPinnedCountQuery = applyGameFilters(
+            supabase.from("games").select("id", { count: "planned", head: true }).eq("pinned", false),
+          );
+          const { count, error } = await nonPinnedCountQuery;
+          if ((window as any).__reqId !== reqId) return;
+          if (error) throw error;
+          nonPinnedCount = count || 0;
         }
 
-        return metaQuery;
+        setFilteredGames([...visiblePinned, ...nonPinnedGames]);
+        setTotalCount(pinnedCount + nonPinnedCount);
+        setCurrentPage(page);
+        return;
+      }
+
+      function buildMetaQuery() {
+        return applyGameFilters(
+          supabase.from("games").select("id, name, updatedate, pinned, category_id, subcategory_id"),
+        );
       }
 
       const metaData: {
@@ -174,6 +288,8 @@ export default function AdminDashboard() {
         name?: string;
         updatedate: string;
         pinned?: boolean;
+        category_id?: number | null;
+        subcategory_id?: number | null;
       }[] = [];
       const META_BATCH = 1000;
       let metaPage = 0;
@@ -181,7 +297,7 @@ export default function AdminDashboard() {
       while (true) {
         const metaFrom = metaPage * META_BATCH;
         const metaTo = metaFrom + META_BATCH - 1;
-        const { data, error } = await buildSortMetaQuery()
+        const { data, error } = await buildMetaQuery()
           .order("id", { ascending: true })
           .range(metaFrom, metaTo);
 
@@ -259,29 +375,22 @@ export default function AdminDashboard() {
       setCurrentPage(page);
     } catch (error: any) {
       alert("筛选失败: " + error.message);
+    } finally {
+      if ((window as any).__reqId === reqId) {
+        setLoading(false);
+      }
     }
-
-    setLoading(false);
   }
 
-  function handleCategoryClick(cat: string) {
-    const catName = CATEGORY_DB_VALUE[cat];
-    const subcatCountsNew: Record<string, number> = {};
-    const subcats = CATEGORY_SUBCATEGORIES[cat] || [];
-    subcats.forEach((sub) => {
-      subcatCountsNew[sub] = allGameMeta.filter(
-        (g) => g.category === catName && g.subcategory === sub,
-      ).length;
-    });
-    setSubcatCounts(subcatCountsNew);
-    setSelectedCategory(cat);
-    setSelectedSubcategory("all");
+  function handleCategoryClick(categoryId: number) {
+    setSelectedCategoryId(categoryId);
+    setSelectedSubcategoryId("all");
     setSearchKeyword("");
-    applyFilters(1, cat, "all");
+    applyFilters(1, categoryId, "all");
   }
 
-  function handleSubcategoryClick(sub: string) {
-    setSelectedSubcategory(sub);
+  function handleSubcategoryClick(sub: number | "all") {
+    setSelectedSubcategoryId(sub);
     applyFilters(1, undefined, sub);
   }
 
@@ -309,101 +418,6 @@ export default function AdminDashboard() {
     applyFilters(page);
   }
 
-  // 一次性批量加载所有元数据，从内存计算所有统计
-  async function loadAllMeta() {
-    const cacheKey = "admin_game_meta_v2";
-    const cached = localStorage.getItem(cacheKey);
-
-    if (cached) {
-      try {
-        const { meta, total } = JSON.parse(cached);
-        const { count } = await supabase
-          .from("games")
-          .select("id", { count: "exact", head: true });
-
-        if (count === total) {
-          const normalizedMeta = meta.map((g: any) => ({
-            category: normalizeMetaCategory(g.category, g.subcategory),
-            subcategory: g.subcategory,
-          }));
-          setAllGameMeta(normalizedMeta);
-          const catCounts: Record<string, number> = {};
-          for (const catKey of Object.keys(CATEGORY_DB_VALUE)) {
-            const catName = CATEGORY_DB_VALUE[catKey];
-            catCounts[catKey] = normalizedMeta.filter(
-              (g: any) => g.category === catName,
-            ).length;
-          }
-          setCategoryCounts(catCounts);
-
-          const catName = CATEGORY_DB_VALUE[selectedCategory];
-          const subcatCountsNew: Record<string, number> = {};
-          (CATEGORY_SUBCATEGORIES[selectedCategory] || []).forEach(
-            (sub: string) => {
-              subcatCountsNew[sub] = normalizedMeta.filter(
-                (g: any) => g.category === catName && g.subcategory === sub,
-              ).length;
-            },
-          );
-          setSubcatCounts(subcatCountsNew);
-          setStatsLoaded(true);
-          return;
-        }
-      } catch {}
-    }
-
-    // 缓存失效，重新加载
-    const allMeta: { category: string; subcategory: string }[] = [];
-    const BATCH = 1000;
-    let page = 0;
-
-    while (true) {
-      const from = page * BATCH;
-      const to = from + BATCH - 1;
-      const { data, error } = await supabase
-        .from("games")
-        .select("category, subcategory")
-        .order("id", { ascending: true })
-        .range(from, to);
-
-      if (error || !data || data.length === 0) break;
-      data.forEach((g: any) =>
-        allMeta.push({
-          category: normalizeMetaCategory(g.category?.[0] || "", g.subcategory?.[0] || ""),
-          subcategory: g.subcategory?.[0] || "",
-        }),
-      );
-      if (data.length < BATCH) break;
-      page++;
-    }
-
-    setAllGameMeta(allMeta);
-
-    const catCounts: Record<string, number> = {};
-    for (const catKey of Object.keys(CATEGORY_DB_VALUE)) {
-      const catName = CATEGORY_DB_VALUE[catKey];
-      catCounts[catKey] = allMeta.filter(
-        (g: any) => g.category === catName,
-      ).length;
-    }
-    setCategoryCounts(catCounts);
-
-    const catName = CATEGORY_DB_VALUE[selectedCategory];
-    const subcatCountsNew: Record<string, number> = {};
-    (CATEGORY_SUBCATEGORIES[selectedCategory] || []).forEach((sub: string) => {
-      subcatCountsNew[sub] = allMeta.filter(
-        (g: any) => g.category === catName && g.subcategory === sub,
-      ).length;
-    });
-    setSubcatCounts(subcatCountsNew);
-
-    const { count: total } = await supabase
-      .from("games")
-      .select("id", { count: "exact", head: true });
-    localStorage.setItem(cacheKey, JSON.stringify({ meta: allMeta, total }));
-    setStatsLoaded(true);
-  }
-
   function openAddModal() {
     setEditingGame(null);
     setShowEditModal(true);
@@ -426,121 +440,31 @@ export default function AdminDashboard() {
       "封面图片",
       "视频链接",
     ];
-    const SHEET_DATA: Record<string, string[][]> = {
-      PC: [
-        SHEET_COLS,
-        [
-          "示例游戏",
-          "PC",
-          "RPG",
-          "1234",
-          "https://pan.quark.cn/s/xxx",
-          "8888",
-          "https://pan.baidu.com/s/xxx",
-          "8888",
-          "https://pan.xunlei.com/s/xxx",
-          "8888",
-          "2026.3.30",
-          "https://",
-          "https://",
-        ],
-      ],
-      NS: [
-        SHEET_COLS,
-        [
-          "示例游戏",
-          "NS",
-          "动作",
-          "1234",
-          "https://pan.quark.cn/s/xxx",
-          "8888",
-          "https://pan.baidu.com/s/xxx",
-          "8888",
-          "https://pan.xunlei.com/s/xxx",
-          "8888",
-          "2026.3.30",
-          "https://",
-          "https://",
-        ],
-      ],
-      任天堂掌机: [
-        SHEET_COLS,
-        [
-          "示例游戏",
-          "任天堂掌机",
-          "RPG",
-          "1234",
-          "https://pan.quark.cn/s/xxx",
-          "8888",
-          "https://pan.baidu.com/s/xxx",
-          "8888",
-          "https://pan.xunlei.com/s/xxx",
-          "8888",
-          "2026.3.30",
-          "https://",
-          "https://",
-        ],
-      ],
-      任天堂主机: [
-        SHEET_COLS,
-        [
-          "示例游戏",
-          "任天堂主机",
-          "运动",
-          "1234",
-          "https://pan.quark.cn/s/xxx",
-          "8888",
-          "https://pan.baidu.com/s/xxx",
-          "8888",
-          "https://pan.xunlei.com/s/xxx",
-          "8888",
-          "2026.3.30",
-          "https://",
-          "https://",
-        ],
-      ],
-      索尼: [
-        SHEET_COLS,
-        [
-          "示例游戏",
-          "索尼",
-          "RPG",
-          "1234",
-          "https://pan.quark.cn/s/xxx",
-          "8888",
-          "https://pan.baidu.com/s/xxx",
-          "8888",
-          "https://pan.xunlei.com/s/xxx",
-          "8888",
-          "2026.3.30",
-          "https://",
-          "https://",
-        ],
-      ],
-      Other: [
-        SHEET_COLS,
-        [
-          "示例游戏",
-          "Other",
-          "FPS",
-          "1234",
-          "https://pan.quark.cn/s/xxx",
-          "8888",
-          "https://pan.baidu.com/s/xxx",
-          "8888",
-          "https://pan.xunlei.com/s/xxx",
-          "8888",
-          "2026.3.30",
-          "https://",
-          "https://",
-        ],
-      ],
-    };
-
+    const dbCategories = categories.length > 0 ? categories : await fetchDbCategoryOptions();
     const wb = XLSX.utils.book_new();
-    Object.entries(SHEET_DATA).forEach(([name, data]) => {
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      XLSX.utils.book_append_sheet(wb, ws, name);
+
+    dbCategories.forEach((category) => {
+      const exampleSubcategory = category.subcategories[0]?.name || "";
+      const sheetData = [
+        SHEET_COLS,
+        [
+          "示例游戏",
+          category.name,
+          exampleSubcategory,
+          "1234",
+          "https://pan.quark.cn/s/xxx",
+          "8888",
+          "https://pan.baidu.com/s/xxx",
+          "8888",
+          "https://pan.xunlei.com/s/xxx",
+          "8888",
+          "2026.3.30",
+          "https://",
+          "https://",
+        ],
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      XLSX.utils.book_append_sheet(wb, ws, category.name.slice(0, 31));
     });
     XLSX.writeFile(wb, "游戏导入模板.xlsx");
   }
@@ -567,7 +491,7 @@ export default function AdminDashboard() {
       const { error } = await supabase.from("games").delete().eq("id", id);
       if (error) throw error;
       invalidateAdminMetaCache();
-      await loadAllMeta();
+      await loadCategories();
       // 如果当前页只有1条，删后回退到上一页
       if (filteredGames.length === 1 && currentPage > 1) {
         applyFilters(currentPage - 1);
@@ -588,7 +512,7 @@ export default function AdminDashboard() {
       const { error } = await supabase.from("games").delete().in("id", ids);
       if (error) throw error;
       invalidateAdminMetaCache();
-      await loadAllMeta();
+      await loadCategories();
       alert(`批量删除成功，共删除 ${ids.length} 条数据`);
       // 如果删完当前页空了，回退
       const remaining = filteredGames.length - ids.length;
@@ -615,17 +539,15 @@ export default function AdminDashboard() {
       <div className="admin-container" style={{ maxWidth: 1200, margin: "20px auto", padding: "0 20px" }}>
         <StatsCards
           className="stats-cards"
-          selectedCategory={selectedCategory}
-          categoryCounts={categoryCounts}
+          categories={categories}
+          selectedCategoryId={selectedCategoryId}
           onCategoryClick={handleCategoryClick}
         />
 
         <SubcategoryFilter
           className="subcat-filter"
-          selectedCategory={selectedCategory}
-          selectedSubcategory={selectedSubcategory}
-          categoryCounts={categoryCounts}
-          subcatCounts={subcatCounts}
+          selectedCategory={categories.find((category) => category.id === selectedCategoryId) || null}
+          selectedSubcategoryId={selectedSubcategoryId}
           onSubcategoryClick={handleSubcategoryClick}
         />
 
@@ -665,7 +587,7 @@ export default function AdminDashboard() {
           onSaved={() => {
             setShowEditModal(false);
             invalidateAdminMetaCache();
-            loadAllMeta();
+            loadCategories();
             applyFilters(currentPage);
           }}
         />
@@ -677,7 +599,7 @@ export default function AdminDashboard() {
           onImported={() => {
             setShowImportModal(false);
             invalidateAdminMetaCache();
-            loadAllMeta();
+            loadCategories();
             applyFilters(currentPage);
           }}
         />
@@ -689,7 +611,7 @@ export default function AdminDashboard() {
           onDone={() => {
             setShowImageMatchModal(false);
             invalidateAdminMetaCache();
-            loadAllMeta();
+            loadCategories();
             applyFilters(currentPage);
           }}
         />
