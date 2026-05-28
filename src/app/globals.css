@@ -68,7 +68,7 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  background-image: url("/bg.jpg");
+  background-image: url("https://img.cdn1.vip/i/6a17f00cb1ad8_1779953676.webp");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -77,7 +77,7 @@ body {
 
 .container {
   /* 毛玻璃效果 - 使用渐变和阴影模拟 */
-  max-width: 900px;
+  max-width: 1000px;
   min-width: 280px;
   margin: 0 auto;
   text-align: center;
@@ -678,7 +678,7 @@ body {
   display: flex;
   flex-wrap: nowrap;
   gap: 14px;
-  align-items: flex-start;
+  align-items: center;
   position: relative;
   content-visibility: auto;
   contain: layout paint style;
@@ -694,8 +694,8 @@ body {
 
 /* 游戏缩略图 */
 .game-thumb {
-  width: 104px;
-  align-self: flex-start;
+  width: 132px;
+  align-self: center;
   flex-shrink: 0;
   display: block;
 }
@@ -708,9 +708,35 @@ body {
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.1);
 }
 
+.zoomable-game-image {
+  cursor: zoom-in;
+}
+
+.image-hover-preview {
+  position: fixed;
+  z-index: 2147483647;
+  pointer-events: none;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 18px 48px rgba(15, 23, 42, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.85);
+}
+
+.image-hover-preview img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(320px, 42vw);
+  max-height: min(460px, 72vh);
+  border-radius: 8px;
+  object-fit: contain;
+}
+
 .thumb-ph {
   width: 100%;
-  min-height: 138px;
+  min-height: 80px;
   align-items: center;
   justify-content: center;
   font-size: 26px;
@@ -726,6 +752,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  justify-content: center;
+  align-self: stretch;
 }
 
 /* 游戏名称行 */
@@ -1134,7 +1162,9 @@ body {
   gap: 8px;
   flex-shrink: 0;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
 }
 .qrcode-box {
   width: 66px;
@@ -1398,7 +1428,7 @@ body {
 @media (max-width: 768px) {
   /* 基础布局适配 */
   html, body {
-    background-image: url("/bg.jpg") !important;
+    background-image: url("https://img.cdn1.vip/i/6a17f00cb1ad8_1779953676.webp") !important;
     background-size: cover !important;
     background-position: center center !important;
     background-repeat: no-repeat !important;
@@ -1470,14 +1500,21 @@ body {
   .result-item {
     flex-direction: column;
     gap: 10px;
-    align-items: flex-start;
+    align-items: center;
     flex-wrap: wrap;
+    text-align: center;
   }
   .game-thumb {
-    width: 88px;
+    width: 150px;
   }
   .result-middle {
     width: 100%;
+    align-items: center;
+  }
+  .game-title-row,
+  .game-links-row,
+  .game-code-row {
+    justify-content: center;
   }
   .game-title-row {
     font-size: 14px;
@@ -1492,7 +1529,7 @@ body {
     gap: 6px;
   }
   .qrcode-area {
-    justify-content: flex-start;
+    justify-content: center;
     width: 100%;
     gap: 6px;
   }
@@ -1501,7 +1538,7 @@ body {
     min-height: 76px;
   }
   body {
-    background-image: url("/bg.jpg") !important;
+    background-image: url("https://img.cdn1.vip/i/6a17f00cb1ad8_1779953676.webp") !important;
     background-repeat: no-repeat;
     background-position: center center;
     background-size: cover;
@@ -1565,7 +1602,7 @@ body {
 
   /* 二维码基础样式适配 */
   .qrcode-area {
-    justify-content: flex-start;
+    justify-content: center;
     width: 100%;
   }
 
@@ -1678,14 +1715,14 @@ body {
 
 /* 单条更新记录项（适配网站卡片风格） */
 .update-record-item {
-  padding: 10px 15px;
+  padding: 13px 16px;
   margin: 8px 0;
   background: rgba(255, 255, 255, 0.8);
   border-radius: var(--radius-sm);
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   transition: all var(--transition-fast);
   cursor: default;
   border-left: 3px solid transparent; /* 分类色边框占位 */
@@ -1697,14 +1734,14 @@ body {
   box-shadow: var(--shadow-md);
 }
 
-/* 更新记录缩略图 */
-.update-record-thumb {
-  width: 36px;
-  height: 36px;
-  border-radius: 5px;
-  object-fit: cover;
+.update-record-image {
+  width: 120px;
+  height: auto;
+  max-width: 120px;
+  border-radius: 10px;
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.05);
+  display: block;
+  background: transparent;
 }
 .update-record-thumb-placeholder {
   display: flex;
@@ -1714,6 +1751,10 @@ body {
   color: white;
   font-weight: 700;
   font-size: 14px;
+  width: 120px;
+  min-height: 80px;
+  border-radius: 10px;
+  flex-shrink: 0;
 }
 
 /* 更新记录视频标记 */
@@ -1802,8 +1843,17 @@ body {
   }
   .update-record-item {
     flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
+    gap: 10px;
+    align-items: center;
+    text-align: center;
+  }
+  .update-record-image {
+    width: 160px;
+    max-width: 100%;
+  }
+  .update-record-thumb-placeholder {
+    width: 160px;
+    min-height: 92px;
   }
   .update-record-category {
     font-size: 13px;

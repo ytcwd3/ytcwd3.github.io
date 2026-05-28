@@ -130,7 +130,7 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
       <div className="game-thumb">
         {game.image ? (
           <img
-            className="game-thumb-img"
+            className="game-thumb-img zoomable-game-image"
             src={game.image}
             alt={game.name}
             loading="lazy"

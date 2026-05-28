@@ -248,6 +248,7 @@ export default function GameTable({
                             <img
                               src={game.image}
                               alt={game.name}
+                              className="admin-table-thumb zoomable-game-image"
                               style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
                               onError={(e) => {
                                 const el = e.target as HTMLImageElement;
@@ -495,7 +496,7 @@ export default function GameTable({
                       <img
                         src={game.image}
                         alt={game.name}
-                        className="game-card-thumb"
+                        className="game-card-thumb zoomable-game-image"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = "none";
                         }}

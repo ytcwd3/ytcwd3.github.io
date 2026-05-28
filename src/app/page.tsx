@@ -66,7 +66,7 @@ function buildGameQuery(
   keyword?: string,
   pinned?: boolean,
 ) {
-  let query = supabase.from("games").select("*", { count: "planned" });
+  let query = supabase.from("games").select("*", { count: "exact" });
 
   if (typeof pinned === "boolean") {
     query = query.eq("pinned", pinned);
@@ -86,7 +86,7 @@ function buildGameCountQuery(
   keyword?: string,
   pinned?: boolean,
 ) {
-  let query = supabase.from("games").select("id", { count: "planned", head: true });
+  let query = supabase.from("games").select("id", { count: "exact", head: true });
 
   if (typeof pinned === "boolean") {
     query = query.eq("pinned", pinned);
@@ -168,7 +168,7 @@ export default function HomePage() {
       pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null,
     }));
 
-    const pinnedCount = pinnedCountRaw || sortedPinned.length;
+    const pinnedCount = sortedPinned.length;
     const visiblePinned = sortedPinned.slice(pageStart, pageEnd);
     const remainingSlots = PAGE_SIZE - visiblePinned.length;
     const nonPinnedOffset = Math.max(0, pageStart - pinnedCount);
@@ -197,10 +197,10 @@ export default function HomePage() {
         ...game,
         pinPriority: null,
       }));
-      nonPinnedCount = nonPinnedCountRaw || 0;
+      nonPinnedCount = nonPinnedCountRaw ?? 0;
     } else {
       const { count } = await buildGameCountQuery(tagValue, keyword, false);
-      nonPinnedCount = count || 0;
+      nonPinnedCount = count ?? 0;
     }
 
     return {
@@ -272,10 +272,11 @@ export default function HomePage() {
   function loadPage(page: number) {
     if (loading) return;
 
+    const nextPage = Math.min(Math.max(1, page), Math.ceil(totalCount / PAGE_SIZE) || 1);
     setLoading(true);
-    setCurrentPage(page);
+    setCurrentPage(nextPage);
 
-    loadGames(page)
+    loadGames(nextPage)
       .then(({ data, count }) => {
         setFilteredGames(data);
         setTotalCount(count);

@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import AuthGuard from "./components/AuthGuard";
+import ImageHoverPreview from "./components/ImageHoverPreview";
 
 export const metadata: Metadata = {
   title: "单游仓鼠搜索站",
@@ -41,6 +42,7 @@ export default function RootLayout({
       </head>
       <body>
         <AuthGuard>{children}</AuthGuard>
+        <ImageHoverPreview />
       </body>
     </html>
   );
