@@ -5,6 +5,8 @@ export type DbSubcategory = {
   categoryId: number;
   name: string;
   gameCount: number;
+  showOnHome?: boolean;
+  homeSortOrder?: number;
 };
 
 export type DbCategory = {
@@ -12,6 +14,8 @@ export type DbCategory = {
   name: string;
   subcategories: DbSubcategory[];
   gameCount: number;
+  showOnHome?: boolean;
+  homeSortOrder?: number;
 };
 
 export type CategoryMoveProgress = {
@@ -27,12 +31,16 @@ type GameCategoryRow = {
   id: number;
   category: string[] | null;
   subcategory: string[] | null;
+  category_id?: number | null;
+  subcategory_id?: number | null;
 };
 
 type CategoryRow = {
   id: number;
   name: string;
   sort_order: number | null;
+  show_on_home?: boolean | null;
+  home_sort_order?: number | null;
 };
 
 type SubcategoryRow = {
@@ -40,10 +48,39 @@ type SubcategoryRow = {
   category_id: number;
   name: string;
   sort_order: number | null;
+  show_on_home?: boolean | null;
+  home_sort_order?: number | null;
+};
+
+type GameCategoryCountRow = {
+  id: number;
+  category_id?: number | null;
+  subcategory_id?: number | null;
 };
 
 const BATCH_SIZE = 1000;
 const OPERATOR_NAME = "admin";
+
+function normalizeDbCategories(value: unknown): DbCategory[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.map((category: any) => ({
+    id: Number(category.id),
+    name: String(category.name || ""),
+    gameCount: Number(category.gameCount || 0),
+    showOnHome: category.showOnHome ?? true,
+    homeSortOrder: Number(category.homeSortOrder || 0),
+    subcategories: Array.isArray(category.subcategories)
+      ? category.subcategories.map((subcategory: any) => ({
+          id: Number(subcategory.id),
+          categoryId: Number(subcategory.categoryId),
+          name: String(subcategory.name || ""),
+          gameCount: Number(subcategory.gameCount || 0),
+          showOnHome: subcategory.showOnHome ?? true,
+          homeSortOrder: Number(subcategory.homeSortOrder || 0),
+        }))
+      : [],
+  }));
+}
 
 function uniq(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
@@ -51,10 +88,6 @@ function uniq(values: string[]) {
 
 function replaceValue(values: string[] | null | undefined, oldValue: string, newValue: string) {
   return uniq((values || []).map((value) => (value === oldValue ? newValue : value)));
-}
-
-function removeValue(values: string[] | null | undefined, valueToRemove: string) {
-  return uniq((values || []).filter((value) => value !== valueToRemove));
 }
 
 async function logCategoryOperation(params: {
@@ -80,7 +113,7 @@ async function logCategoryOperation(params: {
 async function fetchCategoriesRaw() {
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, sort_order")
+    .select("id, name, sort_order, show_on_home, home_sort_order")
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   if (error) throw error;
@@ -90,7 +123,7 @@ async function fetchCategoriesRaw() {
 async function fetchSubcategoriesRaw() {
   const { data, error } = await supabase
     .from("subcategories")
-    .select("id, category_id, name, sort_order")
+    .select("id, category_id, name, sort_order, show_on_home, home_sort_order")
     .order("category_id", { ascending: true })
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
@@ -107,7 +140,7 @@ export async function fetchGameCategoryRows() {
     const to = from + BATCH_SIZE - 1;
     const { data, error } = await supabase
       .from("games")
-      .select("id, category, subcategory")
+      .select("id, category, subcategory, category_id, subcategory_id")
       .range(from, to);
 
     if (error) throw error;
@@ -120,76 +153,131 @@ export async function fetchGameCategoryRows() {
   return rows;
 }
 
-export async function fetchDbCategories() {
-  const [categoriesRaw, subcategoriesRaw, games] = await Promise.all([
-    fetchCategoriesRaw(),
-    fetchSubcategoriesRaw(),
-    fetchGameCategoryRows(),
-  ]);
+async function fetchGameCategoryCountRows() {
+  const rows: GameCategoryCountRow[] = [];
+  let page = 0;
 
+  while (true) {
+    const from = page * BATCH_SIZE;
+    const to = from + BATCH_SIZE - 1;
+    const { data, error } = await supabase
+      .from("games")
+      .select("id, category_id, subcategory_id")
+      .range(from, to);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    rows.push(...((data || []) as GameCategoryCountRow[]));
+    if (data.length < BATCH_SIZE) break;
+    page += 1;
+  }
+
+  return rows;
+}
+
+function buildDbCategoryTree(categoriesRaw: CategoryRow[], subcategoriesRaw: SubcategoryRow[]) {
   const categoriesById = new Map<number, DbCategory>();
-  const categoriesByName = new Map<string, DbCategory>();
 
   for (const row of categoriesRaw) {
-    const category: DbCategory = {
+    categoriesById.set(row.id, {
       id: row.id,
       name: row.name,
       subcategories: [],
       gameCount: 0,
-    };
-    categoriesById.set(row.id, category);
-    categoriesByName.set(row.name, category);
+      showOnHome: row.show_on_home ?? true,
+      homeSortOrder: row.home_sort_order ?? row.sort_order ?? 0,
+    });
   }
 
-  const subcategoriesByCategoryId = new Map<number, DbSubcategory[]>();
-  const subcategoryByCategoryName = new Map<string, Map<string, DbSubcategory>>();
-
   for (const row of subcategoriesRaw) {
-    const subcategory: DbSubcategory = {
+    const category = categoriesById.get(row.category_id);
+    if (!category) continue;
+    category.subcategories.push({
       id: row.id,
       categoryId: row.category_id,
       name: row.name,
       gameCount: 0,
-    };
-    const list = subcategoriesByCategoryId.get(row.category_id) || [];
-    list.push(subcategory);
-    subcategoriesByCategoryId.set(row.category_id, list);
-
-    const category = categoriesById.get(row.category_id);
-    if (category) {
-      category.subcategories.push(subcategory);
-    }
-
-    const byName = subcategoryByCategoryName.get(row.category_id.toString()) || new Map<string, DbSubcategory>();
-    byName.set(row.name, subcategory);
-    subcategoryByCategoryName.set(row.category_id.toString(), byName);
+      showOnHome: row.show_on_home ?? true,
+      homeSortOrder: row.home_sort_order ?? row.sort_order ?? 0,
+    });
   }
 
-  const categoryCounts = new Map<string, number>();
+  return Array.from(categoriesById.values())
+    .map((category) => ({
+      ...category,
+      subcategories: category.subcategories.sort((a, b) => a.id - b.id),
+    }))
+    .sort((a, b) => a.id - b.id || a.name.localeCompare(b.name, "zh-CN"));
+}
+
+export async function fetchDbCategoryOptions() {
+  const { data: rpcData, error: rpcError } = await supabase.rpc(
+    "get_category_tree_fast",
+    { include_counts: false },
+  );
+  if (!rpcError) {
+    const normalized = normalizeDbCategories(rpcData);
+    if (normalized && normalized.length > 0) return normalized;
+  }
+
+  const [categoriesRaw, subcategoriesRaw] = await Promise.all([
+    fetchCategoriesRaw(),
+    fetchSubcategoriesRaw(),
+  ]);
+  return buildDbCategoryTree(categoriesRaw, subcategoriesRaw);
+}
+
+async function updateGameRows(
+  matcher: (row: GameCategoryRow) => boolean,
+  updater: (row: GameCategoryRow) => Partial<Pick<GameCategoryRow, "category" | "subcategory" | "category_id" | "subcategory_id">>,
+) {
+  const rows = (await fetchGameCategoryRows()).filter(matcher);
+  for (const row of rows) {
+    const patch = updater(row);
+    const { error } = await supabase
+      .from("games")
+      .update({
+        ...(patch.category !== undefined ? { category: patch.category } : {}),
+        ...(patch.subcategory !== undefined ? { subcategory: patch.subcategory } : {}),
+        ...(patch.category_id !== undefined ? { category_id: patch.category_id } : {}),
+        ...(patch.subcategory_id !== undefined ? { subcategory_id: patch.subcategory_id } : {}),
+      })
+      .eq("id", row.id);
+    if (error) throw error;
+  }
+}
+
+export async function fetchDbCategories() {
+  const { data: rpcData, error: rpcError } = await supabase.rpc(
+    "get_category_tree_fast",
+    { include_counts: true },
+  );
+  if (!rpcError) {
+    const normalized = normalizeDbCategories(rpcData);
+    if (normalized && normalized.length > 0) return normalized;
+  }
+
+  const [categoriesRaw, subcategoriesRaw, games] = await Promise.all([
+    fetchCategoriesRaw(),
+    fetchSubcategoriesRaw(),
+    fetchGameCategoryCountRows(),
+  ]);
+
+  const categories = buildDbCategoryTree(categoriesRaw, subcategoriesRaw);
+  const categoryCounts = new Map<number, number>();
   const subcategoryCounts = new Map<number, number>();
 
   for (const game of games) {
-    const gameCategories = uniq(game.category || []);
-    const gameSubcategories = uniq(game.subcategory || []);
-
-    for (const categoryName of gameCategories) {
-      categoryCounts.set(categoryName, (categoryCounts.get(categoryName) || 0) + 1);
-
-      for (const category of categoriesRaw) {
-        if (category.name !== categoryName) continue;
-        const subMap =
-          subcategoryByCategoryName.get(category.id.toString()) || new Map<string, DbSubcategory>();
-        for (const subcategoryName of gameSubcategories) {
-          const subcategory = subMap.get(subcategoryName);
-          if (!subcategory) continue;
-          subcategoryCounts.set(subcategory.id, (subcategoryCounts.get(subcategory.id) || 0) + 1);
-        }
-      }
+    if (game.category_id) {
+      categoryCounts.set(game.category_id, (categoryCounts.get(game.category_id) || 0) + 1);
+    }
+    if (game.subcategory_id) {
+      subcategoryCounts.set(game.subcategory_id, (subcategoryCounts.get(game.subcategory_id) || 0) + 1);
     }
   }
 
-  for (const category of categoriesById.values()) {
-    category.gameCount = categoryCounts.get(category.name) || 0;
+  for (const category of categories) {
+    category.gameCount = categoryCounts.get(category.id) || 0;
     category.subcategories = category.subcategories
       .map((subcategory) => ({
         ...subcategory,
@@ -198,10 +286,7 @@ export async function fetchDbCategories() {
       .sort((a, b) => a.id - b.id);
   }
 
-  return Array.from(categoriesById.values()).sort((a, b) => {
-    const sortDiff = a.id - b.id;
-    return sortDiff !== 0 ? sortDiff : a.name.localeCompare(b.name, "zh-CN");
-  });
+  return categories;
 }
 
 async function getNextCategorySortOrder() {
@@ -241,9 +326,12 @@ export async function addDbCategory(name: string) {
     throw new Error("主分类已存在");
   }
 
+  const sortOrder = await getNextCategorySortOrder();
   const { error } = await supabase.from("categories").insert({
     name: cleanName,
-    sort_order: await getNextCategorySortOrder(),
+    sort_order: sortOrder,
+    show_on_home: true,
+    home_sort_order: sortOrder,
   });
   if (error) throw error;
 
@@ -270,10 +358,13 @@ export async function addDbSubcategory(categoryId: number, categoryName: string,
     throw new Error("子分类已存在");
   }
 
+  const sortOrder = await getNextSubcategorySortOrder(categoryId);
   const { error } = await supabase.from("subcategories").insert({
     category_id: categoryId,
     name: cleanName,
-    sort_order: await getNextSubcategorySortOrder(categoryId),
+    sort_order: sortOrder,
+    show_on_home: true,
+    home_sort_order: sortOrder,
   });
   if (error) throw error;
 
@@ -289,6 +380,19 @@ export async function addDbSubcategory(categoryId: number, categoryName: string,
 export async function renameDbCategory(categoryId: number, oldName: string, newName: string) {
   const cleanName = newName.trim();
   if (!cleanName) throw new Error("主分类名称不能为空");
+
+  if (cleanName === oldName) return;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("name", cleanName)
+    .neq("id", categoryId)
+    .limit(1);
+  if (existingError) throw existingError;
+  if (existing && existing.length > 0) {
+    throw new Error("主分类已存在");
+  }
 
   const { error: updateCategoryError } = await supabase
     .from("categories")
@@ -318,13 +422,27 @@ export async function renameDbCategory(categoryId: number, oldName: string, newN
 }
 
 export async function renameDbSubcategory(
+  categoryId: number,
   subcategoryId: number,
-  categoryName: string,
   oldName: string,
   newName: string,
 ) {
   const cleanName = newName.trim();
   if (!cleanName) throw new Error("子分类名称不能为空");
+
+  if (cleanName === oldName) return;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("subcategories")
+    .select("id")
+    .eq("category_id", categoryId)
+    .eq("name", cleanName)
+    .neq("id", subcategoryId)
+    .limit(1);
+  if (existingError) throw existingError;
+  if (existing && existing.length > 0) {
+    throw new Error("子分类已存在");
+  }
 
   const { error: updateSubcategoryError } = await supabase
     .from("subcategories")
@@ -333,7 +451,6 @@ export async function renameDbSubcategory(
   if (updateSubcategoryError) throw updateSubcategoryError;
 
   const rows = (await fetchGameCategoryRows()).filter((row) =>
-    (row.category || []).includes(categoryName) &&
     (row.subcategory || []).includes(oldName),
   );
   for (const row of rows) {
@@ -349,8 +466,8 @@ export async function renameDbSubcategory(
     targetType: "subcategory",
     targetId: subcategoryId,
     targetName: cleanName,
-    beforeData: { categoryName, name: oldName },
-    afterData: { categoryName, name: cleanName },
+    beforeData: { categoryId, name: oldName },
+    afterData: { categoryId, name: cleanName },
   });
 }
 
@@ -365,10 +482,21 @@ export async function moveDbSubcategoryToCategory(
 ) {
   if (fromCategoryId === toCategoryId) return;
 
-  const rows = (await fetchGameCategoryRows()).filter((row) =>
-    (row.category || []).includes(fromCategoryName) &&
-    (row.subcategory || []).includes(subcategoryName),
+  const rows = (await fetchGameCategoryRows()).filter(
+    (row) =>
+      ((row.category || []).includes(fromCategoryName) &&
+        (row.subcategory || []).includes(subcategoryName)) ||
+      row.subcategory_id === subcategoryId,
   );
+
+  const { data: duplicate, error: duplicateError } = await supabase
+    .from("subcategories")
+    .select("id")
+    .eq("category_id", toCategoryId)
+    .eq("name", subcategoryName)
+    .limit(1);
+  if (duplicateError) throw duplicateError;
+  const targetSubcategoryId = duplicate?.[0]?.id ?? subcategoryId;
 
   onProgress?.({
     total: rows.length,
@@ -382,7 +510,11 @@ export async function moveDbSubcategoryToCategory(
     const nextCategory = replaceValue(row.category, fromCategoryName, toCategoryName);
     const { error } = await supabase
       .from("games")
-      .update({ category: nextCategory })
+      .update({
+        category: nextCategory,
+        category_id: toCategoryId,
+        subcategory_id: targetSubcategoryId,
+      })
       .eq("id", row.id);
     if (error) throw error;
 
@@ -395,14 +527,6 @@ export async function moveDbSubcategoryToCategory(
       to: toCategoryName,
     });
   }
-
-  const { data: duplicate, error: duplicateError } = await supabase
-    .from("subcategories")
-    .select("id")
-    .eq("category_id", toCategoryId)
-    .eq("name", subcategoryName)
-    .limit(1);
-  if (duplicateError) throw duplicateError;
 
   if (duplicate && duplicate.length > 0) {
     const { error } = await supabase.from("subcategories").delete().eq("id", subcategoryId);
@@ -435,16 +559,13 @@ export async function moveDbSubcategoryToCategory(
 }
 
 export async function deleteDbCategory(categoryId: number, categoryName: string) {
-  const rows = (await fetchGameCategoryRows()).filter((row) =>
-    (row.category || []).includes(categoryName),
+  await updateGameRows(
+    (row) => (row.category || []).includes(categoryName) || row.category_id === categoryId,
+    () => ({
+      category: [],
+      category_id: null,
+    }),
   );
-  for (const row of rows) {
-    const { error } = await supabase
-      .from("games")
-      .update({ category: removeValue(row.category, categoryName) })
-      .eq("id", row.id);
-    if (error) throw error;
-  }
 
   const { error } = await supabase.from("categories").delete().eq("id", categoryId);
   if (error) throw error;
@@ -463,17 +584,16 @@ export async function deleteDbSubcategory(
   categoryName: string,
   subcategoryName: string,
 ) {
-  const rows = (await fetchGameCategoryRows()).filter((row) =>
-    (row.category || []).includes(categoryName) &&
-    (row.subcategory || []).includes(subcategoryName),
+  await updateGameRows(
+    (row) =>
+      ((row.category || []).includes(categoryName) &&
+        (row.subcategory || []).includes(subcategoryName)) ||
+      row.subcategory_id === subcategoryId,
+    () => ({
+      subcategory: [],
+      subcategory_id: null,
+    }),
   );
-  for (const row of rows) {
-    const { error } = await supabase
-      .from("games")
-      .update({ subcategory: removeValue(row.subcategory, subcategoryName) })
-      .eq("id", row.id);
-    if (error) throw error;
-  }
 
   const { error } = await supabase.from("subcategories").delete().eq("id", subcategoryId);
   if (error) throw error;

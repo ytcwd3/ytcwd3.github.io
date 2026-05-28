@@ -3,13 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, Game } from "@/lib/supabase";
 import { parsePinPriority, savePinPriority } from "@/lib/pinPriority";
-import { DbCategory, fetchDbCategories } from "@/lib/categoryTables";
-import {
-  INPUT_STYLE,
-  LABEL_STYLE,
-  CATEGORY_SUBCATEGORIES,
-  DB_TO_UI_KEY,
-} from "./constants";
+import { DbCategory, fetchDbCategoryOptions } from "@/lib/categoryTables";
+import { INPUT_STYLE, LABEL_STYLE } from "./constants";
 import ConfirmModal from "./ConfirmModal";
 
 interface EditModalProps {
@@ -18,8 +13,6 @@ interface EditModalProps {
   onSaved: (added?: boolean) => void;
 }
 
-const FALLBACK_CATEGORIES = ["PC", "NS", "任天堂掌机", "任天堂主机", "索尼", "Other"];
-
 function invalidateAdminMetaCache() {
   localStorage.removeItem("admin_game_meta");
   localStorage.removeItem("admin_game_meta_v2");
@@ -27,6 +20,8 @@ function invalidateAdminMetaCache() {
 
 interface FormData {
   name: string;
+  categoryId: string;
+  subcategoryId: string;
   category: string;
   subcategory: string;
   code: string;
@@ -72,9 +67,9 @@ function parseCodeFromUrl(url: string): string | null {
   return match ? match[1] : null;
 }
 
-function buildGameData(formData: FormData) {
-  const category: string[] = formData.category ? [formData.category] : [];
-  const subcategory: string[] = formData.subcategory ? [formData.subcategory] : [];
+function buildGameData(formData: FormData, categoryName: string, subcategoryName: string) {
+  const category: string[] = categoryName ? [categoryName] : [];
+  const subcategory: string[] = subcategoryName ? [subcategoryName] : [];
   return {
     name: formData.name.trim(),
     category,
@@ -101,6 +96,8 @@ function getFormDataFromGame(game: Game | null): FormData {
     const normalizedCategory = cats[0] || "";
     return {
       name: game.name || "",
+      categoryId: game.category_id ? String(game.category_id) : "",
+      subcategoryId: game.subcategory_id ? String(game.subcategory_id) : "",
       category: normalizedCategory,
       subcategory: subcats[0] || "",
       code: game.code || "",
@@ -120,6 +117,8 @@ function getFormDataFromGame(game: Game | null): FormData {
   }
   return {
     name: "",
+    categoryId: "",
+    subcategoryId: "",
     category: "",
     subcategory: "",
     code: "",
@@ -141,6 +140,8 @@ function getFormDataFromGame(game: Game | null): FormData {
 function buildInitialData(): FormData {
   return {
     name: "",
+    categoryId: "",
+    subcategoryId: "",
     category: "",
     subcategory: "",
     code: "",
@@ -196,8 +197,22 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
   }, [tryClose]);
 
   useEffect(() => {
-    fetchDbCategories()
-      .then(setCategoryOptions)
+    fetchDbCategoryOptions()
+      .then((data) => {
+        setCategoryOptions(data);
+        setFormData((prev) => {
+          if (prev.categoryId) return prev;
+          const category = data.find((item) => item.name === prev.category);
+          const subcategory = category?.subcategories.find(
+            (item) => item.name === prev.subcategory,
+          );
+          return {
+            ...prev,
+            categoryId: category ? String(category.id) : "",
+            subcategoryId: subcategory ? String(subcategory.id) : "",
+          };
+        });
+      })
       .catch(() => setCategoryOptions([]));
   }, []);
 
@@ -226,8 +241,25 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
         return;
       }
     }
-    if (key === "category") {
-      setFormData((prev) => ({ ...prev, [key]: value, subcategory: "" }));
+    if (key === "categoryId") {
+      const category = categoryOptions.find((item) => String(item.id) === value);
+      setFormData((prev) => ({
+        ...prev,
+        categoryId: value as string,
+        subcategoryId: "",
+        category: category?.name || "",
+        subcategory: "",
+      }));
+      return;
+    }
+    if (key === "subcategoryId") {
+      const category = categoryOptions.find((item) => String(item.id) === formData.categoryId);
+      const subcategory = category?.subcategories.find((item) => String(item.id) === value);
+      setFormData((prev) => ({
+        ...prev,
+        subcategoryId: value as string,
+        subcategory: subcategory?.name || "",
+      }));
       return;
     }
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -243,7 +275,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
       setSaving(false);
       return;
     }
-    if (!formData.category) {
+    if (!formData.categoryId) {
       alert("请选择主分类");
       setSaving(false);
       return;
@@ -295,21 +327,42 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
       }
     }
 
-    const gameData = buildGameData(formData);
+    const selectedCategory = categoryOptions.find(
+      (category) => String(category.id) === formData.categoryId,
+    );
+    const selectedSubcategory = selectedCategory?.subcategories.find(
+      (subcategory) => String(subcategory.id) === formData.subcategoryId,
+    );
+    if (!selectedCategory) {
+      alert("请选择数据库里的主分类");
+      setSaving(false);
+      return;
+    }
+
+    const gameData = buildGameData(
+      formData,
+      selectedCategory.name,
+      selectedSubcategory?.name || "",
+    );
     const pinPriority = parsePinPriority(normalizePinOrder(formData.pinOrder) ?? 0);
 
     try {
+      const payload = {
+        ...gameData,
+        category_id: selectedCategory.id,
+        subcategory_id: selectedSubcategory?.id ?? null,
+      };
       if (game) {
         const { error } = await supabase
           .from("games")
-          .update(gameData)
+          .update(payload)
           .eq("id", game.id);
         if (error) throw error;
         await savePinPriority(game.id, !!gameData.pinned, pinPriority);
       } else {
         const { data, error } = await supabase
           .from("games")
-          .insert([gameData])
+          .insert([payload])
           .select("id");
         if (error) throw error;
         const insertedId = data?.[0]?.id;
@@ -334,19 +387,10 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
     // 这里改为：保存成功后，重新打开添加弹窗
   }
 
-  const categoryNames =
-    categoryOptions.length > 0
-      ? categoryOptions.map((category) => category.name)
-      : FALLBACK_CATEGORIES;
   const selectedCategory = categoryOptions.find(
-    (category) => category.name === formData.category,
+    (category) => String(category.id) === formData.categoryId,
   );
-  const uiKey = formData.category
-    ? DB_TO_UI_KEY[formData.category] || formData.category.toLowerCase()
-    : "";
-  const currentSubcats =
-    selectedCategory?.subcategories.map((subcategory) => subcategory.name) ||
-    (uiKey && CATEGORY_SUBCATEGORIES[uiKey] ? CATEGORY_SUBCATEGORIES[uiKey] : []);
+  const currentSubcats = selectedCategory?.subcategories || [];
 
   return (
     <>
@@ -435,14 +479,14 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
               <div style={{ flex: 1 }}>
                 <label style={LABEL_STYLE}>主分类</label>
                 <select
-                  value={formData.category}
-                  onChange={(e) => setField("category", e.target.value)}
+                  value={formData.categoryId}
+                  onChange={(e) => setField("categoryId", e.target.value)}
                   style={INPUT_STYLE}
                 >
                   <option value="">选择分类</option>
-                  {categoryNames.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
+                  {categoryOptions.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
                     </option>
                   ))}
                 </select>
@@ -450,15 +494,15 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
               <div style={{ flex: 1 }}>
                 <label style={LABEL_STYLE}>子分类</label>
                 <select
-                  value={formData.subcategory}
-                  onChange={(e) => setField("subcategory", e.target.value)}
+                  value={formData.subcategoryId}
+                  onChange={(e) => setField("subcategoryId", e.target.value)}
                   style={INPUT_STYLE}
-                  disabled={!formData.category}
+                  disabled={!formData.categoryId}
                 >
                   <option value="">选择子分类</option>
                   {currentSubcats.map((sub) => (
-                    <option key={sub} value={sub}>
-                      {sub}
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
                     </option>
                   ))}
                 </select>
@@ -662,21 +706,43 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                     setNameError("");
                     setLinkErrors({});
 
-                    if (!formData.name.trim() || !formData.category ||
+                    if (!formData.name.trim() || !formData.categoryId ||
                         (!formData.quarkpan.trim() && !formData.baidupan.trim() && !formData.thunderpan.trim())) {
                       alert("请先填写必填项（名称、分类、至少一个链接）");
                       setSaving(false);
                       return;
                     }
 
-                    const gameData = buildGameData(formData);
+                    const selectedCategory = categoryOptions.find(
+                      (category) => String(category.id) === formData.categoryId,
+                    );
+                    const selectedSubcategory = selectedCategory?.subcategories.find(
+                      (subcategory) => String(subcategory.id) === formData.subcategoryId,
+                    );
+                    if (!selectedCategory) {
+                      alert("请选择数据库里的主分类");
+                      setSaving(false);
+                      return;
+                    }
+
+                    const gameData = buildGameData(
+                      formData,
+                      selectedCategory.name,
+                      selectedSubcategory?.name || "",
+                    );
                     const pinPriority = parsePinPriority(
                       normalizePinOrder(formData.pinOrder) ?? 0,
                     );
                     try {
                       const { data, error } = await supabase
                       .from("games")
-                      .insert([gameData])
+                      .insert([
+                        {
+                          ...gameData,
+                          category_id: selectedCategory.id,
+                          subcategory_id: selectedSubcategory?.id ?? null,
+                        },
+                      ])
                       .select("id");
                       if (error) {
                         alert("操作失败: " + error.message);

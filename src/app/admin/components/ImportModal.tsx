@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { supabase, Game } from "@/lib/supabase";
-import { SHEET_DB_CAT, UI_CAT_TO_DB } from "./constants";
+import { DbCategory, fetchDbCategoryOptions } from "@/lib/categoryTables";
 
 interface ImportModalProps {
   onClose: () => void;
@@ -15,6 +15,27 @@ interface DiffResult {
   unchanged: any[];
 }
 
+function resolveImportCategory(
+  dbCategories: DbCategory[],
+  sheetName: string,
+  categoryCell: string,
+  subcategoryName: string,
+) {
+  const exactCategory =
+    dbCategories.find((category) => category.name === categoryCell) ||
+    dbCategories.find((category) => category.name === sheetName);
+  if (exactCategory) return exactCategory.name;
+
+  if (subcategoryName) {
+    const matchedCategories = dbCategories.filter((category) =>
+      category.subcategories.some((subcategory) => subcategory.name === subcategoryName),
+    );
+    if (matchedCategories.length === 1) return matchedCategories[0].name;
+  }
+
+  return "";
+}
+
 function normalizeUpdateDate(value: string) {
   const normalized = value.trim().replace(/\./g, "-").replace(/\//g, "-");
   const parts = normalized.split("-").map((part) => Number(part));
@@ -23,6 +44,34 @@ function normalizeUpdateDate(value: string) {
   }
   const [year, month, day] = parts;
   return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
+}
+
+async function resolveCategoryIds(categoryName: string, subcategoryName: string) {
+  const { data: categoryRows, error: categoryError } = await supabase
+    .from("categories")
+    .select("id, name")
+    .eq("name", categoryName)
+    .limit(1);
+  if (categoryError) throw categoryError;
+  const categoryId = categoryRows?.[0]?.id ?? null;
+  if (!categoryId) return { categoryId: null, subcategoryId: null };
+
+  if (!subcategoryName) {
+    return { categoryId, subcategoryId: null };
+  }
+
+  const { data: subcategoryRows, error: subcategoryError } = await supabase
+    .from("subcategories")
+    .select("id, name, category_id")
+    .eq("category_id", categoryId)
+    .eq("name", subcategoryName)
+    .limit(1);
+  if (subcategoryError) throw subcategoryError;
+
+  return {
+    categoryId,
+    subcategoryId: subcategoryRows?.[0]?.id ?? null,
+  };
 }
 
 export default function ImportModal({ onClose, onImported }: ImportModalProps) {
@@ -49,15 +98,13 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
         const data = new Uint8Array(event.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const allGames: any[] = [];
+        const dbCategories = await fetchDbCategoryOptions();
 
         workbook.SheetNames.forEach((sheetName: string) => {
-          const sheetDbCat = SHEET_DB_CAT[sheetName];
           const sheet = workbook.Sheets[sheetName];
           const json = XLSX.utils.sheet_to_json(sheet, {
             header: 1,
           }) as any[][];
-
-          if (!sheetDbCat) return;
 
           for (let i = 1; i < json.length; i++) {
             const row = json[i];
@@ -66,15 +113,10 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
             if (!name) continue;
 
             const p1 = String(row[1] || "").trim();
-            let dbCat: string;
-            if (p1 && UI_CAT_TO_DB[p1]) {
-              dbCat = UI_CAT_TO_DB[p1];
-            } else {
-              dbCat = sheetDbCat;
-            }
-            const category: string[] = [dbCat];
-
             const s1 = String(row[2] || "").trim();
+            const dbCat = resolveImportCategory(dbCategories, sheetName, p1, s1);
+            if (!dbCat) continue;
+            const category: string[] = [dbCat];
             const subcategory: string[] = s1 ? [s1] : [];
 
             allGames.push({
@@ -182,11 +224,17 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
 
     for (const item of diffResult.modified) {
       try {
+        const { categoryId, subcategoryId } = await resolveCategoryIds(
+          item.new.category?.[0] || "",
+          item.new.subcategory?.[0] || "",
+        );
         const { error } = await supabase
           .from("games")
           .update({
             category: item.new.category,
             subcategory: item.new.subcategory,
+            category_id: categoryId,
+            subcategory_id: subcategoryId,
             code: item.new.code,
             unzipcode: item.new.unzipcode,
             quarkpan: item.new.quarkpan,
@@ -210,11 +258,17 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
 
     for (const game of diffResult.added) {
       try {
+        const { categoryId, subcategoryId } = await resolveCategoryIds(
+          game.category?.[0] || "",
+          game.subcategory?.[0] || "",
+        );
         const { error } = await supabase.from("games").insert([
           {
             name: game.name,
             category: game.category,
             subcategory: game.subcategory,
+            category_id: categoryId,
+            subcategory_id: subcategoryId,
             code: game.code,
             unzipcode: game.unzipcode,
             quarkpan: game.quarkpan,

@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
 import { savePinPriority } from "@/lib/pinPriority";
 import {
-  CATEGORY_NAMES,
-  DB_TO_UI_KEY,
   CAT_RGBA,
   CARD_STYLE,
 } from "./constants";
@@ -187,10 +185,8 @@ export default function GameTable({
               </thead>
               <tbody>
                 {games.map((game, idx) => {
-                  const dbCat = game.subcategory?.includes("安卓")
-                    ? "Other"
-                    : game.category?.[0] || "";
-                  const catKey = DB_TO_UI_KEY[dbCat] || "pc";
+                  const dbCat = game.category?.[0] || "";
+                  const catKey = "pc";
 
                   return (
                     <tr
@@ -295,7 +291,7 @@ export default function GameTable({
                             border: `1px solid rgba(${CAT_RGBA[catKey]}, 0.25)`,
                           }}
                         >
-                          {CATEGORY_NAMES[catKey]}
+                          {dbCat || "未分类"}
                         </span>
                       </td>
                       <td style={{ padding: "11px 14px" }}>
@@ -490,10 +486,8 @@ export default function GameTable({
           </div>
           <div className="game-card-list">
             {games.map((game) => {
-              const dbCat = game.subcategory?.includes("安卓")
-                ? "Other"
-                : game.category?.[0] || "";
-              const catKey = DB_TO_UI_KEY[dbCat] || "pc";
+              const dbCat = game.category?.[0] || "";
+              const catKey = "pc";
               return (
                 <div className="game-card" key={game.id}>
                   <div className="game-card-header">
@@ -533,7 +527,7 @@ export default function GameTable({
                         border: `1px solid rgba(${CAT_RGBA[catKey]}, 0.25)`,
                       }}
                     >
-                      {CATEGORY_NAMES[catKey]}
+                      {dbCat || "未分类"}
                     </span>
                   </div>
                   <div className="game-card-row">

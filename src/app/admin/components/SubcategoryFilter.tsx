@@ -1,29 +1,27 @@
 "use client";
 
 import {
-  CATEGORY_SUBCATEGORIES,
   CAT_RGBA,
   CAT_COLOR,
   CARD_STYLE_SM,
 } from "./constants";
+import type { DbCategory } from "@/lib/categoryTables";
 
 interface SubcategoryFilterProps {
-  selectedCategory: string;
-  selectedSubcategory: string;
-  categoryCounts: Record<string, number>;
-  subcatCounts: Record<string, number>;
-  onSubcategoryClick: (sub: string) => void;
+  selectedCategory: DbCategory | null;
+  selectedSubcategoryId: number | "all";
+  onSubcategoryClick: (subcategoryId: number | "all") => void;
   className?: string;
 }
 
 export default function SubcategoryFilter({
   selectedCategory,
-  selectedSubcategory,
-  categoryCounts,
-  subcatCounts,
+  selectedSubcategoryId,
   onSubcategoryClick,
   className,
 }: SubcategoryFilterProps) {
+  const styleKey = "pc";
+
   return (
     <div className={`subcat-filter ${className || ""}`} style={CARD_STYLE_SM}>
       <div
@@ -52,50 +50,47 @@ export default function SubcategoryFilter({
             borderRadius: "var(--radius-sm)",
             fontSize: "12px",
             cursor: "pointer",
-            border: `1px solid ${selectedSubcategory === "all" ? CAT_COLOR[selectedCategory] : "var(--border-light)"}`,
+            border: `1px solid ${selectedSubcategoryId === "all" ? CAT_COLOR[styleKey] : "var(--border-light)"}`,
             backgroundColor:
-              selectedSubcategory === "all"
-                ? `rgba(${CAT_RGBA[selectedCategory]}, 0.15)`
+              selectedSubcategoryId === "all"
+                ? `rgba(${CAT_RGBA[styleKey]}, 0.15)`
                 : "rgba(255,255,255,0.8)",
             color:
-              selectedSubcategory === "all"
-                ? CAT_COLOR[selectedCategory]
+              selectedSubcategoryId === "all"
+                ? CAT_COLOR[styleKey]
                 : "var(--text-secondary)",
-            fontWeight: selectedSubcategory === "all" ? 600 : 400,
+            fontWeight: selectedSubcategoryId === "all" ? 600 : 400,
             transition: "all 0.2s",
           }}
         >
-          全部 ({categoryCounts[selectedCategory] || 0})
+          全部 ({selectedCategory?.gameCount || 0})
         </button>
 
-        {(CATEGORY_SUBCATEGORIES[selectedCategory] || []).map(
-          (sub) =>
-            subcatCounts[sub] > 0 && (
-              <button
-                key={sub}
-                onClick={() => onSubcategoryClick(sub)}
-                style={{
-                  padding: "3px 8px",
-                  borderRadius: "var(--radius-sm)",
-                  fontSize: "11px",
-                  cursor: "pointer",
-                  border: `1px solid ${selectedSubcategory === sub ? CAT_COLOR[selectedCategory] : "var(--border-light)"}`,
-                  backgroundColor:
-                    selectedSubcategory === sub
-                      ? `rgba(${CAT_RGBA[selectedCategory]}, 0.15)`
-                      : "rgba(255,255,255,0.7)",
-                  color:
-                    selectedSubcategory === sub
-                      ? CAT_COLOR[selectedCategory]
-                      : "var(--text-secondary)",
-                  fontWeight: selectedSubcategory === sub ? 600 : 400,
-                  transition: "all 0.2s",
-                }}
-              >
-                {sub} ({subcatCounts[sub]})
-              </button>
-            ),
-        )}
+        {(selectedCategory?.subcategories || []).map((sub) => (
+          <button
+            key={sub.id}
+            onClick={() => onSubcategoryClick(sub.id)}
+            style={{
+              padding: "3px 8px",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "11px",
+              cursor: "pointer",
+              border: `1px solid ${selectedSubcategoryId === sub.id ? CAT_COLOR[styleKey] : "var(--border-light)"}`,
+              backgroundColor:
+                selectedSubcategoryId === sub.id
+                  ? `rgba(${CAT_RGBA[styleKey]}, 0.15)`
+                  : "rgba(255,255,255,0.7)",
+              color:
+                selectedSubcategoryId === sub.id
+                  ? CAT_COLOR[styleKey]
+                  : "var(--text-secondary)",
+              fontWeight: selectedSubcategoryId === sub.id ? 600 : 400,
+              transition: "all 0.2s",
+            }}
+          >
+            {sub.name} ({sub.gameCount})
+          </button>
+        ))}
       </div>
     </div>
   );

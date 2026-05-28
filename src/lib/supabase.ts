@@ -11,6 +11,8 @@ export interface Game {
   name: string;
   category: string[];
   subcategory: string[];
+  category_id?: number | null;
+  subcategory_id?: number | null;
   code: string;
   unzipcode: string;
   quarkpan: string;

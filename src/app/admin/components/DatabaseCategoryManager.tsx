@@ -7,6 +7,7 @@ import {
   addDbSubcategory,
   deleteDbCategory,
   deleteDbSubcategory,
+  fetchDbCategoryOptions,
   fetchDbCategories,
   moveDbSubcategoryToCategory,
   renameDbCategory,
@@ -54,13 +55,31 @@ export default function DatabaseCategoryManager() {
   function loadCategories() {
     if (guardMoving()) return;
     setLoading(true);
-    fetchDbCategories()
+    fetchDbCategoryOptions()
       .then((data) => {
         setCategories(data);
-        setSelectedId((current) => current ?? data[0]?.id ?? null);
+        setSelectedId((current) => {
+          if (current && data.some((category) => category.id === current)) return current;
+          return data[0]?.id ?? null;
+        });
+        refreshCounts();
       })
       .catch((error: any) => setMsg("加载失败: " + error.message))
       .finally(() => setLoading(false));
+  }
+
+  function refreshCounts() {
+    fetchDbCategories()
+      .then((data) => {
+        setCategories(data);
+        setSelectedId((current) => {
+          if (current && data.some((category) => category.id === current)) return current;
+          return data[0]?.id ?? null;
+        });
+      })
+      .catch(() => {
+        // 数量不是首屏阻塞项。
+      });
   }
 
   async function run(actionName: string, action: () => Promise<void>) {
@@ -124,11 +143,15 @@ export default function DatabaseCategoryManager() {
       .then(() => {
         setMsg("迁移完成");
         setMoveProgress(null);
+        setSelectedId(toCategory.id);
         return fetchDbCategories();
       })
       .then((data) => {
         setCategories(data);
-        setSelectedId(toCategory.id);
+        setSelectedId((current) => {
+          if (current && data.some((category) => category.id === current)) return current;
+          return data[0]?.id ?? null;
+        });
       })
       .catch((error: any) => {
         setMsg("迁移失败: " + error.message);
@@ -368,7 +391,7 @@ export default function DatabaseCategoryManager() {
                               confirmAndRun(
                                 `确认把子分类「${subcategory.name}」改成「${next}」？这会批量更新相关游戏数据。`,
                                 "rename-subcategory",
-                                () => renameDbSubcategory(subcategory.id, currentCategory.name, subcategory.name, next),
+                                () => renameDbSubcategory(currentCategory.id, subcategory.id, subcategory.name, next),
                               );
                             }}
                             style={{ border: "none", background: "transparent", color: "#9333ea", cursor: "pointer", padding: "0 2px", fontSize: "12px" }}
