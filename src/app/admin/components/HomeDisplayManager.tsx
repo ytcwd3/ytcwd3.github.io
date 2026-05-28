@@ -14,7 +14,7 @@ import {
 
 const inputStyle = {
   padding: "7px 10px",
-  borderRadius: "6px",
+  borderRadius: "7px",
   border: "1px solid #ddd",
   fontSize: "13px",
   boxSizing: "border-box" as const,
@@ -30,6 +30,8 @@ export default function HomeDisplayManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState("");
   const [msg, setMsg] = useState("");
+  const [draggingGroupId, setDraggingGroupId] = useState<number | null>(null);
+  const [draggingSubcategoryId, setDraggingSubcategoryId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -40,22 +42,21 @@ export default function HomeDisplayManager() {
     [groups, selectedId],
   );
 
-  const subcategoriesByDbCategory = useMemo(() => {
-    const grouped = new Map<string, HomeDisplaySubcategory[]>();
-    for (const subcategory of subcategories) {
-      const key = subcategory.dbCategoryName || "未分类";
-      const list = grouped.get(key) || [];
-      list.push(subcategory);
-      grouped.set(key, list);
-    }
-    return Array.from(grouped.entries());
-  }, [subcategories]);
-
   function applySelectedGroup(group: HomeDisplayGroup | null) {
     const orderedIds = group?.subcategories.map((item) => item.id) || [];
     setSelectedSubcategoryIds(new Set(orderedIds));
     setSelectedSubcategoryOrder(orderedIds);
   }
+
+  const orderedSubcategories = useMemo(() => {
+    const selected = selectedSubcategoryOrder
+      .filter((id) => selectedSubcategoryIds.has(id))
+      .map((id) => subcategories.find((subcategory) => subcategory.id === id))
+      .filter(Boolean) as HomeDisplaySubcategory[];
+    const selectedIdSet = new Set(selected.map((subcategory) => subcategory.id));
+    const unselected = subcategories.filter((subcategory) => !selectedIdSet.has(subcategory.id));
+    return [...selected, ...unselected];
+  }, [selectedSubcategoryOrder, selectedSubcategoryIds, subcategories]);
 
   function loadData(nextSelectedId?: number | null) {
     setLoading(true);
@@ -123,6 +124,36 @@ export default function HomeDisplayManager() {
     });
   }
 
+  function moveSelectedSubcategoryByDrop(sourceId: number, targetId: number) {
+    if (!selectedGroup || sourceId === targetId) return;
+    const sourceSelected = selectedSubcategoryIds.has(sourceId);
+    const targetSelected = selectedSubcategoryIds.has(targetId);
+    const currentSelectedOrder = selectedSubcategoryOrder.filter((id) => selectedSubcategoryIds.has(id));
+    const sourceIndex = currentSelectedOrder.indexOf(sourceId);
+    const targetIndex = currentSelectedOrder.indexOf(targetId);
+
+    if (sourceSelected && targetSelected) {
+      if (sourceIndex < 0 || targetIndex < 0) return;
+      const next = [...currentSelectedOrder];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      setSelectedSubcategoryOrder(next);
+      run("save-items", () => saveHomeDisplayGroupItems(selectedGroup.id, next));
+      return;
+    }
+
+    if (!sourceSelected && targetSelected) {
+      if (targetIndex < 0) return;
+      const nextSelectedIds = new Set(selectedSubcategoryIds);
+      nextSelectedIds.add(sourceId);
+      const next = [...currentSelectedOrder];
+      next.splice(targetIndex, 0, sourceId);
+      setSelectedSubcategoryIds(nextSelectedIds);
+      setSelectedSubcategoryOrder(next);
+      run("save-items", () => saveHomeDisplayGroupItems(selectedGroup.id, next));
+    }
+  }
+
   function moveGroup(groupId: number, direction: -1 | 1) {
     const index = groups.findIndex((group) => group.id === groupId);
     const target = index + direction;
@@ -136,6 +167,24 @@ export default function HomeDisplayManager() {
         next.map((group, sortOrder) => ({ ...group, sortOrder })),
       );
       return groupId;
+    });
+  }
+
+  function moveGroupByDrop(sourceId: number, targetId: number) {
+    if (sourceId === targetId) return;
+    const sourceIndex = groups.findIndex((group) => group.id === sourceId);
+    const targetIndex = groups.findIndex((group) => group.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    if (!confirm("确认调整首页主分类展示顺序吗？")) return;
+
+    const next = [...groups];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    run("sort-groups", async () => {
+      await updateHomeDisplayGroupSort(
+        next.map((group, sortOrder) => ({ ...group, sortOrder })),
+      );
+      return sourceId;
     });
   }
 
@@ -183,43 +232,38 @@ export default function HomeDisplayManager() {
     );
   }
 
-  const selectedSubcategories = selectedSubcategoryOrder
-    .filter((id) => selectedSubcategoryIds.has(id))
-    .map((id) => subcategories.find((subcategory) => subcategory.id === id))
-    .filter(Boolean) as HomeDisplaySubcategory[];
-
   return (
     <section
       style={{
         background: "white",
         borderRadius: "10px",
-        padding: "16px",
+        padding: "14px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         marginBottom: "20px",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "12px" }}>
         <div>
-          <h2 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>首页展示配置</h2>
-          <p style={{ fontSize: "12px", color: "#777", margin: "4px 0 0" }}>
-            首页主分类独立管理，子分类来自 subcategories 表，只决定首页展示分组。
+          <h2 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>首页展示配置</h2>
+          <p style={{ fontSize: "12px", color: "#777", margin: "3px 0 0" }}>
+            左侧管理首页主分类，右侧勾选和拖动子分类。
           </p>
         </div>
         <button
           onClick={() => loadData(selectedId)}
           disabled={loading || !!saving}
-          style={{ height: 32, padding: "0 12px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", cursor: loading || saving ? "not-allowed" : "pointer", fontSize: "13px" }}
+          style={{ height: 32, padding: "0 12px", borderRadius: "7px", border: "1px solid #ddd", background: "#fafafa", cursor: loading || saving ? "not-allowed" : "pointer", fontSize: "13px" }}
         >
           刷新
         </button>
       </div>
 
       {loading ? (
-        <p style={{ color: "#888", textAlign: "center", padding: "28px 0" }}>加载中...</p>
+        <p style={{ color: "#888", textAlign: "center", padding: "20px 0" }}>加载中...</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "16px", alignItems: "start" }}>
-          <div>
-            <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: "12px", alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0 }}>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <input
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
@@ -229,190 +273,168 @@ export default function HomeDisplayManager() {
               <button
                 onClick={addGroup}
                 disabled={!!saving}
-                style={{ padding: "0 12px", borderRadius: "6px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: saving ? "not-allowed" : "pointer", fontSize: "13px" }}
+                style={{ height: 34, padding: "0 14px", borderRadius: "8px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: saving ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 600 }}
               >
                 添加
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              {groups.map((group, index) => (
-                <div
-                  key={group.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "8px 10px",
-                    borderRadius: "6px",
-                    border: `1px solid ${selectedGroup?.id === group.id ? "#9333ea" : "#eee"}`,
-                    background: selectedGroup?.id === group.id ? "rgba(147,51,234,0.08)" : "#fafafa",
-                    color: selectedGroup?.id === group.id ? "#6b21a8" : "#333",
-                    cursor: saving ? "not-allowed" : "pointer",
-                    textAlign: "left",
-                    fontSize: "13px",
-                  }}
-                >
-                  <button
+            <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+              {groups.map((group) => {
+                const active = selectedGroup?.id === group.id;
+                return (
+                  <div
+                    key={group.id}
+                    draggable={!saving}
                     onClick={() => selectGroup(group)}
-                    disabled={!!saving}
-                    style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", color: "inherit", cursor: saving ? "not-allowed" : "pointer", textAlign: "left", padding: 0, fontSize: "13px" }}
+                    onDragStart={() => setDraggingGroupId(group.id)}
+                    onDragEnd={() => setDraggingGroupId(null)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      if (!draggingGroupId) return;
+                      moveGroupByDrop(draggingGroupId, group.id);
+                      setDraggingGroupId(null);
+                    }}
+                    style={{
+                      minHeight: 68,
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      border: `1px solid ${active ? "#9333ea" : "#e5e7eb"}`,
+                      background: active ? "rgba(147,51,234,0.08)" : "#fafafa",
+                      boxShadow: active ? "0 4px 12px rgba(147,51,234,0.12)" : "none",
+                      color: active ? "#6b21a8" : "#333",
+                      cursor: saving ? "not-allowed" : "grab",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      gap: "6px",
+                      opacity: draggingGroupId === group.id ? 0.55 : 1,
+                    }}
                   >
-                    <span style={{ display: "block", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.name}</span>
-                    <span style={{ display: "block", color: "#888", marginTop: "2px" }}>{group.subcategories.length} 子类</span>
-                  </button>
-                  <button
-                    onClick={() => moveGroup(group.id, -1)}
-                    disabled={!!saving || index === 0}
-                    style={{ border: "none", background: "transparent", color: index === 0 ? "#bbb" : "#9333ea", cursor: saving || index === 0 ? "not-allowed" : "pointer", padding: "0 2px", fontSize: "12px" }}
-                  >
-                    上
-                  </button>
-                  <button
-                    onClick={() => moveGroup(group.id, 1)}
-                    disabled={!!saving || index === groups.length - 1}
-                    style={{ border: "none", background: "transparent", color: index === groups.length - 1 ? "#bbb" : "#9333ea", cursor: saving || index === groups.length - 1 ? "not-allowed" : "pointer", padding: "0 2px", fontSize: "12px" }}
-                  >
-                    下
-                  </button>
-                </div>
-              ))}
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
+                      <strong style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "13px" }}>
+                        {group.name}
+                      </strong>
+                      <span style={{ flexShrink: 0, color: "#888", fontSize: "11px" }}>{group.subcategories.length} 子类</span>
+                    </div>
+                    <span style={{ color: "#999", fontSize: "11px" }}>拖动调整位置</span>
+                  </div>
+                );
+              })}
             </div>
+
+            {selectedGroup && (
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => moveGroup(selectedGroup.id, -1)}
+                  disabled={!!saving || groups[0]?.id === selectedGroup.id}
+                  style={{ padding: "6px 10px", borderRadius: "7px", border: "1px solid #ddd", background: "#fff", color: "#333", cursor: saving ? "not-allowed" : "pointer", fontSize: "12px" }}
+                >
+                  上移
+                </button>
+                <button
+                  onClick={() => moveGroup(selectedGroup.id, 1)}
+                  disabled={!!saving || groups[groups.length - 1]?.id === selectedGroup.id}
+                  style={{ padding: "6px 10px", borderRadius: "7px", border: "1px solid #ddd", background: "#fff", color: "#333", cursor: saving ? "not-allowed" : "pointer", fontSize: "12px" }}
+                >
+                  下移
+                </button>
+                <button
+                  onClick={renameGroup}
+                  disabled={!!saving}
+                  style={{ padding: "6px 10px", borderRadius: "7px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: saving ? "not-allowed" : "pointer", fontSize: "12px" }}
+                >
+                  改名
+                </button>
+                <button
+                  onClick={deleteGroup}
+                  disabled={!!saving}
+                  style={{ padding: "6px 10px", borderRadius: "7px", border: "1px solid #ef4444", background: "rgba(239,68,68,0.08)", color: "#ef4444", cursor: saving ? "not-allowed" : "pointer", fontSize: "12px" }}
+                >
+                  删除
+                </button>
+                <button
+                  onClick={saveGroupItems}
+                  disabled={!!saving}
+                  style={{ padding: "7px 12px", borderRadius: "7px", border: "none", background: "#9333ea", color: "white", cursor: saving ? "not-allowed" : "pointer", fontSize: "12px", fontWeight: 600 }}
+                >
+                  {saving === "save-items" ? "保存中..." : "保存分配"}
+                </button>
+              </div>
+            )}
           </div>
 
-          <div>
+          <div style={{ minWidth: 0 }}>
             {selectedGroup ? (
-              <>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "12px" }}>
-                  <strong style={{ fontSize: "15px", flex: 1 }}>{selectedGroup.name}</strong>
-                  <button
-                    onClick={renameGroup}
-                    disabled={!!saving}
-                    style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: saving ? "not-allowed" : "pointer", fontSize: "12px" }}
-                  >
-                    改名
-                  </button>
-                  <button
-                    onClick={deleteGroup}
-                    disabled={!!saving}
-                    style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #ef4444", background: "rgba(239,68,68,0.08)", color: "#ef4444", cursor: saving ? "not-allowed" : "pointer", fontSize: "12px" }}
-                  >
-                    删除
-                  </button>
-                  <button
-                    onClick={saveGroupItems}
-                    disabled={!!saving}
-                    style={{ padding: "7px 12px", borderRadius: "6px", border: "none", background: "#9333ea", color: "white", cursor: saving ? "not-allowed" : "pointer", fontSize: "12px", fontWeight: 600 }}
-                  >
-                    {saving === "save-items" ? "保存中..." : "保存分配"}
-                  </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ fontSize: "12px", color: "#777", fontWeight: 700 }}>
+                  {selectedGroup.name} 的子分类
                 </div>
 
-                <div style={{ marginBottom: "14px", padding: "10px", borderRadius: "8px", border: "1px solid #eee", background: "#fafafa" }}>
-                  <div style={{ fontSize: "12px", color: "#777", fontWeight: 700, marginBottom: "8px" }}>
-                    当前首页展示顺序
-                  </div>
-                  {selectedSubcategories.length === 0 ? (
-                    <p style={{ margin: 0, color: "#999", fontSize: "12px" }}>这个首页主分类暂未分配子分类</p>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      {selectedSubcategories.map((subcategory, index) => (
-                        <div
-                          key={subcategory.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            padding: "7px 8px",
-                            borderRadius: "6px",
-                            background: "white",
-                            border: "1px solid #eee",
-                            fontSize: "12px",
-                          }}
-                        >
-                          <span style={{ width: 24, color: "#999" }}>{index + 1}</span>
-                          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {subcategory.name}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "8px" }}>
+                  {orderedSubcategories.map((subcategory) => {
+                    const checked = selectedSubcategoryIds.has(subcategory.id);
+                    const assignedElsewhere =
+                      subcategory.homeGroupId !== null &&
+                      subcategory.homeGroupId !== selectedGroup.id;
+                    const assignedGroupName = groups.find((group) => group.id === subcategory.homeGroupId)?.name;
+                    const orderIndex = selectedSubcategoryOrder.indexOf(subcategory.id);
+                    return (
+                      <label
+                        key={subcategory.id}
+                        draggable={checked && !saving}
+                        onDragStart={() => checked && setDraggingSubcategoryId(subcategory.id)}
+                        onDragEnd={() => setDraggingSubcategoryId(null)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (!draggingSubcategoryId || !checked) return;
+                          moveSelectedSubcategoryByDrop(draggingSubcategoryId, subcategory.id);
+                          setDraggingSubcategoryId(null);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          minHeight: 36,
+                          padding: "7px 9px",
+                          borderRadius: "8px",
+                          border: `1px solid ${checked ? "#9333ea" : "#eee"}`,
+                          background: checked ? "rgba(147,51,234,0.08)" : "#fafafa",
+                          color: "#333",
+                          fontSize: "12px",
+                          cursor: saving ? "not-allowed" : "pointer",
+                          opacity: draggingSubcategoryId === subcategory.id ? 0.55 : 1,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!!saving}
+                          onChange={() => toggleSubcategory(subcategory.id)}
+                        />
+                        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {subcategory.name}
+                        </span>
+                        {checked && (
+                          <span style={{ color: "#999", flexShrink: 0, fontSize: "11px", width: 18, textAlign: "right" }}>
+                            {orderIndex >= 0 ? orderIndex + 1 : ""}
                           </span>
-                          <span style={{ color: "#999", flexShrink: 0 }}>{subcategory.dbCategoryName}</span>
-                          <button
-                            onClick={() => moveSelectedSubcategory(subcategory.id, -1)}
-                            disabled={!!saving || index === 0}
-                            style={{ border: "none", background: "transparent", color: index === 0 ? "#bbb" : "#9333ea", cursor: saving || index === 0 ? "not-allowed" : "pointer", padding: "0 2px", fontSize: "12px" }}
-                          >
-                            上移
-                          </button>
-                          <button
-                            onClick={() => moveSelectedSubcategory(subcategory.id, 1)}
-                            disabled={!!saving || index === selectedSubcategories.length - 1}
-                            style={{ border: "none", background: "transparent", color: index === selectedSubcategories.length - 1 ? "#bbb" : "#9333ea", cursor: saving || index === selectedSubcategories.length - 1 ? "not-allowed" : "pointer", padding: "0 2px", fontSize: "12px" }}
-                          >
-                            下移
-                          </button>
-                          <button
-                            onClick={() => toggleSubcategory(subcategory.id)}
-                            disabled={!!saving}
-                            style={{ border: "none", background: "transparent", color: "#ef4444", cursor: saving ? "not-allowed" : "pointer", padding: "0 2px", fontSize: "12px" }}
-                          >
-                            移除
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        )}
+                        <span style={{ color: "#999", flexShrink: 0, fontSize: "11px" }}>
+                          {subcategory.dbCategoryName} / {subcategory.gameCount}游戏
+                        </span>
+                        {assignedElsewhere && (
+                          <span style={{ color: "#999", flexShrink: 0, fontSize: "11px" }}>
+                            在 {assignedGroupName}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
                 </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {subcategoriesByDbCategory.map(([dbCategoryName, items]) => (
-                    <div key={dbCategoryName}>
-                      <div style={{ fontSize: "12px", color: "#777", fontWeight: 700, marginBottom: "6px" }}>
-                        {dbCategoryName}
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" }}>
-                        {items.map((subcategory) => {
-                          const checked = selectedSubcategoryIds.has(subcategory.id);
-                          const assignedElsewhere =
-                            subcategory.homeGroupId !== null &&
-                            subcategory.homeGroupId !== selectedGroup.id;
-                          const assignedGroupName = groups.find((group) => group.id === subcategory.homeGroupId)?.name;
-                          return (
-                            <label
-                              key={subcategory.id}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "8px",
-                                padding: "8px 10px",
-                                borderRadius: "8px",
-                                border: `1px solid ${checked ? "#9333ea" : "#eee"}`,
-                                background: checked ? "rgba(147,51,234,0.08)" : "#fafafa",
-                                color: "#333",
-                                fontSize: "12px",
-                                cursor: saving ? "not-allowed" : "pointer",
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                disabled={!!saving}
-                                onChange={() => toggleSubcategory(subcategory.id)}
-                              />
-                              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {subcategory.name}
-                              </span>
-                              {assignedElsewhere && (
-                                <span style={{ color: "#999", flexShrink: 0 }}>
-                                  在 {assignedGroupName}
-                                </span>
-                              )}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
+              </div>
             ) : (
               <p style={{ color: "#999", fontSize: "13px" }}>暂无首页主分类</p>
             )}
