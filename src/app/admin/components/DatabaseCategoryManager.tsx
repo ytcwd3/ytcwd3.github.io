@@ -106,10 +106,6 @@ export default function DatabaseCategoryManager() {
     run(actionName, action);
   }
 
-  function getSubcategoryCount(category: DbCategory, subcategoryId: number) {
-    return category.subcategories.find((item) => item.id === subcategoryId)?.gameCount || 0;
-  }
-
   function handleMoveSubcategory(subcategoryId: number, fromCategory: DbCategory, toCategory: DbCategory) {
     if (guardMoving()) return;
     if (fromCategory.id === toCategory.id) return;
