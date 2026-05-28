@@ -12,6 +12,7 @@ export type HomeDisplaySubcategory = {
   dbCategoryName: string;
   homeGroupId: number | null;
   sortOrder: number;
+  gameCount: number;
 };
 
 export type HomeDisplayGroup = {
@@ -126,6 +127,35 @@ export async function fetchAllHomeDisplaySubcategories() {
     .order("id", { ascending: true });
   if (error) throw error;
 
+  const { data: rpcData, error: rpcError } = await supabase.rpc("get_home_subcategory_counts_fast");
+  const subcategoryCounts = new Map<number, number>();
+  if (!rpcError && Array.isArray(rpcData)) {
+    for (const row of rpcData as { subcategory_id?: number | null; game_count?: number | null }[]) {
+      if (!row.subcategory_id) continue;
+      subcategoryCounts.set(row.subcategory_id, Number(row.game_count || 0));
+    }
+  } else {
+    let page = 0;
+    const batchSize = 1000;
+    while (true) {
+      const from = page * batchSize;
+      const to = from + batchSize - 1;
+      const { data: gameRows, error: gameError } = await supabase
+        .from("games")
+        .select("subcategory_id")
+        .not("subcategory_id", "is", null)
+        .range(from, to);
+      if (gameError) break;
+      if (!gameRows || gameRows.length === 0) break;
+      for (const game of gameRows as { subcategory_id?: number | null }[]) {
+        if (!game.subcategory_id) continue;
+        subcategoryCounts.set(game.subcategory_id, (subcategoryCounts.get(game.subcategory_id) || 0) + 1);
+      }
+      if (gameRows.length < batchSize) break;
+      page += 1;
+    }
+  }
+
   return ((data || []) as unknown as SubcategoryRow[]).map((row) => {
     const category = Array.isArray(row.categories) ? row.categories[0] : row.categories;
     return {
@@ -135,6 +165,7 @@ export async function fetchAllHomeDisplaySubcategories() {
       dbCategoryName: category?.name || "",
       homeGroupId: null,
       sortOrder: row.sort_order ?? row.id,
+      gameCount: subcategoryCounts.get(row.id) || 0,
     };
   });
 }
