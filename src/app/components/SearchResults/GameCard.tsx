@@ -84,11 +84,7 @@ function trackDownload(gameId: number, provider: "quark" | "baidu" | "thunder") 
 }
 
 export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) {
-  const catColors: Record<string, string> = {
-    "PC及安卓": "#9333ea", "任天堂": "#e53935", "索尼": "#1976d2",
-    "其他平台": "#666", PC: "#9333ea", NS: "#e53935",
-  };
-  const catColor = catColors[game.category?.[0] || ""] || "#9333ea";
+  const catColor = "#9333ea";
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
 

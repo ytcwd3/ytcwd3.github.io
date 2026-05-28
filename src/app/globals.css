@@ -232,58 +232,19 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-/* 分类hover样式（原始） */
-.tab-btn[data-category="任天堂"]:hover {
-  background-color: rgba(var(--nintendo-rgb), 0.1);
-  color: var(--color-nintendo);
-}
-.tab-btn[data-category="索尼"]:hover {
-  background-color: rgba(var(--sony-rgb), 0.1);
-  color: var(--color-sony);
-}
-.tab-btn[data-category="PC及安卓"]:hover {
-  background-color: rgba(var(--pc-android-rgb), 0.1);
-  color: var(--color-pc-android);
-}
-.tab-btn[data-category="其他平台"]:hover {
-  background-color: rgba(var(--other-rgb), 0.1);
-  color: var(--color-other);
+.tab-btn:hover {
+  background-color: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary-color);
 }
 
-/* 母标签选中态分类专属渐变（完全还原） */
-.tab-btn[data-category="任天堂"].active {
-  background: linear-gradient(90deg, #e63946, #f472b6);
+.tab-btn.active {
+  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
   color: white;
-  box-shadow: 0 4px 8px rgba(var(--nintendo-rgb), 0.2);
-}
-.tab-btn[data-category="索尼"].active {
-  background: linear-gradient(90deg, #003791, #3b82f6);
-  color: white;
-  box-shadow: 0 4px 8px rgba(var(--sony-rgb), 0.2);
-}
-.tab-btn[data-category="PC及安卓"].active {
-  background: linear-gradient(90deg, #eab308, #facc15);
-  color: white;
-  box-shadow: 0 4px 8px rgba(var(--pc-android-rgb), 0.2);
-}
-.tab-btn[data-category="其他平台"].active {
-  background: linear-gradient(90deg, #107c10, #34d399);
-  color: white;
-  box-shadow: 0 4px 8px rgba(var(--other-rgb), 0.2);
+  box-shadow: 0 4px 8px rgba(var(--primary-rgb), 0.2);
 }
 
-/* 选中态hover增强（还原） */
-.tab-btn[data-category="任天堂"].active:hover {
-  box-shadow: 0 6px 12px rgba(var(--nintendo-rgb), 0.3);
-}
-.tab-btn[data-category="索尼"].active:hover {
-  box-shadow: 0 6px 12px rgba(var(--sony-rgb), 0.3);
-}
-.tab-btn[data-category="PC及安卓"].active:hover {
-  box-shadow: 0 6px 12px rgba(var(--pc-android-rgb), 0.3);
-}
-.tab-btn[data-category="其他平台"].active:hover {
-  box-shadow: 0 6px 12px rgba(var(--other-rgb), 0.3);
+.tab-btn.active:hover {
+  box-shadow: 0 6px 12px rgba(var(--primary-rgb), 0.3);
 }
 
 /* 标签面板（原始样式） */
@@ -378,22 +339,9 @@ body {
   box-shadow: 0 3px 6px rgba(var(--category-color-rgb), 0.2);
 }
 
-/* 分类颜色绑定（原始） */
-.tag-item[data-category="任天堂"] {
-  --category-color: var(--color-nintendo);
-  --category-color-rgb: var(--nintendo-rgb);
-}
-.tag-item[data-category="索尼"] {
-  --category-color: var(--color-sony);
-  --category-color-rgb: var(--sony-rgb);
-}
-.tag-item[data-category="PC及安卓"] {
-  --category-color: var(--color-pc-android);
-  --category-color-rgb: var(--pc-android-rgb);
-}
-.tag-item[data-category="其他平台"] {
-  --category-color: var(--color-other);
-  --category-color-rgb: var(--other-rgb);
+.tag-item {
+  --category-color: var(--primary-color);
+  --category-color-rgb: var(--primary-rgb);
 }
 
 /* 已选分类栏（原始样式） */
@@ -928,18 +876,8 @@ body {
   border-color: rgba(34, 197, 94, 0.3);
 }
 
-/* 分类左侧边框（原始） */
-.result-item[data-category="任天堂"] {
-  border-left: 3px solid var(--color-nintendo);
-}
-.result-item[data-category="索尼"] {
-  border-left: 3px solid var(--color-sony);
-}
-.result-item[data-category="PC及安卓"] {
-  border-left: 3px solid var(--color-pc-android);
-}
-.result-item[data-category="其他平台"] {
-  border-left: 3px solid var(--color-other);
+.result-item {
+  border-left: 3px solid var(--primary-color);
 }
 
 .result-item:hover {

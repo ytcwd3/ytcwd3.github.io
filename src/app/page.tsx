@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { supabase, Game } from "@/lib/supabase";
 import { HomeCategory, fetchHomeCategories } from "@/lib/homeDisplay";
-import { DEFAULT_HOME_CATEGORIES } from "@/lib/homeCategories";
 import { fetchPinPriorityMap } from "@/lib/pinPriority";
 import SearchResults from "./components/SearchResults";
 import GuestbookPopup from "./components/Popups/GuestbookPopup";
@@ -67,7 +66,7 @@ function buildGameQuery(
   keyword?: string,
   pinned?: boolean,
 ) {
-  let query = supabase.from("games").select("*", { count: "exact" });
+  let query = supabase.from("games").select("*", { count: "planned" });
 
   if (typeof pinned === "boolean") {
     query = query.eq("pinned", pinned);
@@ -87,7 +86,7 @@ function buildGameCountQuery(
   keyword?: string,
   pinned?: boolean,
 ) {
-  let query = supabase.from("games").select("id", { count: "exact", head: true });
+  let query = supabase.from("games").select("id", { count: "planned", head: true });
 
   if (typeof pinned === "boolean") {
     query = query.eq("pinned", pinned);
@@ -118,9 +117,7 @@ export default function HomePage() {
   const [qrModalTitle, setQrModalTitle] = useState("");
   const [showPopups, setShowPopups] = useState<Record<string, boolean>>({});
   const [pinPriorityMap, setPinPriorityMap] = useState<Record<number, number>>({});
-  const [homeCategories, setHomeCategories] = useState<HomeCategory[]>(
-    DEFAULT_HOME_CATEGORIES,
-  );
+  const [homeCategories, setHomeCategories] = useState<HomeCategory[]>([]);
 
   // 分页相关
   const [currentPage, setCurrentPage] = useState(1);
@@ -145,7 +142,7 @@ export default function HomePage() {
   useEffect(() => {
     fetchHomeCategories()
       .then(setHomeCategories)
-      .catch(() => setHomeCategories(DEFAULT_HOME_CATEGORIES));
+      .catch(() => setHomeCategories([]));
   }, []);
 
   async function fetchGamesWithLocalSort(
@@ -364,9 +361,9 @@ export default function HomePage() {
               className={`tab-panel ${showPanel === category.name ? "show" : ""}`}
               id={`panel-${category.name}`}
             >
-              {category.tags.map((tag) => (
+              {category.tags.map((tag, tagIndex) => (
                 <div
-                  key={tag}
+                  key={`${category.name}-${tag}-${tagIndex}`}
                   className={`tag-item ${selectedTag?.value === tag ? "active" : ""}`}
                   data-category={category.name}
                   onClick={() => selectTag(category.name, tag)}
@@ -385,14 +382,7 @@ export default function HomePage() {
             {selectedTag ? (
               <span
                 style={{
-                  color:
-                    selectedTag.category === "任天堂"
-                      ? "var(--color-nintendo)"
-                      : selectedTag.category === "索尼"
-                        ? "var(--color-sony)"
-                        : selectedTag.category === "PC及安卓"
-                          ? "var(--color-pc-android)"
-                          : "var(--color-other)",
+                  color: "var(--primary-color)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "4px",
