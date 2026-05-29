@@ -28,6 +28,7 @@ export interface HomeCategory {
 export interface DbCategory {
   id: number;
   name: string;
+  sortOrder: number | null;
   subcategories: DbSubcategory[];
   gameCount: number;
 }
@@ -91,6 +92,7 @@ export function buildDbCategoryTree(
     categoriesById.set(row.id, {
       id: row.id,
       name: row.name,
+      sortOrder: row.sort_order,
       subcategories: [],
       gameCount: 0,
     });
@@ -103,6 +105,7 @@ export function buildDbCategoryTree(
       id: row.id,
       categoryId: row.category_id,
       name: row.name,
+      sortOrder: row.sort_order,
       gameCount: 0,
     });
   }
@@ -110,9 +113,19 @@ export function buildDbCategoryTree(
   return Array.from(categoriesById.values())
     .map((category) => ({
       ...category,
-      subcategories: category.subcategories.sort((a, b) => a.id - b.id),
+      subcategories: category.subcategories.sort(
+        (a, b) =>
+          (a.sortOrder ?? a.id) - (b.sortOrder ?? b.id) ||
+          a.id - b.id ||
+          a.name.localeCompare(b.name, "zh-CN"),
+      ),
     }))
-    .sort((a, b) => a.id - b.id || a.name.localeCompare(b.name, "zh-CN"));
+    .sort(
+      (a, b) =>
+        (a.sortOrder ?? a.id) - (b.sortOrder ?? b.id) ||
+        a.id - b.id ||
+        a.name.localeCompare(b.name, "zh-CN"),
+    );
 }
 
 // 读取后台分类管理需要的 categories / subcategories 数据。
@@ -172,10 +185,20 @@ export async function fetchDbCategories(): Promise<DbCategory[]> {
           ...subcategory,
           gameCount: subcategoryCounts.get(subcategory.id) || 0,
         }))
-        .sort((a, b) => a.id - b.id);
+        .sort(
+          (a, b) =>
+            (a.sortOrder ?? a.id) - (b.sortOrder ?? b.id) ||
+            a.id - b.id ||
+            a.name.localeCompare(b.name, "zh-CN"),
+        );
     }
 
-    return categories;
+    return categories.sort(
+      (a, b) =>
+        (a.sortOrder ?? a.id) - (b.sortOrder ?? b.id) ||
+        a.id - b.id ||
+        a.name.localeCompare(b.name, "zh-CN"),
+    );
   })();
 
   try {

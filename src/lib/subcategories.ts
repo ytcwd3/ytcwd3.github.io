@@ -16,6 +16,7 @@ export interface DbSubcategory {
   id: number;
   categoryId: number;
   name: string;
+  sortOrder: number | null;
   gameCount: number;
 }
 
