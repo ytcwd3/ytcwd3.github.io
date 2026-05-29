@@ -63,7 +63,7 @@ export default function DatabaseCategoryManager() {
     return true;
   }
 
-  async function loadCategories(withCounts = false) {
+  async function loadCategories() {
     if (guardMoving()) return;
     setLoading(true);
     try {
@@ -87,7 +87,7 @@ export default function DatabaseCategoryManager() {
     try {
       await action();
       setMsg("操作成功");
-      await loadCategories(true);
+      await loadCategories();
     } catch (error: any) {
       setMsg("操作失败: " + error.message);
     } finally {
@@ -337,7 +337,7 @@ export default function DatabaseCategoryManager() {
         </div>
         <button
           className="refresh-btn"
-          onClick={() => loadCategories(true)}
+          onClick={() => loadCategories()}
           disabled={loading && !isMoving}
           style={{ height: 32, padding: "0 12px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", cursor: loading && !isMoving ? "not-allowed" : "pointer", fontSize: "13px" }}
         >
@@ -348,8 +348,36 @@ export default function DatabaseCategoryManager() {
       {loading ? (
         <p style={{ color: "#888", textAlign: "center", padding: "28px 0" }}>加载中...</p>
       ) : (
-        <div className="category-manager-layout">
-          <div>
+        <div
+          className="category-manager-layout"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "320px minmax(0, 1fr)",
+            alignItems: "start",
+            gap: "16px",
+          }}
+        >
+          <div
+            className="category-main-panel"
+            style={{
+              border: "1px solid #eee",
+              borderRadius: "10px",
+              background: "#fbfbfc",
+              padding: "12px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "10px",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "14px", color: "#333" }}>主分类</h3>
+              <span style={{ fontSize: "12px", color: "#888" }}>{categories.length} 个</span>
+            </div>
             <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
               <input
                 value={newCategoryName}
@@ -410,7 +438,7 @@ export default function DatabaseCategoryManager() {
                       cursor: "pointer",
                       textAlign: "left",
                       opacity: isDragging ? 0.5 : 1,
-                      touchAction: "none",
+                      touchAction: "pan-y",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1, minWidth: 0 }}>
@@ -429,46 +457,71 @@ export default function DatabaseCategoryManager() {
           </div>
 
           {currentCategory && (
-            <div className="subcategory-panel">
-              <div className="subcat-panel-header" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                <input
-                  value={currentCategory.name}
-                  onChange={(e) => {
-                    // 只改草稿显示，不立即提交
-                    setCategories((prev) =>
-                      prev.map((item) =>
-                        item.id === currentCategory.id ? { ...item, name: e.target.value } : item,
-                      ),
-                    );
-                  }}
-                  style={inputStyle}
-                />
-                <button
-                  onClick={() => {
-                    if (guardMoving()) return;
-                    const next = prompt("新的主分类名称", currentCategory.name)?.trim();
-                    if (!next || next === currentCategory.name) return;
-                    confirmAndRun(
-                      `确认把主分类「${currentCategory.name}」改成「${next}」？这会批量更新相关游戏数据。`,
-                      "rename-category",
-                      () => renameDbCategory(currentCategory.id, currentCategory.name, next),
-                    );
-                  }}
-                  style={{ padding: "5px 10px", borderRadius: "5px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: "pointer", fontSize: "12px" }}
-                >
-                  改名
-                </button>
-                <button
-                  onClick={() => {
-                    if (guardMoving()) return;
-                    if (confirm(`确认删除主分类「${currentCategory.name}」？相关游戏会移除这个分类值。`)) {
-                      run("delete-category", () => deleteDbCategory(currentCategory.id, currentCategory.name));
-                    }
-                  }}
-                  style={{ padding: "5px 10px", borderRadius: "5px", border: "1px solid #ef4444", background: "rgba(239,68,68,0.08)", color: "#ef4444", cursor: "pointer", fontSize: "12px" }}
-                >
-                  删除
-                </button>
+            <div
+              className="subcategory-panel"
+              style={{
+                border: "1px solid #eee",
+                borderRadius: "10px",
+                background: "#fff",
+                padding: "12px",
+                minWidth: 0,
+              }}
+            >
+              <div
+                className="subcat-panel-header"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  marginBottom: "12px",
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: "16px",
+                      color: "#222",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {currentCategory.name}
+                  </h3>
+                  <p style={{ margin: "3px 0 0", fontSize: "12px", color: "#888" }}>
+                    子分类 {currentCategory.subcategories.length} 个 / 游戏 {currentCategory.gameCount} 个
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                  <button
+                    onClick={() => {
+                      if (guardMoving()) return;
+                      const next = prompt("新的主分类名称", currentCategory.name)?.trim();
+                      if (!next || next === currentCategory.name) return;
+                      confirmAndRun(
+                        `确认把主分类「${currentCategory.name}」改成「${next}」？这会批量更新相关游戏数据。`,
+                        "rename-category",
+                        () => renameDbCategory(currentCategory.id, currentCategory.name, next),
+                      );
+                    }}
+                    style={{ padding: "5px 10px", borderRadius: "5px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: "pointer", fontSize: "12px" }}
+                  >
+                    改名
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (guardMoving()) return;
+                      if (confirm(`确认删除主分类「${currentCategory.name}」？相关游戏会移除这个分类值。`)) {
+                        run("delete-category", () => deleteDbCategory(currentCategory.id, currentCategory.name));
+                      }
+                    }}
+                    style={{ padding: "5px 10px", borderRadius: "5px", border: "1px solid #ef4444", background: "rgba(239,68,68,0.08)", color: "#ef4444", cursor: "pointer", fontSize: "12px" }}
+                  >
+                    删除
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
@@ -530,7 +583,7 @@ export default function DatabaseCategoryManager() {
                             background: isDragging ? "rgba(147,51,234,0.05)" : "#fafafa",
                             boxSizing: "border-box",
                             opacity: isDragging ? 0.5 : 1,
-                            touchAction: "none",
+                            touchAction: "pan-y",
                           }}
                         >
                           <span className="subcat-drag" style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: "#aaa", fontSize: "16px", flexShrink: 0 }}>⋮⋮</span>

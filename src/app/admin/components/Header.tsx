@@ -63,6 +63,7 @@ export default function AdminHeader({ user, className }: HeaderProps) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={false}
             style={{
               background: item.active ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.15)",
               border: "1px solid rgba(255,255,255,0.3)",

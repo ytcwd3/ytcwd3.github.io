@@ -71,29 +71,41 @@ export default function SiteLinksManager() {
 
   return (
     <div>
-      <h2 className="page-title" style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>工具补丁 & 帮助中心管理</h2>
+      <div
+        className="site-links-header"
+        style={{
+          background: "rgba(255,255,255,0.94)",
+          borderRadius: "10px",
+          padding: "14px 16px",
+          marginBottom: "16px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          border: "1px solid rgba(255,255,255,0.72)",
+        }}
+      >
+        <h2 className="page-title" style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 12px" }}>工具补丁 & 帮助中心管理</h2>
 
-      {/* 筛选 */}
-      <div className="site-links-filter" style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
-        {(["all", "tool", "help"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setFilterType(t)}
-            style={{
-              padding: "5px 14px",
-              borderRadius: "6px",
-              border: "1px solid",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: 600,
-              background: filterType === t ? "#9333ea" : "white",
-              color: filterType === t ? "white" : "#666",
-              borderColor: filterType === t ? "#9333ea" : "#ddd",
-            }}
-          >
-            {t === "all" ? "全部" : t === "tool" ? "工具补丁" : "帮助中心"}
-          </button>
-        ))}
+        {/* 筛选 */}
+        <div className="site-links-filter" style={{ display: "flex", gap: "8px" }}>
+          {(["all", "tool", "help"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              style={{
+                padding: "5px 14px",
+                borderRadius: "6px",
+                border: "1px solid",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: 600,
+                background: filterType === t ? "#9333ea" : "white",
+                color: filterType === t ? "white" : "#666",
+                borderColor: filterType === t ? "#9333ea" : "#ddd",
+              }}
+            >
+              {t === "all" ? "全部" : t === "tool" ? "工具补丁" : "帮助中心"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 添加/编辑表单 */}
@@ -176,55 +188,84 @@ export default function SiteLinksManager() {
         <p style={{ color: "#888", textAlign: "center", padding: "40px" }}>暂无链接</p>
       ) : (
         <div className="game-table-wrapper">
-        <table className="site-links-table" style={{ width: "100%", borderCollapse: "collapse", background: "white", borderRadius: "10px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-          <thead>
-            <tr style={{ background: "#f5f5f5" }}>
-              <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>类型</th>
-              <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>名称</th>
-              <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>链接</th>
-              <th style={{ padding: "10px 14px", textAlign: "right", fontSize: "13px", fontWeight: 600, color: "#555" }}>操作</th>
-            </tr>
-          </thead>
-          <tbody>
+          <table className="site-links-table" style={{ width: "100%", borderCollapse: "collapse", background: "white", borderRadius: "10px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+            <thead>
+              <tr style={{ background: "#f5f5f5" }}>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>类型</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>名称</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>链接</th>
+                <th style={{ padding: "10px 14px", textAlign: "right", fontSize: "13px", fontWeight: 600, color: "#555" }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((link) => (
+                <tr key={link.id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                  <td style={{ padding: "10px 14px" }}>
+                    <span style={{
+                      display: "inline-block",
+                      padding: "2px 10px",
+                      borderRadius: "12px",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      background: link.type === "tool" ? "rgba(245,158,11,0.1)" : "rgba(33,150,243,0.1)",
+                      color: link.type === "tool" ? "#f59e0b" : "#2196f3",
+                    }}>
+                      {link.type === "tool" ? "工具补丁" : "帮助中心"}
+                    </span>
+                  </td>
+                  <td style={{ padding: "10px 14px", fontSize: "13px", color: "#333" }}>{link.name}</td>
+                  <td style={{ padding: "10px 14px", fontSize: "12px" }}>
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ color: "#9333ea", textDecoration: "none", wordBreak: "break-all" }}>
+                      {link.url}
+                    </a>
+                  </td>
+                  <td style={{ padding: "10px 14px", textAlign: "right" }}>
+                    <button
+                      onClick={() => startEdit(link)}
+                      style={{ padding: "4px 12px", borderRadius: "5px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: "pointer", fontSize: "12px", marginRight: "6px" }}
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={() => handleDelete(link.id)}
+                      style={{ padding: "4px 12px", borderRadius: "5px", border: "1px solid #ef4444", background: "rgba(239,68,68,0.08)", color: "#ef4444", cursor: "pointer", fontSize: "12px" }}
+                    >
+                      删除
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="site-links-card-list">
             {filtered.map((link) => (
-              <tr key={link.id} style={{ borderTop: "1px solid #f0f0f0" }}>
-                <td style={{ padding: "10px 14px" }}>
-                  <span style={{
-                    display: "inline-block",
-                    padding: "2px 10px",
-                    borderRadius: "12px",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    background: link.type === "tool" ? "rgba(245,158,11,0.1)" : "rgba(33,150,243,0.1)",
-                    color: link.type === "tool" ? "#f59e0b" : "#2196f3",
-                  }}>
+              <div className="site-link-card" key={link.id}>
+                <div className="site-link-card-top">
+                  <span className={`site-link-type site-link-type-${link.type}`}>
                     {link.type === "tool" ? "工具补丁" : "帮助中心"}
                   </span>
-                </td>
-                <td style={{ padding: "10px 14px", fontSize: "13px", color: "#333" }}>{link.name}</td>
-                <td style={{ padding: "10px 14px", fontSize: "12px" }}>
-                  <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ color: "#9333ea", textDecoration: "none", wordBreak: "break-all" }}>
-                    {link.url}
-                  </a>
-                </td>
-                <td style={{ padding: "10px 14px", textAlign: "right" }}>
+                  <strong>{link.name}</strong>
+                </div>
+                <a href={link.url} target="_blank" rel="noopener noreferrer" className="site-link-card-url">
+                  {link.url}
+                </a>
+                <div className="site-link-card-actions">
                   <button
                     onClick={() => startEdit(link)}
-                    style={{ padding: "4px 12px", borderRadius: "5px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: "pointer", fontSize: "12px", marginRight: "6px" }}
+                    className="site-link-edit-btn"
                   >
                     编辑
                   </button>
                   <button
                     onClick={() => handleDelete(link.id)}
-                    style={{ padding: "4px 12px", borderRadius: "5px", border: "1px solid #ef4444", background: "rgba(239,68,68,0.08)", color: "#ef4444", cursor: "pointer", fontSize: "12px" }}
+                    className="site-link-delete-btn"
                   >
                     删除
                   </button>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
         </div>
       )}
     </div>

@@ -5,32 +5,111 @@
   display: none;
 }
 
+.site-links-card-list {
+  display: none;
+}
+
+.admin-login-page,
+.admin-category-page,
+.admin-container {
+  box-sizing: border-box;
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .category-manager-layout {
+    grid-template-columns: 260px minmax(0, 1fr) !important;
+  }
+
+  .cat-list-item {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .cat-list-item-btns {
+    justify-content: flex-end !important;
+  }
+
+  .subcat-item {
+    align-items: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+
+  .subcat-actions {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+}
+
 /* 通用移动端适配 */
 @media (max-width: 768px) {
+  .admin-login-page {
+    min-height: 100vh !important;
+    padding: 18px !important;
+    align-items: center !important;
+  }
+
+  .admin-login-card {
+    width: 100% !important;
+    max-width: 420px !important;
+    padding: 24px 18px !important;
+    border-radius: 14px !important;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18) !important;
+  }
+
+  .admin-login-card h1 {
+    font-size: 20px !important;
+    line-height: 1.25 !important;
+  }
+
   /* Header 移动端 */
   .admin-header {
     flex-direction: column !important;
     gap: 8px !important;
-    padding: 10px 16px !important;
+    padding: 10px 12px !important;
+    align-items: stretch !important;
   }
   .admin-header h1 {
     font-size: 15px !important;
+    text-align: center !important;
+  }
+  .admin-header p {
+    text-align: center !important;
   }
   .admin-header-user {
-    gap: 8px !important;
+    width: 100% !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
   }
   .admin-header-user span {
     font-size: 11px !important;
-    max-width: 120px;
+    max-width: 100% !important;
+    flex-basis: 100% !important;
+    text-align: center !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .admin-header-user a,
+  .admin-header-user button {
+    flex: 1 1 calc(50% - 6px) !important;
+    min-width: 120px !important;
+    padding: 7px 8px !important;
+    text-align: center !important;
+  }
 
   /* 主容器移动端 */
   .admin-container {
-    margin: 12px auto !important;
-    padding: 0 10px !important;
+    width: 100% !important;
+    margin: 10px auto !important;
+    padding: 0 8px !important;
+  }
+
+  .admin-category-page {
+    padding: 10px 8px !important;
   }
 
   /* StatsCards 移动端 - 每个卡片更小 */
@@ -53,6 +132,7 @@
   .toolbar {
     padding: 8px 12px !important;
     gap: 8px !important;
+    align-items: stretch !important;
   }
   .toolbar-search {
     min-width: 100% !important;
@@ -62,10 +142,15 @@
   .toolbar-btn {
     padding: 6px 10px !important;
     font-size: 12px !important;
-    flex: 0 0 auto !important;
+    flex: 1 1 calc(50% - 4px) !important;
     white-space: normal !important;
     text-align: center !important;
-    min-width: 60px !important;
+    min-width: 120px !important;
+  }
+  .toolbar select {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    font-size: 13px !important;
   }
 
   /* 子分类筛选移动端 */
@@ -187,23 +272,111 @@
   }
 
   /* 分类管理移动端 */
+  .category-manager-section {
+    padding: 12px !important;
+    margin-bottom: 12px !important;
+    border-radius: 12px !important;
+  }
+  .category-manager-section > div:first-child {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+  .category-manager-section .refresh-btn {
+    width: 100% !important;
+  }
   .category-manager-layout {
     display: flex !important;
     flex-direction: column !important;
-    gap: 16px !important;
+    gap: 12px !important;
   }
   .category-manager-layout > div:first-child {
     min-width: 0 !important;
   }
+  .category-main-panel,
+  .subcategory-panel {
+    width: 100% !important;
+    padding: 10px !important;
+    border-radius: 12px !important;
+  }
+  .subcat-panel-header {
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .subcat-panel-header > div:last-child {
+    width: 100% !important;
+  }
+  .subcat-panel-header > div:last-child button {
+    flex: 1 1 0 !important;
+  }
   .cat-list-item {
     width: 100% !important;
     box-sizing: border-box !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .cat-list-item .cat-name {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+  .cat-list-item .cat-count {
+    white-space: nowrap !important;
+  }
+  .cat-list-item-btns {
+    justify-content: flex-end !important;
+  }
+  .cat-list-input,
+  .subcat-list-input {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .subcat-item {
+    align-items: flex-start !important;
+    flex-wrap: wrap !important;
+    padding: 10px !important;
+  }
+  .subcat-info {
+    flex: 1 1 calc(100% - 28px) !important;
+  }
+  .subcat-name {
+    word-break: break-word !important;
+    line-height: 1.35 !important;
+  }
+  .subcat-move-btns {
+    order: 3 !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+  .subcat-actions {
+    order: 4 !important;
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr auto auto auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  .subcat-actions select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .subcat-actions button {
+    min-height: 30px !important;
+    padding: 0 6px !important;
   }
 
   /* 链接管理移动端 */
   .site-links-filter {
     flex-wrap: wrap !important;
     gap: 6px !important;
+  }
+  .site-links-header {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+  .site-links-header .page-title {
+    font-size: 18px !important;
+    line-height: 1.25 !important;
   }
   .site-links-filter button {
     padding: 5px 12px !important;
@@ -235,13 +408,119 @@
   .site-links-table {
     min-width: 700px;
   }
+  .site-links-card-list {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-header-user a,
+  .admin-header-user button {
+    flex-basis: 100% !important;
+  }
+
+  .toolbar-btn {
+    flex-basis: 100% !important;
+  }
+
+  .stats-cards > div {
+    min-width: calc(50% - 4px) !important;
+  }
+
+  .subcat-actions {
+    grid-template-columns: 1fr 1fr 1fr !important;
+  }
+
+  .subcat-actions select {
+    grid-column: 1 / -1 !important;
+  }
 }
 
 /* 超小屏幕（480px以下）：表格强制卡片化 */
 @media (max-width: 480px) {
   /* 隐藏表格，显示卡片列表 */
-  .game-table-wrapper table {
+  .game-table-wrapper table:not(.site-links-table) {
     display: none;
+  }
+  .site-links-table {
+    display: none !important;
+  }
+  .site-links-card-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .site-link-card {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-sizing: border-box;
+  }
+  .site-link-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    min-width: 0;
+  }
+  .site-link-card-top strong {
+    min-width: 0;
+    color: #333;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .site-link-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .site-link-type-tool {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+  }
+  .site-link-type-help {
+    background: rgba(33, 150, 243, 0.1);
+    color: #2196f3;
+  }
+  .site-link-card-url {
+    display: block;
+    color: #9333ea;
+    font-size: 12px;
+    line-height: 1.45;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .site-link-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .site-link-card-actions button {
+    flex: 1;
+    min-height: 32px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .site-link-edit-btn {
+    border: 1px solid #9333ea;
+    background: rgba(147, 51, 234, 0.08);
+    color: #9333ea;
+  }
+  .site-link-delete-btn {
+    border: 1px solid #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
   }
   .game-card-list {
     display: flex !important;

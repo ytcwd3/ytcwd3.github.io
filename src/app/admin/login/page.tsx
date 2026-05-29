@@ -72,6 +72,7 @@ export default function AdminLogin() {
 
   return (
     <div
+      className="admin-login-page"
       style={{
         display: "flex",
         justifyContent: "center",
@@ -80,6 +81,7 @@ export default function AdminLogin() {
       }}
     >
       <div
+        className="admin-login-card"
         style={{
           background: "white",
           padding: 40,
