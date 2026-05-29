@@ -20,9 +20,11 @@ import {
 const inputStyle = {
   padding: "7px 10px",
   borderRadius: "6px",
-  border: "1px solid #ddd",
+  border: "1px solid #e2e2e2",
   fontSize: "13px",
   boxSizing: "border-box" as const,
+  outline: "none",
+  transition: "border-color 0.2s",
 };
 
 export default function DatabaseCategoryManager() {
@@ -321,49 +323,67 @@ export default function DatabaseCategoryManager() {
     <section
       className="category-manager-section"
       style={{
-        background: "white",
-        borderRadius: "10px",
-        padding: "16px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        marginBottom: "20px",
+        background: "#fff",
+        borderRadius: "16px",
+        padding: "24px",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+        marginBottom: "24px",
+        border: "1px solid rgba(0,0,0,0.04)",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "20px" }}>
         <div>
-          <h2 className="page-title" style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>数据库分类管理</h2>
-          <p className="page-desc" style={{ fontSize: "12px", color: "#777", margin: "4px 0 0" }}>
+          <h2 style={{ fontSize: "22px", fontWeight: 700, margin: 0, color: "#1a1a1a", letterSpacing: "-0.3px" }}>数据库分类管理</h2>
+          <p style={{ fontSize: "13px", color: "#888", margin: "6px 0 0", lineHeight: "1.4" }}>
             直接管理 categories / subcategories 表，相关游戏数据会同步更新。
           </p>
         </div>
         <button
-          className="refresh-btn"
           onClick={() => loadCategories()}
           disabled={loading && !isMoving}
-          style={{ height: 32, padding: "0 12px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", cursor: loading && !isMoving ? "not-allowed" : "pointer", fontSize: "13px" }}
+          style={{
+            height: "34px",
+            padding: "0 16px",
+            borderRadius: "8px",
+            border: "1px solid #e2e2e2",
+            background: loading && !isMoving ? "#f5f5f5" : "#fff",
+            cursor: loading && !isMoving ? "not-allowed" : "pointer",
+            fontSize: "13px",
+            fontWeight: 500,
+            color: loading && !isMoving ? "#aaa" : "#555",
+            transition: "all 0.2s",
+            flexShrink: 0,
+          }}
         >
-          刷新
+          🔄 刷新
         </button>
       </div>
 
       {loading ? (
-        <p style={{ color: "#888", textAlign: "center", padding: "28px 0" }}>加载中...</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 0", gap: "10px", color: "#888" }}>
+          <div style={{ width: "20px", height: "20px", border: "2px solid #e2e2e2", borderTopColor: "#b87dd8", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <span style={{ fontSize: "14px" }}>加载中...</span>
+        </div>
       ) : (
         <div
           className="category-manager-layout"
           style={{
             display: "grid",
-            gridTemplateColumns: "380px minmax(0, 1fr)",
+            gridTemplateColumns: "340px minmax(0, 1fr)",
             alignItems: "start",
             gap: "16px",
           }}
         >
+          {/* Left: Main Categories */}
           <div
             className="category-main-panel"
             style={{
-              border: "1px solid #eee",
-              borderRadius: "10px",
-              background: "#fbfbfc",
-              padding: "12px",
+              border: "1px solid #e8e8e8",
+              borderRadius: "14px",
+              background: "rgba(147,51,234,0.05)",
+              padding: "14px",
             }}
           >
             <div
@@ -372,19 +392,23 @@ export default function DatabaseCategoryManager() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 gap: "8px",
-                marginBottom: "10px",
+                marginBottom: "12px",
+                padding: "0 2px",
               }}
             >
-              <h3 style={{ margin: 0, fontSize: "14px", color: "#333" }}>主分类</h3>
-              <span style={{ fontSize: "12px", color: "#888" }}>{categories.length} 个</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "#333" }}>主分类</span>
+                <span style={{ fontSize: "11px", color: "#aaa", background: "#fff", padding: "2px 6px", borderRadius: "10px", border: "1px solid #e2e2e2" }}>{categories.length} 个</span>
+              </div>
             </div>
-            <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+
+            <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
               <input
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 placeholder="新增主分类"
                 className="cat-list-input"
-                style={inputStyle}
+                style={{ ...inputStyle, flex: 1 }}
               />
               <button
                 onClick={() =>
@@ -398,13 +422,25 @@ export default function DatabaseCategoryManager() {
                   )
                 }
                 disabled={!!saving}
-                style={{ padding: "0 12px", borderRadius: "6px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: saving ? "not-allowed" : "pointer", fontSize: "13px" }}
+                style={{
+                  padding: "0 14px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "rgba(147,51,234,0.1)",
+                  color: "#fff",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  transition: "opacity 0.2s",
+                  opacity: saving ? 0.6 : 1,
+                  whiteSpace: "nowrap",
+                }}
               >
-                添加
+                + 添加
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
               {categories.map((category) => {
                 const active = selectedCategory?.id === category.id;
                 const isDragging = draggingCategoryId === category.id;
@@ -428,27 +464,43 @@ export default function DatabaseCategoryManager() {
                     className="cat-list-item"
                     style={{
                       display: "flex",
-                      justifyContent: "space-between",
+                      alignItems: "center",
                       gap: "8px",
                       padding: "10px 12px",
-                      borderRadius: "6px",
-                      border: `1px solid ${active ? "#9333ea" : isDragOver ? "#16a34a" : "#eee"}`,
-                      background: active ? "rgba(147,51,234,0.08)" : "#fafafa",
-                      color: active ? "#6b21a8" : "#333",
+                      borderRadius: "10px",
+                      border: `1.5px solid ${active ? "#b87dd8" : isDragOver ? "#16a34a" : "transparent"}`,
+                      background: active
+                        ? "rgba(147,51,234,0.08)"
+                        : isDragOver
+                        ? "rgba(22,163,74,0.08)"
+                        : "#fff",
+                      color: active ? "#7c22ce" : "#333",
                       cursor: "pointer",
                       textAlign: "left",
-                      opacity: isDragging ? 0.5 : 1,
+                      opacity: isDragging ? 0.4 : 1,
                       touchAction: "pan-y",
+                      boxShadow: active ? "0 2px 8px rgba(147,51,234,0.15)" : "0 1px 3px rgba(0,0,0,0.06)",
+                      transition: "all 0.15s ease",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1, minWidth: 0 }}>
-                      <span className="cat-drag-handle" style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: "#aaa", fontSize: "16px", flexShrink: 0 }}>⋮⋮</span>
-                      <span className="cat-name" style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{category.name}</span>
-                      <span className="cat-count" style={{ color: "#888", flexShrink: 0, fontSize: "12px" }}>{category.subcategories.length} 子类 / {category.gameCount} 游戏</span>
+                    <span style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: active ? "#b87dd8" : "#ccc", fontSize: "14px", flexShrink: 0 }}>⋮⋮</span>
+                    <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, gap: "2px" }}>
+                      <span style={{ fontWeight: 600, fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{category.name}</span>
+                      <span style={{ fontSize: "11px", color: active ? "#b87dd8" : "#aaa" }}>{category.subcategories.length} 子类 · {category.gameCount} 游戏</span>
                     </div>
-                    <div className="cat-list-item-btns" style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-                      <button onClick={(e) => { e.stopPropagation(); moveCategory(category.id, -1); }} disabled={!!saving || categories[0]?.id === category.id} style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #ddd", background: "#fff", cursor: saving || categories[0]?.id === category.id ? "not-allowed" : "pointer", fontSize: "12px" }} title="上移">↑</button>
-                      <button onClick={(e) => { e.stopPropagation(); moveCategory(category.id, 1); }} disabled={!!saving || categories[categories.length - 1]?.id === category.id} style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #ddd", background: "#fff", cursor: saving || categories[categories.length - 1]?.id === category.id ? "not-allowed" : "pointer", fontSize: "12px" }} title="下移">↓</button>
+                    <div style={{ display: "flex", gap: "3px", flexShrink: 0 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); moveCategory(category.id, -1); }}
+                        disabled={!!saving || categories[0]?.id === category.id}
+                        style={{ padding: "3px 6px", borderRadius: "5px", border: "1px solid #e2e2e2", background: "#fff", cursor: saving || categories[0]?.id === category.id ? "not-allowed" : "pointer", fontSize: "11px", color: categories[0]?.id === category.id ? "#ddd" : "#888" }}
+                        title="上移"
+                      >↑</button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); moveCategory(category.id, 1); }}
+                        disabled={!!saving || categories[categories.length - 1]?.id === category.id}
+                        style={{ padding: "3px 6px", borderRadius: "5px", border: "1px solid #e2e2e2", background: "#fff", cursor: saving || categories[categories.length - 1]?.id === category.id ? "not-allowed" : "pointer", fontSize: "11px", color: categories[categories.length - 1]?.id === category.id ? "#ddd" : "#888" }}
+                        title="下移"
+                      >↓</button>
                     </div>
                   </div>
                 );
@@ -456,45 +508,54 @@ export default function DatabaseCategoryManager() {
             </div>
           </div>
 
+          {/* Right: Subcategories */}
           {currentCategory && (
             <div
               className="subcategory-panel"
               style={{
-                border: "1px solid #eee",
-                borderRadius: "10px",
+                border: "1px solid #e8e8e8",
+                borderRadius: "14px",
                 background: "#fff",
-                padding: "12px",
+                padding: "16px",
                 minWidth: 0,
               }}
             >
+              {/* Panel Header */}
               <div
-                className="subcat-panel-header"
                 style={{
                   display: "flex",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   justifyContent: "space-between",
                   gap: "12px",
-                  marginBottom: "12px",
+                  marginBottom: "14px",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid #f0f0f0",
                 }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: "16px",
-                      color: "#222",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {currentCategory.name}
-                  </h3>
-                  <p style={{ margin: "3px 0 0", fontSize: "12px", color: "#888" }}>
-                    子分类 {currentCategory.subcategories.length} 个 / 游戏 {currentCategory.gameCount} 个
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <h3
+                      style={{
+                        margin: 0,
+                        fontSize: "17px",
+                        fontWeight: 700,
+                        color: "#1a1a1a",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {currentCategory.name}
+                    </h3>
+                    <span style={{ fontSize: "11px", color: "#fff", background: "rgba(147,51,234,0.1)", padding: "2px 8px", borderRadius: "10px", flexShrink: 0 }}>
+                      {currentCategory.subcategories.length} 子分类
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#aaa" }}>
+                    共 {currentCategory.gameCount} 个游戏关联
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
                   <button
                     onClick={() => {
                       if (guardMoving()) return;
@@ -506,9 +567,9 @@ export default function DatabaseCategoryManager() {
                         () => renameDbCategory(currentCategory.id, currentCategory.name, next),
                       );
                     }}
-                    style={{ padding: "5px 10px", borderRadius: "5px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: "pointer", fontSize: "12px" }}
+                    style={{ padding: "5px 12px", borderRadius: "8px", border: "1px solid #e2e2e2", background: "#fff", cursor: "pointer", fontSize: "12px", color: "#666", fontWeight: 500 }}
                   >
-                    改名
+                    ✏️ 改名
                   </button>
                   <button
                     onClick={() => {
@@ -517,20 +578,21 @@ export default function DatabaseCategoryManager() {
                         run("delete-category", () => deleteDbCategory(currentCategory.id, currentCategory.name));
                       }
                     }}
-                    style={{ padding: "5px 10px", borderRadius: "5px", border: "1px solid #ef4444", background: "rgba(239,68,68,0.08)", color: "#ef4444", cursor: "pointer", fontSize: "12px" }}
+                    style={{ padding: "5px 12px", borderRadius: "8px", border: "1px solid #fecaca", background: "rgba(239,68,68,0.06)", color: "#dc2626", cursor: "pointer", fontSize: "12px", fontWeight: 500 }}
                   >
-                    删除
+                    🗑️ 删除
                   </button>
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+              {/* Add Subcategory */}
+              <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
                 <input
                   value={newSubcategoryName}
                   onChange={(e) => setNewSubcategoryName(e.target.value)}
                   placeholder="新增子分类"
                   className="subcat-list-input"
-                  style={inputStyle}
+                  style={{ ...inputStyle, flex: 1 }}
                 />
                 <button
                   onClick={() =>
@@ -544,15 +606,30 @@ export default function DatabaseCategoryManager() {
                     )
                   }
                   disabled={!!saving}
-                  style={{ padding: "0 12px", borderRadius: "6px", border: "1px solid #9333ea", background: "rgba(147,51,234,0.08)", color: "#9333ea", cursor: saving ? "not-allowed" : "pointer", fontSize: "13px" }}
+                  style={{
+                    padding: "0 14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "rgba(147,51,234,0.1)",
+                    color: "#fff",
+                    cursor: saving ? "not-allowed" : "pointer",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    opacity: saving ? 0.6 : 1,
+                    whiteSpace: "nowrap",
+                  }}
                 >
-                  添加
+                  + 添加
                 </button>
               </div>
 
+              {/* Subcategory Grid */}
               <div>
                 {currentCategory.subcategories.length === 0 ? (
-                  <p style={{ color: "#999", fontSize: "13px" }}>暂无子分类</p>
+                  <div style={{ textAlign: "center", padding: "32px 0", color: "#ccc" }}>
+                    <div style={{ fontSize: "32px", marginBottom: "8px" }}>📭</div>
+                    <p style={{ fontSize: "13px", color: "#bbb" }}>暂无子分类，点击上方添加</p>
+                  </div>
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
                     {currentCategory.subcategories.map((subcategory) => {
@@ -575,27 +652,32 @@ export default function DatabaseCategoryManager() {
                           style={{
                             display: "flex",
                             alignItems: "center",
+                            justifyContent: "space-between",
                             gap: "8px",
-                            width: "100%",
                             padding: "8px 10px",
                             borderRadius: "8px",
-                            border: `1px solid ${isDragOver ? "#16a34a" : "#eee"}`,
-                            background: isDragging ? "rgba(147,51,234,0.05)" : "#fafafa",
+                            border: `1.5px solid ${isDragOver ? "#16a34a" : "#e8e8e8"}`,
+                            background: isDragging
+                              ? "rgba(147,51,234,0.06)"
+                              : isDragOver
+                              ? "rgba(22,163,74,0.06)"
+                              : "#fafafa",
                             boxSizing: "border-box",
-                            opacity: isDragging ? 0.5 : 1,
+                            opacity: isDragging ? 0.4 : 1,
                             touchAction: "pan-y",
+                            transition: "all 0.15s ease",
                           }}
                         >
-                          <span className="subcat-drag" style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: "#aaa", fontSize: "16px", flexShrink: 0 }}>⋮⋮</span>
-                          <div className="subcat-info" style={{ flex: 1, minWidth: 0 }}>
-                            <div className="subcat-name" style={{ fontWeight: 600, color: "#333" }}>{subcategory.name}</div>
-                            <div className="subcat-count" style={{ color: "#777", marginTop: "2px" }}>{subcategory.gameCount} 个游戏</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                            <span style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: "#ccc", fontSize: "13px", flexShrink: 0 }}>⋮⋮</span>
+                            <div style={{ fontWeight: 600, fontSize: "13px", color: "#333", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subcategory.name}</div>
+                            <div style={{ fontSize: "12px", color: "#aaa", flexShrink: 0 }}>{subcategory.gameCount}游戏</div>
                           </div>
-                          <div className="subcat-move-btns" style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-                            <button onClick={() => moveSubcategory(subcategory.id, -1)} disabled={!!saving || currentCategory.subcategories[0]?.id === subcategory.id} style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #ddd", background: "#fff", cursor: saving || currentCategory.subcategories[0]?.id === subcategory.id ? "not-allowed" : "pointer", fontSize: "12px" }} title="上移">↑</button>
-                            <button onClick={() => moveSubcategory(subcategory.id, 1)} disabled={!!saving || currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id} style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #ddd", background: "#fff", cursor: saving || currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id ? "not-allowed" : "pointer", fontSize: "12px" }} title="下移">↓</button>
-                          </div>
-                          <div className="subcat-actions">
+                          <div style={{ display: "flex", alignItems: "center", gap: "3px", flexShrink: 0 }}>
+                            <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
+                              <button onClick={() => moveSubcategory(subcategory.id, -1)} disabled={!!saving || currentCategory.subcategories[0]?.id === subcategory.id} style={{ padding: "2px 5px", borderRadius: "4px", border: "1px solid #e2e2e2", background: "#fff", cursor: saving || currentCategory.subcategories[0]?.id === subcategory.id ? "not-allowed" : "pointer", fontSize: "11px", color: currentCategory.subcategories[0]?.id === subcategory.id ? "#e0e0e0" : "#999" }}>↑</button>
+                              <button onClick={() => moveSubcategory(subcategory.id, 1)} disabled={!!saving || currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id} style={{ padding: "2px 5px", borderRadius: "4px", border: "1px solid #e2e2e2", background: "#fff", cursor: saving || currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id ? "not-allowed" : "pointer", fontSize: "11px", color: currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id ? "#e0e0e0" : "#999" }}>↓</button>
+                            </div>
                             <select
                               value={parentId}
                               onChange={(e) =>
@@ -605,15 +687,31 @@ export default function DatabaseCategoryManager() {
                                 }))
                               }
                               disabled={isMoving}
-                              style={{ ...inputStyle, width: "120px", flexShrink: 0 }}
+                              style={{ ...inputStyle, fontSize: "11px", padding: "2px 5px", width: "80px", flexShrink: 0 }}
                             >
                               {categories.map((category) => (
-                                <option key={category.id} value={category.id}>父：{category.name}</option>
+                                <option key={category.id} value={category.id}>{category.name}</option>
                               ))}
                             </select>
-                            <button className="subcat-move-btn" onClick={() => { const target = categories.find((item) => item.id === parentId); if (!target) return; handleMoveSubcategory(subcategory.id, currentCategory, target); }} disabled={!!saving || parentId === currentCategory.id} style={{ border: "none", background: "transparent", color: "#9333ea", cursor: saving || parentId === currentCategory.id ? "not-allowed" : "pointer", padding: "0 2px", fontSize: "12px" }}>{isMoving ? "迁移中" : "迁移"}</button>
-                            <button className="subcat-rename-btn" onClick={() => { if (guardMoving()) return; const next = prompt("新的子分类名称", subcategory.name)?.trim(); if (!next || next === subcategory.name) return; confirmAndRun(`确认把子分类「${subcategory.name}」改成「${next}」？这会批量更新相关游戏数据。`, "rename-subcategory", () => renameDbSubcategory(currentCategory.id, subcategory.id, subcategory.name, next)); }} style={{ border: "none", background: "transparent", color: "#9333ea", cursor: "pointer", padding: "0 2px", fontSize: "12px" }}>改名</button>
-                            <button className="subcat-delete-btn" onClick={() => { if (guardMoving()) return; if (confirm(`确认删除子分类「${subcategory.name}」？相关游戏会移除这个子分类值。`)) { run("delete-subcategory", () => deleteDbSubcategory(subcategory.id, currentCategory.name, subcategory.name)); } }} style={{ border: "none", background: "transparent", color: "#ef4444", cursor: "pointer", padding: "0 2px", fontSize: "12px" }}>删除</button>
+                            <button
+                              onClick={() => { const target = categories.find((item) => item.id === parentId); if (!target) return; handleMoveSubcategory(subcategory.id, currentCategory, target); }}
+                              disabled={!!saving || parentId === currentCategory.id}
+                              style={{ border: "none", background: "rgba(147,51,234,0.1)", color: parentId === currentCategory.id ? "#ccc" : "#b87dd8", cursor: saving || parentId === currentCategory.id ? "not-allowed" : "pointer", padding: "2px 6px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, flexShrink: 0 }}
+                            >
+                              {isMoving ? "迁移中" : "迁移"}
+                            </button>
+                            <button
+                              onClick={() => { if (guardMoving()) return; const next = prompt("新的子分类名称", subcategory.name)?.trim(); if (!next || next === subcategory.name) return; confirmAndRun(`确认把子分类「${subcategory.name}」改成「${next}」？这会批量更新相关游戏数据。`, "rename-subcategory", () => renameDbSubcategory(currentCategory.id, subcategory.id, subcategory.name, next)); }}
+                              style={{ border: "none", background: "transparent", color: "#999", cursor: "pointer", padding: "2px 4px", borderRadius: "4px", fontSize: "11px", flexShrink: 0 }}
+                            >
+                              改名
+                            </button>
+                            <button
+                              onClick={() => { if (guardMoving()) return; if (confirm(`确认删除子分类「${subcategory.name}」？相关游戏会移除这个子分类值。`)) { run("delete-subcategory", () => deleteDbSubcategory(subcategory.id, currentCategory.name, subcategory.name)); } }}
+                              style={{ border: "none", background: "transparent", color: "#dc2626", cursor: "pointer", padding: "2px 4px", borderRadius: "4px", fontSize: "11px", flexShrink: 0 }}
+                            >
+                              删除
+                            </button>
                           </div>
                         </div>
                       );
@@ -626,22 +724,21 @@ export default function DatabaseCategoryManager() {
         </div>
       )}
 
+      {/* Move Progress */}
       {moveProgress && (
-        <div className="move-progress-bar" style={{ marginTop: "12px", padding: "10px 12px", borderRadius: "8px", background: "#fafafa", border: "1px solid #eee" }}>
-          <div className="progress-text" style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "6px", fontSize: "12px", color: "#555" }}>
-            <span>
-              正在迁移「{moveProgress.subcategory}」：{moveProgress.from} → {moveProgress.to}
-            </span>
-            <span>
+        <div style={{ marginTop: "16px", padding: "14px 16px", borderRadius: "12px", background: "#fafafa", border: "1px solid #e8e8e8" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "8px", fontSize: "13px", color: "#555" }}>
+            <span>正在迁移「{moveProgress.subcategory}」：{moveProgress.from} → {moveProgress.to}</span>
+            <span style={{ fontWeight: 600, color: "#9333ea" }}>
               {moveProgress.done} / {moveProgress.total}
               {moveProgress.total > 0 ? ` (${Math.round((moveProgress.done / moveProgress.total) * 100)}%)` : ""}
             </span>
           </div>
-          <div className="progress-bar-track" style={{ height: "8px", borderRadius: "999px", background: "#eee", overflow: "hidden" }}>
-            <div className="progress-bar-fill" style={{ height: "100%", width: moveProgress.total > 0 ? `${Math.min(100, (moveProgress.done / moveProgress.total) * 100)}%` : "0%", background: "#9333ea", transition: "width 0.2s ease" }} />
+          <div style={{ height: "6px", borderRadius: "999px", background: "#e8e8e8", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: moveProgress.total > 0 ? `${Math.min(100, (moveProgress.done / moveProgress.total) * 100)}%` : "0%", background: "linear-gradient(90deg, #b87dd8, #c77ddb)", transition: "width 0.3s ease", borderRadius: "999px" }} />
           </div>
           {moveProgress.current && (
-            <p className="progress-current" style={{ margin: "6px 0 0", fontSize: "12px", color: "#888" }}>
+            <p style={{ margin: "6px 0 0", fontSize: "11px", color: "#aaa" }}>
               当前处理游戏 ID：{moveProgress.current}
             </p>
           )}
@@ -649,8 +746,16 @@ export default function DatabaseCategoryManager() {
       )}
 
       {msg && (
-        <p className="msg-text" style={{ margin: "12px 0 0", fontSize: "13px", color: msg.includes("成功") || msg.includes("完成") ? "#16a34a" : "#ef4444" }}>
-          {saving ? "处理中..." : msg}
+        <p style={{
+          margin: "14px 0 0",
+          fontSize: "13px",
+          fontWeight: 500,
+          color: msg.includes("成功") || msg.includes("完成") ? "#16a34a" : "#dc2626",
+          padding: "8px 12px",
+          borderRadius: "8px",
+          background: msg.includes("成功") || msg.includes("完成") ? "rgba(22,163,74,0.08)" : "rgba(220,38,38,0.08)",
+        }}>
+          {saving ? "⏳ 处理中..." : msg}
         </p>
       )}
     </section>
