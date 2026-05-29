@@ -1,8 +1,10 @@
-import { Game } from "@/lib/supabase";
+import { Game } from "@/lib/games";
+import type { HomeCategory } from "@/lib/categories";
 import GameCard from "./GameCard";
 
 interface SearchResultsProps {
   games: Game[];
+  homeCategories: HomeCategory[];
   loading: boolean;
   currentPage: number;
   totalCount: number;
@@ -16,6 +18,7 @@ interface SearchResultsProps {
 
 export default function SearchResults({
   games,
+  homeCategories,
   loading,
   currentPage,
   totalCount,
@@ -75,6 +78,7 @@ export default function SearchResults({
             key={game.id}
             game={game}
             index={idx}
+            homeCategories={homeCategories}
             onOpenQrModal={onOpenQrModal}
           />
         ))}

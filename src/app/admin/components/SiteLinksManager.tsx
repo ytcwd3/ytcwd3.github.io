@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase, SiteLink } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { SiteLink } from "@/lib/site_links";
 
 export default function SiteLinksManager() {
   const [links, setLinks] = useState<SiteLink[]>([]);
@@ -70,10 +71,10 @@ export default function SiteLinksManager() {
 
   return (
     <div>
-      <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>工具补丁 & 帮助中心管理</h2>
+      <h2 className="page-title" style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>工具补丁 & 帮助中心管理</h2>
 
       {/* 筛选 */}
-      <div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
+      <div className="site-links-filter" style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
         {(["all", "tool", "help"] as const).map((t) => (
           <button
             key={t}
@@ -97,6 +98,7 @@ export default function SiteLinksManager() {
 
       {/* 添加/编辑表单 */}
       <div
+        className="site-links-form"
         style={{
           background: "white",
           borderRadius: "10px",
@@ -108,10 +110,11 @@ export default function SiteLinksManager() {
         <h3 style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px", color: "#333" }}>
           {editingId ? "编辑链接" : "添加链接"}
         </h3>
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+        <div className="site-links-form-row" style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value as "tool" | "help" })}
+            className="site-links-select"
             style={{ padding: "7px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px" }}
           >
             <option value="tool">工具补丁</option>
@@ -122,6 +125,7 @@ export default function SiteLinksManager() {
             placeholder="名称，如：WinRAR"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="site-links-name-input"
             style={{ padding: "7px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", width: "160px" }}
           />
           <input
@@ -129,6 +133,7 @@ export default function SiteLinksManager() {
             placeholder="链接，如：https://"
             value={form.url}
             onChange={(e) => setForm({ ...form, url: e.target.value })}
+            className="site-links-url-input"
             style={{ padding: "7px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", flex: 1, minWidth: "200px" }}
           />
           <button
@@ -158,7 +163,7 @@ export default function SiteLinksManager() {
           )}
         </div>
         {msg && (
-          <p style={{ marginTop: "8px", fontSize: "13px", color: msg.includes("成功") ? "#16a34a" : "#ef4444" }}>
+          <p className="site-links-msg" style={{ marginTop: "8px", fontSize: "13px", color: msg.includes("成功") ? "#16a34a" : "#ef4444" }}>
             {msg}
           </p>
         )}
@@ -170,7 +175,8 @@ export default function SiteLinksManager() {
       ) : filtered.length === 0 ? (
         <p style={{ color: "#888", textAlign: "center", padding: "40px" }}>暂无链接</p>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse", background: "white", borderRadius: "10px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+        <div className="game-table-wrapper">
+        <table className="site-links-table" style={{ width: "100%", borderCollapse: "collapse", background: "white", borderRadius: "10px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
           <thead>
             <tr style={{ background: "#f5f5f5" }}>
               <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>类型</th>
@@ -219,6 +225,7 @@ export default function SiteLinksManager() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

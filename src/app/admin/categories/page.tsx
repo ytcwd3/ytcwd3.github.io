@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import AdminHeader from "../components/Header";
 import DatabaseCategoryManager from "../components/DatabaseCategoryManager";
-import HomeDisplayManager from "../components/HomeDisplayManager";
 
 export default function CategoryPage() {
   const [user, setUser] = useState<any>(null);
@@ -22,11 +21,10 @@ export default function CategoryPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "transparent" }}>
       <AdminHeader user={user} />
-      <div style={{ padding: "20px" }}>
+      <div className="admin-category-page" style={{ padding: "20px" }}>
         <DatabaseCategoryManager />
-        <HomeDisplayManager />
       </div>
     </div>
   );

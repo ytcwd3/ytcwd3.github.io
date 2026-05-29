@@ -1,18 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, TouchEvent, MouseEvent } from "react";
 import {
   DbCategory,
   addDbCategory,
-  addDbSubcategory,
   deleteDbCategory,
-  deleteDbSubcategory,
-  fetchDbCategoryOptions,
   fetchDbCategories,
-  moveDbSubcategoryToCategory,
   renameDbCategory,
+  updateCategorySortOrder,
+} from "@/lib/categories";
+import {
+  addDbSubcategory,
+  deleteDbSubcategory,
+  moveDbSubcategoryToCategory,
   renameDbSubcategory,
-} from "@/lib/categoryTables";
+  updateSubcategorySortOrder,
+} from "@/lib/subcategories";
 
 const inputStyle = {
   padding: "7px 10px",
@@ -35,6 +38,14 @@ export default function DatabaseCategoryManager() {
   const [moveProgress, setMoveProgress] = useState<any>(null);
   const [msg, setMsg] = useState("");
 
+  // Drag state
+  const [draggingCategoryId, setDraggingCategoryId] = useState<number | null>(null);
+  const [draggingSubcategoryId, setDraggingSubcategoryId] = useState<number | null>(null);
+  const [dragOverCategoryId, setDragOverCategoryId] = useState<number | null>(null);
+  const [dragOverSubcategoryId, setDragOverSubcategoryId] = useState<number | null>(null);
+  const touchDragRef = useRef<{ categoryId: number; startY: number } | null>(null);
+  const touchDragStateRef = useRef<{ categoryId: number; subcategoryId: number; startY: number } | null>(null);
+
   useEffect(() => {
     loadCategories();
   }, []);
@@ -56,32 +67,16 @@ export default function DatabaseCategoryManager() {
     if (guardMoving()) return;
     setLoading(true);
     try {
-      const data = withCounts ? await fetchDbCategories() : await fetchDbCategoryOptions();
-      setCategories(data);
-      setSelectedId((current) => {
-        if (current && data.some((category) => category.id === current)) return current;
-        return data[0]?.id ?? null;
-      });
-      if (!withCounts) {
-        refreshCounts();
-      }
-    } catch (error: any) {
-      setMsg("加载失败: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function refreshCounts() {
-    try {
       const data = await fetchDbCategories();
       setCategories(data);
       setSelectedId((current) => {
         if (current && data.some((category) => category.id === current)) return current;
         return data[0]?.id ?? null;
       });
-    } catch {
-      // 数量不是首屏阻塞项。
+    } catch (error: any) {
+      setMsg("加载失败: " + error.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -166,10 +161,165 @@ export default function DatabaseCategoryManager() {
       });
   }
 
+  function moveCategory(categoryId: number, direction: -1 | 1) {
+    if (guardMoving()) return;
+    const idx = categories.findIndex((c) => c.id === categoryId);
+    if (idx < 0) return;
+    const nextIdx = idx + direction;
+    if (nextIdx < 0 || nextIdx >= categories.length) return;
+    const next = [...categories];
+    [next[idx], next[nextIdx]] = [next[nextIdx], next[idx]];
+    setCategories(next);
+    run("sort-category", () => updateCategorySortOrder(next));
+  }
+
+  function moveSubcategory(subcategoryId: number, direction: -1 | 1) {
+    if (guardMoving()) return;
+    if (!selectedCategory) return;
+    const idx = selectedCategory.subcategories.findIndex((s) => s.id === subcategoryId);
+    if (idx < 0) return;
+    const nextIdx = idx + direction;
+    if (nextIdx < 0 || nextIdx >= selectedCategory.subcategories.length) return;
+    const next = [...selectedCategory.subcategories];
+    [next[idx], next[nextIdx]] = [next[nextIdx], next[idx]];
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === selectedCategory.id ? { ...c, subcategories: next } : c,
+      ),
+    );
+    run("sort-subcategory", () => updateSubcategorySortOrder(next));
+  }
+
+  // Category drag handlers
+  function handleCategoryDragStart(id: number) {
+    setDraggingCategoryId(id);
+  }
+  function handleCategoryDragOver(e: MouseEvent<HTMLDivElement>, id: number) {
+    e.preventDefault();
+    setDragOverCategoryId(id);
+  }
+  function handleCategoryDrop(e: MouseEvent<HTMLDivElement>, targetId: number) {
+    e.preventDefault();
+    if (!draggingCategoryId || draggingCategoryId === targetId) {
+      setDraggingCategoryId(null);
+      setDragOverCategoryId(null);
+      return;
+    }
+    const fromIdx = categories.findIndex((c) => c.id === draggingCategoryId);
+    const toIdx = categories.findIndex((c) => c.id === targetId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const next = [...categories];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    setCategories(next);
+    setDraggingCategoryId(null);
+    setDragOverCategoryId(null);
+    run("sort-category", () => updateCategorySortOrder(next));
+  }
+  function handleCategoryDragEnd() {
+    setDraggingCategoryId(null);
+    setDragOverCategoryId(null);
+  }
+  function handleCategoryTouchStart(id: number, e: TouchEvent<HTMLDivElement>) {
+    touchDragRef.current = { categoryId: id, startY: e.touches[0].clientY };
+  }
+  function handleCategoryTouchMove(e: TouchEvent<HTMLDivElement>) {
+    if (!touchDragRef.current) return;
+    const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+    const categoryId = (el as HTMLElement)?.dataset?.categoryId ? Number((el as HTMLElement).dataset?.categoryId) : null;
+    if (categoryId && categoryId !== touchDragRef.current.categoryId) {
+      setDragOverCategoryId(categoryId);
+    }
+  }
+  function handleCategoryTouchEnd() {
+    if (touchDragRef.current && dragOverCategoryId && dragOverCategoryId !== touchDragRef.current.categoryId) {
+      const fromIdx = categories.findIndex((c) => c.id === touchDragRef.current!.categoryId);
+      const toIdx = categories.findIndex((c) => c.id === dragOverCategoryId);
+      if (fromIdx >= 0 && toIdx >= 0) {
+        const next = [...categories];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        setCategories(next);
+        run("sort-category", () => updateCategorySortOrder(next));
+      }
+    }
+    setDraggingCategoryId(null);
+    setDragOverCategoryId(null);
+    touchDragRef.current = null;
+  }
+
+  // Subcategory drag handlers
+  function handleSubcategoryDragStart(id: number) {
+    setDraggingSubcategoryId(id);
+  }
+  function handleSubcategoryDragOver(e: MouseEvent<HTMLDivElement>, id: number) {
+    e.preventDefault();
+    setDragOverSubcategoryId(id);
+  }
+  function handleSubcategoryDrop(e: MouseEvent<HTMLDivElement>, targetId: number) {
+    e.preventDefault();
+    if (!draggingSubcategoryId || draggingSubcategoryId === targetId || !selectedCategory) {
+      setDraggingSubcategoryId(null);
+      setDragOverSubcategoryId(null);
+      return;
+    }
+    const fromIdx = selectedCategory.subcategories.findIndex((s) => s.id === draggingSubcategoryId);
+    const toIdx = selectedCategory.subcategories.findIndex((s) => s.id === targetId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const next = [...selectedCategory.subcategories];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === selectedCategory.id ? { ...c, subcategories: next } : c,
+      ),
+    );
+    setDraggingSubcategoryId(null);
+    setDragOverSubcategoryId(null);
+    run("sort-subcategory", () => updateSubcategorySortOrder(next));
+  }
+  function handleSubcategoryDragEnd() {
+    setDraggingSubcategoryId(null);
+    setDragOverSubcategoryId(null);
+  }
+  function handleSubcategoryTouchStart(id: number, e: TouchEvent<HTMLDivElement>) {
+    touchDragStateRef.current = { categoryId: selectedCategory?.id ?? 0, subcategoryId: id, startY: e.touches[0].clientY };
+  }
+  function handleSubcategoryTouchMove(e: TouchEvent<HTMLDivElement>) {
+    if (!touchDragStateRef.current) return;
+    const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+    const subcategoryId = (el as HTMLElement)?.dataset?.subcategoryId ? Number((el as HTMLElement).dataset?.subcategoryId) : null;
+    if (subcategoryId && subcategoryId !== touchDragStateRef.current.subcategoryId) {
+      setDragOverSubcategoryId(subcategoryId);
+    }
+  }
+  function handleSubcategoryTouchEnd() {
+    if (touchDragStateRef.current && dragOverSubcategoryId && dragOverSubcategoryId !== touchDragStateRef.current.subcategoryId) {
+      if (!selectedCategory) return;
+      const fromIdx = selectedCategory.subcategories.findIndex((s) => s.id === touchDragStateRef.current!.subcategoryId);
+      const toIdx = selectedCategory.subcategories.findIndex((s) => s.id === dragOverSubcategoryId);
+      if (fromIdx >= 0 && toIdx >= 0) {
+        const next = [...selectedCategory.subcategories];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === selectedCategory.id ? { ...c, subcategories: next } : c,
+          ),
+        );
+        run("sort-subcategory", () => updateSubcategorySortOrder(next));
+      }
+    }
+    setDraggingSubcategoryId(null);
+    setDragOverSubcategoryId(null);
+    touchDragStateRef.current = null;
+  }
+
   const currentCategory = selectedCategory || null;
 
   return (
     <section
+      className="category-manager-section"
       style={{
         background: "white",
         borderRadius: "10px",
@@ -180,12 +330,13 @@ export default function DatabaseCategoryManager() {
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
         <div>
-          <h2 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>数据库分类管理</h2>
-          <p style={{ fontSize: "12px", color: "#777", margin: "4px 0 0" }}>
+          <h2 className="page-title" style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>数据库分类管理</h2>
+          <p className="page-desc" style={{ fontSize: "12px", color: "#777", margin: "4px 0 0" }}>
             直接管理 categories / subcategories 表，相关游戏数据会同步更新。
           </p>
         </div>
         <button
+          className="refresh-btn"
           onClick={() => loadCategories(true)}
           disabled={loading && !isMoving}
           style={{ height: 32, padding: "0 12px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", cursor: loading && !isMoving ? "not-allowed" : "pointer", fontSize: "13px" }}
@@ -197,14 +348,15 @@ export default function DatabaseCategoryManager() {
       {loading ? (
         <p style={{ color: "#888", textAlign: "center", padding: "28px 0" }}>加载中...</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "16px", alignItems: "start" }}>
+        <div className="category-manager-layout">
           <div>
             <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
               <input
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 placeholder="新增主分类"
-                style={{ ...inputStyle, minWidth: 0, flex: 1 }}
+                className="cat-list-input"
+                style={inputStyle}
               />
               <button
                 onClick={() =>
@@ -225,39 +377,60 @@ export default function DatabaseCategoryManager() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    if (guardMoving()) return;
-                    setSelectedId(category.id);
-                  }}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "8px",
-                    padding: "8px 10px",
-                    borderRadius: "6px",
-                    border: `1px solid ${selectedCategory?.id === category.id ? "#9333ea" : "#eee"}`,
-                    background: selectedCategory?.id === category.id ? "rgba(147,51,234,0.08)" : "#fafafa",
-                    color: selectedCategory?.id === category.id ? "#6b21a8" : "#333",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    fontSize: "13px",
-                  }}
-                >
-                  <span style={{ fontWeight: 600 }}>{category.name}</span>
-                  <span style={{ color: "#888", flexShrink: 0 }}>
-                    {category.subcategories.length} 子类 / {category.gameCount} 游戏
-                  </span>
-                </button>
-              ))}
+              {categories.map((category) => {
+                const active = selectedCategory?.id === category.id;
+                const isDragging = draggingCategoryId === category.id;
+                const isDragOver = dragOverCategoryId === category.id;
+                return (
+                  <div
+                    key={category.id}
+                    data-category-id={category.id}
+                    draggable={!saving && !isMoving}
+                    onClick={() => {
+                      if (guardMoving()) return;
+                      setSelectedId(category.id);
+                    }}
+                    onDragStart={() => handleCategoryDragStart(category.id)}
+                    onDragOver={(e) => handleCategoryDragOver(e as unknown as MouseEvent<HTMLDivElement>, category.id)}
+                    onDrop={(e) => handleCategoryDrop(e as unknown as MouseEvent<HTMLDivElement>, category.id)}
+                    onDragEnd={handleCategoryDragEnd}
+                    onTouchStart={(e) => handleCategoryTouchStart(category.id, e)}
+                    onTouchMove={handleCategoryTouchMove}
+                    onTouchEnd={handleCategoryTouchEnd}
+                    className="cat-list-item"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      border: `1px solid ${active ? "#9333ea" : isDragOver ? "#16a34a" : "#eee"}`,
+                      background: active ? "rgba(147,51,234,0.08)" : "#fafafa",
+                      color: active ? "#6b21a8" : "#333",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      opacity: isDragging ? 0.5 : 1,
+                      touchAction: "none",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1, minWidth: 0 }}>
+                      <span className="cat-drag-handle" style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: "#aaa", fontSize: "16px", flexShrink: 0 }}>⋮⋮</span>
+                      <span className="cat-name" style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{category.name}</span>
+                      <span className="cat-count" style={{ color: "#888", flexShrink: 0, fontSize: "12px" }}>{category.subcategories.length} 子类 / {category.gameCount} 游戏</span>
+                    </div>
+                    <div className="cat-list-item-btns" style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                      <button onClick={(e) => { e.stopPropagation(); moveCategory(category.id, -1); }} disabled={!!saving || categories[0]?.id === category.id} style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #ddd", background: "#fff", cursor: saving || categories[0]?.id === category.id ? "not-allowed" : "pointer", fontSize: "12px" }} title="上移">↑</button>
+                      <button onClick={(e) => { e.stopPropagation(); moveCategory(category.id, 1); }} disabled={!!saving || categories[categories.length - 1]?.id === category.id} style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #ddd", background: "#fff", cursor: saving || categories[categories.length - 1]?.id === category.id ? "not-allowed" : "pointer", fontSize: "12px" }} title="下移">↓</button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {currentCategory && (
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+            <div className="subcategory-panel">
+              <div className="subcat-panel-header" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
                 <input
                   value={currentCategory.name}
                   onChange={(e) => {
@@ -268,7 +441,7 @@ export default function DatabaseCategoryManager() {
                       ),
                     );
                   }}
-                  style={{ ...inputStyle, flex: 1 }}
+                  style={inputStyle}
                 />
                 <button
                   onClick={() => {
@@ -303,7 +476,8 @@ export default function DatabaseCategoryManager() {
                   value={newSubcategoryName}
                   onChange={(e) => setNewSubcategoryName(e.target.value)}
                   placeholder="新增子分类"
-                  style={{ ...inputStyle, flex: 1 }}
+                  className="subcat-list-input"
+                  style={inputStyle}
                 />
                 <button
                   onClick={() =>
@@ -327,13 +501,24 @@ export default function DatabaseCategoryManager() {
                 {currentCategory.subcategories.length === 0 ? (
                   <p style={{ color: "#999", fontSize: "13px" }}>暂无子分类</p>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px", width: "100%" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     {currentCategory.subcategories.map((subcategory) => {
-                      const parentId =
-                        pendingParentBySubcategory[subcategory.id] || currentCategory.id;
+                      const parentId = pendingParentBySubcategory[subcategory.id] || currentCategory.id;
+                      const isDragging = draggingSubcategoryId === subcategory.id;
+                      const isDragOver = dragOverSubcategoryId === subcategory.id;
                       return (
                         <div
                           key={subcategory.id}
+                          data-subcategory-id={subcategory.id}
+                          draggable={!saving && !isMoving}
+                          onDragStart={() => handleSubcategoryDragStart(subcategory.id)}
+                          onDragOver={(e) => handleSubcategoryDragOver(e as unknown as MouseEvent<HTMLDivElement>, subcategory.id)}
+                          onDrop={(e) => handleSubcategoryDrop(e as unknown as MouseEvent<HTMLDivElement>, subcategory.id)}
+                          onDragEnd={handleSubcategoryDragEnd}
+                          onTouchStart={(e) => handleSubcategoryTouchStart(subcategory.id, e)}
+                          onTouchMove={handleSubcategoryTouchMove}
+                          onTouchEnd={handleSubcategoryTouchEnd}
+                          className="subcat-item"
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -341,80 +526,42 @@ export default function DatabaseCategoryManager() {
                             width: "100%",
                             padding: "8px 10px",
                             borderRadius: "8px",
-                            border: "1px solid #eee",
-                            background: "#fafafa",
-                            fontSize: "12px",
+                            border: `1px solid ${isDragOver ? "#16a34a" : "#eee"}`,
+                            background: isDragging ? "rgba(147,51,234,0.05)" : "#fafafa",
                             boxSizing: "border-box",
+                            opacity: isDragging ? 0.5 : 1,
+                            touchAction: "none",
                           }}
                         >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, color: "#333" }}>{subcategory.name}</div>
-                            <div style={{ color: "#777", marginTop: "2px" }}>
-                              {subcategory.gameCount} 个游戏
-                            </div>
+                          <span className="subcat-drag" style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: "#aaa", fontSize: "16px", flexShrink: 0 }}>⋮⋮</span>
+                          <div className="subcat-info" style={{ flex: 1, minWidth: 0 }}>
+                            <div className="subcat-name" style={{ fontWeight: 600, color: "#333" }}>{subcategory.name}</div>
+                            <div className="subcat-count" style={{ color: "#777", marginTop: "2px" }}>{subcategory.gameCount} 个游戏</div>
                           </div>
-                          <select
-                            value={parentId}
-                            onChange={(e) =>
-                              setPendingParentBySubcategory((prev) => ({
-                                ...prev,
-                                [subcategory.id]: Number(e.target.value),
-                              }))
-                            }
-                            disabled={isMoving}
-                            style={{
-                              ...inputStyle,
-                              width: "160px",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {categories.map((category) => (
-                              <option key={category.id} value={category.id}>
-                                父分类：{category.name}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => {
-                              const target = categories.find((item) => item.id === parentId);
-                              if (!target) return;
-                              handleMoveSubcategory(subcategory.id, currentCategory, target);
-                            }}
-                            disabled={
-                              !!saving || parentId === currentCategory.id
-                            }
-                            style={{ border: "none", background: "transparent", color: "#9333ea", cursor: saving ? "not-allowed" : "pointer", padding: "0 2px", fontSize: "12px" }}
-                          >
-                            {isMoving ? "迁移中" : "改父分类"}
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (guardMoving()) return;
-                              const next = prompt("新的子分类名称", subcategory.name)?.trim();
-                              if (!next || next === subcategory.name) return;
-                              confirmAndRun(
-                                `确认把子分类「${subcategory.name}」改成「${next}」？这会批量更新相关游戏数据。`,
-                                "rename-subcategory",
-                                () => renameDbSubcategory(currentCategory.id, subcategory.id, subcategory.name, next),
-                              );
-                            }}
-                            style={{ border: "none", background: "transparent", color: "#9333ea", cursor: "pointer", padding: "0 2px", fontSize: "12px" }}
-                          >
-                            改名
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (guardMoving()) return;
-                              if (confirm(`确认删除子分类「${subcategory.name}」？相关游戏会移除这个子分类值。`)) {
-                                run("delete-subcategory", () =>
-                                  deleteDbSubcategory(subcategory.id, currentCategory.name, subcategory.name),
-                                );
+                          <div className="subcat-move-btns" style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                            <button onClick={() => moveSubcategory(subcategory.id, -1)} disabled={!!saving || currentCategory.subcategories[0]?.id === subcategory.id} style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #ddd", background: "#fff", cursor: saving || currentCategory.subcategories[0]?.id === subcategory.id ? "not-allowed" : "pointer", fontSize: "12px" }} title="上移">↑</button>
+                            <button onClick={() => moveSubcategory(subcategory.id, 1)} disabled={!!saving || currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id} style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #ddd", background: "#fff", cursor: saving || currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id ? "not-allowed" : "pointer", fontSize: "12px" }} title="下移">↓</button>
+                          </div>
+                          <div className="subcat-actions">
+                            <select
+                              value={parentId}
+                              onChange={(e) =>
+                                setPendingParentBySubcategory((prev) => ({
+                                  ...prev,
+                                  [subcategory.id]: Number(e.target.value),
+                                }))
                               }
-                            }}
-                            style={{ border: "none", background: "transparent", color: "#ef4444", cursor: "pointer", padding: "0 2px", fontSize: "12px" }}
-                          >
-                            删除
-                          </button>
+                              disabled={isMoving}
+                              style={{ ...inputStyle, width: "120px", flexShrink: 0 }}
+                            >
+                              {categories.map((category) => (
+                                <option key={category.id} value={category.id}>父：{category.name}</option>
+                              ))}
+                            </select>
+                            <button className="subcat-move-btn" onClick={() => { const target = categories.find((item) => item.id === parentId); if (!target) return; handleMoveSubcategory(subcategory.id, currentCategory, target); }} disabled={!!saving || parentId === currentCategory.id} style={{ border: "none", background: "transparent", color: "#9333ea", cursor: saving || parentId === currentCategory.id ? "not-allowed" : "pointer", padding: "0 2px", fontSize: "12px" }}>{isMoving ? "迁移中" : "迁移"}</button>
+                            <button className="subcat-rename-btn" onClick={() => { if (guardMoving()) return; const next = prompt("新的子分类名称", subcategory.name)?.trim(); if (!next || next === subcategory.name) return; confirmAndRun(`确认把子分类「${subcategory.name}」改成「${next}」？这会批量更新相关游戏数据。`, "rename-subcategory", () => renameDbSubcategory(currentCategory.id, subcategory.id, subcategory.name, next)); }} style={{ border: "none", background: "transparent", color: "#9333ea", cursor: "pointer", padding: "0 2px", fontSize: "12px" }}>改名</button>
+                            <button className="subcat-delete-btn" onClick={() => { if (guardMoving()) return; if (confirm(`确认删除子分类「${subcategory.name}」？相关游戏会移除这个子分类值。`)) { run("delete-subcategory", () => deleteDbSubcategory(subcategory.id, currentCategory.name, subcategory.name)); } }} style={{ border: "none", background: "transparent", color: "#ef4444", cursor: "pointer", padding: "0 2px", fontSize: "12px" }}>删除</button>
+                          </div>
                         </div>
                       );
                     })}
@@ -427,8 +574,8 @@ export default function DatabaseCategoryManager() {
       )}
 
       {moveProgress && (
-        <div style={{ marginTop: "12px", padding: "10px 12px", borderRadius: "8px", background: "#fafafa", border: "1px solid #eee" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "6px", fontSize: "12px", color: "#555" }}>
+        <div className="move-progress-bar" style={{ marginTop: "12px", padding: "10px 12px", borderRadius: "8px", background: "#fafafa", border: "1px solid #eee" }}>
+          <div className="progress-text" style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "6px", fontSize: "12px", color: "#555" }}>
             <span>
               正在迁移「{moveProgress.subcategory}」：{moveProgress.from} → {moveProgress.to}
             </span>
@@ -437,11 +584,11 @@ export default function DatabaseCategoryManager() {
               {moveProgress.total > 0 ? ` (${Math.round((moveProgress.done / moveProgress.total) * 100)}%)` : ""}
             </span>
           </div>
-          <div style={{ height: "8px", borderRadius: "999px", background: "#eee", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: moveProgress.total > 0 ? `${Math.min(100, (moveProgress.done / moveProgress.total) * 100)}%` : "0%", background: "#9333ea", transition: "width 0.2s ease" }} />
+          <div className="progress-bar-track" style={{ height: "8px", borderRadius: "999px", background: "#eee", overflow: "hidden" }}>
+            <div className="progress-bar-fill" style={{ height: "100%", width: moveProgress.total > 0 ? `${Math.min(100, (moveProgress.done / moveProgress.total) * 100)}%` : "0%", background: "#9333ea", transition: "width 0.2s ease" }} />
           </div>
           {moveProgress.current && (
-            <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#888" }}>
+            <p className="progress-current" style={{ margin: "6px 0 0", fontSize: "12px", color: "#888" }}>
               当前处理游戏 ID：{moveProgress.current}
             </p>
           )}
@@ -449,7 +596,7 @@ export default function DatabaseCategoryManager() {
       )}
 
       {msg && (
-        <p style={{ margin: "12px 0 0", fontSize: "13px", color: msg.includes("成功") || msg.includes("完成") ? "#16a34a" : "#ef4444" }}>
+        <p className="msg-text" style={{ margin: "12px 0 0", fontSize: "13px", color: msg.includes("成功") || msg.includes("完成") ? "#16a34a" : "#ef4444" }}>
           {saving ? "处理中..." : msg}
         </p>
       )}

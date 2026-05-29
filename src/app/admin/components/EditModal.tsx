@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase, Game } from "@/lib/supabase";
-import { parsePinPriority, savePinPriority } from "@/lib/pinPriority";
-import { DbCategory, fetchDbCategoryOptions } from "@/lib/categoryTables";
+import { supabase } from "@/lib/supabase";
+import { Game } from "@/lib/games";
+import { parsePinPriority, savePinPriority } from "@/lib/site_links";
+import { DbCategory, fetchDbCategoryOptions } from "@/lib/categories";
 import { INPUT_STYLE, LABEL_STYLE } from "./constants";
 import ConfirmModal from "./ConfirmModal";
 

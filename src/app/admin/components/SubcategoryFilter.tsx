@@ -5,7 +5,7 @@ import {
   CAT_COLOR,
   CARD_STYLE_SM,
 } from "./constants";
-import type { DbCategory } from "@/lib/categoryTables";
+import type { DbCategory } from "@/lib/categories";
 
 interface SubcategoryFilterProps {
   selectedCategory: DbCategory | null;

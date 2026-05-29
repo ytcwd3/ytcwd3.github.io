@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase, Game } from "@/lib/supabase";
-import { HomeCategory, fetchHomeCategories } from "@/lib/homeDisplay";
-import { fetchPinPriorityMap } from "@/lib/pinPriority";
+import { supabase } from "@/lib/supabase";
+import { Game } from "@/lib/games";
+import { HomeCategory, fetchHomeCategories } from "@/lib/categories";
+import { fetchPinPriorityMap } from "@/lib/site_links";
 import SearchResults from "./components/SearchResults";
 import GuestbookPopup from "./components/Popups/GuestbookPopup";
 import EmulatorPopup from "./components/Popups/EmulatorPopup";
@@ -61,11 +62,7 @@ function sortGames(
   });
 }
 
-function buildGameQuery(
-  tagValue?: string,
-  keyword?: string,
-  pinned?: boolean,
-) {
+function buildGameQuery(tagValue?: string, keyword?: string, pinned?: boolean) {
   let query = supabase.from("games").select("*", { count: "exact" });
 
   if (typeof pinned === "boolean") {
@@ -86,7 +83,9 @@ function buildGameCountQuery(
   keyword?: string,
   pinned?: boolean,
 ) {
-  let query = supabase.from("games").select("id", { count: "exact", head: true });
+  let query = supabase
+    .from("games")
+    .select("id", { count: "exact", head: true });
 
   if (typeof pinned === "boolean") {
     query = query.eq("pinned", pinned);
@@ -116,7 +115,9 @@ export default function HomePage() {
   const [qrModalSrc, setQrModalSrc] = useState("");
   const [qrModalTitle, setQrModalTitle] = useState("");
   const [showPopups, setShowPopups] = useState<Record<string, boolean>>({});
-  const [pinPriorityMap, setPinPriorityMap] = useState<Record<number, number>>({});
+  const [pinPriorityMap, setPinPriorityMap] = useState<Record<number, number>>(
+    {},
+  );
   const [homeCategories, setHomeCategories] = useState<HomeCategory[]>([]);
 
   // 分页相关
@@ -156,7 +157,11 @@ export default function HomePage() {
     const pageEnd = pageStart + PAGE_SIZE;
 
     const pinnedRes = await buildGameQuery(tagValue, keyword, true);
-    const { data: pinnedData, error: pinnedError, count: pinnedCountRaw } = await pinnedRes;
+    const {
+      data: pinnedData,
+      error: pinnedError,
+      count: pinnedCountRaw,
+    } = await pinnedRes;
     if (pinnedError) throw pinnedError;
 
     const sortedPinned = sortGames(
@@ -165,7 +170,7 @@ export default function HomePage() {
       pinPriorityMap,
     ).map((game) => ({
       ...game,
-      pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null,
+      pinPriority: game.pinned ? (pinPriorityMap[game.id] ?? 0) : null,
     }));
 
     const pinnedCount = sortedPinned.length;
@@ -180,8 +185,12 @@ export default function HomePage() {
       let nonPinnedQuery = buildGameQuery(tagValue, keyword, false);
       nonPinnedQuery =
         sort === "hot"
-          ? nonPinnedQuery.order("hot", { ascending: false, nullsFirst: false }).order("id", { ascending: false })
-          : nonPinnedQuery.order("updatedate", { ascending: false }).order("id", { ascending: false });
+          ? nonPinnedQuery
+              .order("hot", { ascending: false, nullsFirst: false })
+              .order("id", { ascending: false })
+          : nonPinnedQuery
+              .order("updatedate", { ascending: false })
+              .order("id", { ascending: false });
 
       const {
         data: nonPinnedData,
@@ -272,7 +281,10 @@ export default function HomePage() {
   function loadPage(page: number) {
     if (loading) return;
 
-    const nextPage = Math.min(Math.max(1, page), Math.ceil(totalCount / PAGE_SIZE) || 1);
+    const nextPage = Math.min(
+      Math.max(1, page),
+      Math.ceil(totalCount / PAGE_SIZE) || 1,
+    );
     setLoading(true);
     setCurrentPage(nextPage);
 
@@ -331,9 +343,7 @@ export default function HomePage() {
 
   return (
     <>
-      <div
-        className="container"
-      >
+      <div className="container">
         <h1 className="title">单游仓鼠-主机掌机+PC一键检索</h1>
         <p className="sub-title">缺游戏，资源有问题-B站，QQ群联系均可！</p>
 
@@ -346,7 +356,9 @@ export default function HomePage() {
               data-category={category.name}
               onClick={() => {
                 setSelectedCategory(category.name);
-                setShowPanel(showPanel === category.name ? null : category.name);
+                setShowPanel(
+                  showPanel === category.name ? null : category.name,
+                );
               }}
             >
               {category.name}
@@ -482,6 +494,7 @@ export default function HomePage() {
         <div style={{ display: showResult ? "block" : "none" }}>
           <SearchResults
             games={filteredGames}
+            homeCategories={homeCategories}
             loading={loading}
             currentPage={currentPage}
             totalCount={totalCount}
@@ -587,9 +600,7 @@ export default function HomePage() {
           style={{ display: "flex" }}
           onClick={() => togglePopup("popup5")}
         >
-          <UpdateRecordPopup
-            onClose={() => togglePopup("popup5")}
-          />
+          <UpdateRecordPopup onClose={() => togglePopup("popup5")} />
         </div>
       )}
 

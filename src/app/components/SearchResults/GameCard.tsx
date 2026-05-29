@@ -1,10 +1,12 @@
-import { Game } from "@/lib/supabase";
+import { Game } from "@/lib/games";
+import type { HomeCategory } from "@/lib/categories";
 import { QRCodeSVG } from "qrcode.react";
 import { useState, Component, ReactNode } from "react";
 
 interface GameCardProps {
   game: Game;
   index: number;
+  homeCategories: HomeCategory[];
   onOpenQrModal: (src: string, title: string) => void;
 }
 
@@ -83,10 +85,19 @@ function trackDownload(gameId: number, provider: "quark" | "baidu" | "thunder") 
   });
 }
 
-export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) {
+export default function GameCard({
+  game,
+  index,
+  homeCategories,
+  onOpenQrModal,
+}: GameCardProps) {
   const catColor = "#9333ea";
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
+  const homeCategoryName =
+    homeCategories.find((category) =>
+      category.tags.includes(game.subcategory?.[0] || ""),
+    )?.name || game.category?.[0] || "";
 
   function getPinPriority() {
     if (!game.pinned) return null;
@@ -157,13 +168,29 @@ export default function GameCard({ game, index, onOpenQrModal }: GameCardProps) 
           <span className="game-index" style={{ color: catColor }}>{index + 1}.</span>
           <span className="game-name-text">{game.name}</span>
           {game.pinned && (
-            <span className="game-pinned-tag">{`置顶 ${getPinPriority()}`}</span>
+            <span className="game-pinned-tag">置顶</span>
           )}
-          <span className="game-cat-tag" style={{ background: `${catColor}18`, color: catColor, border: `1px solid ${catColor}40` }}>
-            {game.category?.[0] || ""}
+        </div>
+        <div className="game-category-row">
+          <span
+            className="game-cat-tag"
+            style={{
+              background: `${catColor}22`,
+              color: catColor,
+              border: `1px solid ${catColor}66`,
+            }}
+          >
+            {homeCategoryName}
           </span>
           {game.subcategory?.[0] && (
-            <span className="game-cat-tag" style={{ background: "#f0f0f0", color: "#666", border: "1px solid #ddd" }}>
+            <span
+              className="game-cat-tag"
+              style={{
+                background: "rgba(255,255,255,0.92)",
+                color: "#555",
+                border: "1px solid #cfcfcf",
+              }}
+            >
               {game.subcategory[0]}
             </span>
           )}

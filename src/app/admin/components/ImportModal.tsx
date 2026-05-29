@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { supabase, Game } from "@/lib/supabase";
-import { DbCategory, fetchDbCategoryOptions } from "@/lib/categoryTables";
+import { supabase } from "@/lib/supabase";
+import { Game } from "@/lib/games";
+import { DbCategory, fetchDbCategoryOptions } from "@/lib/categories";
 
 interface ImportModalProps {
   onClose: () => void;

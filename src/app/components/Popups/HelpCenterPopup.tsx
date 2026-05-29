@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase, SiteLink } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { SiteLink } from "@/lib/site_links";
 
 interface HelpCenterPopupProps {
   onClose: () => void;

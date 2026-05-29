@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase, Guestbook } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { Guestbook } from "@/lib/guestbook";
 
 interface GuestbookPopupProps {
   onClose?: () => void;
@@ -330,7 +331,7 @@ export default function GuestbookPopup({
               }}
             >
               {
-                "有任何问题或建议欢迎留言\n如有网站加载慢或者是异常情况，请联系 qq:786658882   微信:Ytc3334  "
+                "有任何问题或建议欢迎留言\n如有网站加载慢或者是异常情况，请联系 qq:786658882"
               }
             </p>
           </div>

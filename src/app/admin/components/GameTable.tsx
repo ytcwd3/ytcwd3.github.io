@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase, Game } from "@/lib/supabase";
-import { savePinPriority } from "@/lib/pinPriority";
+import { supabase } from "@/lib/supabase";
+import { Game } from "@/lib/games";
+import { savePinPriority } from "@/lib/site_links";
 import {
   CAT_RGBA,
   CARD_STYLE,
@@ -248,7 +249,7 @@ export default function GameTable({
                             <img
                               src={game.image}
                               alt={game.name}
-                              className="admin-table-thumb zoomable-game-image"
+                              className="zoomable-game-image"
                               style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
                               onError={(e) => {
                                 const el = e.target as HTMLImageElement;

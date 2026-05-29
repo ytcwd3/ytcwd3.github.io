@@ -29,9 +29,9 @@ export default function SiteLinksPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "transparent" }}>
       <AdminHeader user={user} />
-      <div style={{ padding: "20px" }}>
+      <div className="admin-category-page" style={{ padding: "20px" }}>
         <SiteLinksManager />
       </div>
     </div>

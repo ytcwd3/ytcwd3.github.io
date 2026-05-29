@@ -4,7 +4,7 @@ import {
   CAT_COLOR,
   GRADIENT,
 } from "./constants";
-import type { DbCategory } from "@/lib/categoryTables";
+import type { DbCategory } from "@/lib/categories";
 
 interface StatsCardsProps {
   categories: DbCategory[];

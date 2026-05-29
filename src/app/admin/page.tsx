@@ -2,8 +2,9 @@
 import "./admin.css";
 
 import { useState, useEffect } from "react";
-import { supabase, Game } from "@/lib/supabase";
-import { fetchPinPriorityMap } from "@/lib/pinPriority";
+import { supabase } from "@/lib/supabase";
+import { Game } from "@/lib/games";
+import { fetchPinPriorityMap } from "@/lib/site_links";
 import { PAGE_SIZE } from "./components/constants";
 import AdminHeader from "./components/Header";
 import StatsCards from "./components/StatsCards";
@@ -14,7 +15,11 @@ import EditModal from "./components/EditModal";
 import ImportModal from "./components/ImportModal";
 import ConfirmModal from "./components/ConfirmModal";
 import ImageMatchModal from "./components/ImageMatchModal";
-import { DbCategory, fetchDbCategories, fetchDbCategoryOptions } from "@/lib/categoryTables";
+import {
+  DbCategory,
+  fetchDbCategories,
+  fetchDbCategoryOptions,
+} from "@/lib/categories";
 
 function invalidateAdminMetaCache() {
   localStorage.removeItem("admin_game_meta");
@@ -536,7 +541,7 @@ export default function AdminDashboard() {
     <>
       <AdminHeader user={user} />
 
-      <div className="admin-container" style={{ maxWidth: 1200, margin: "20px auto", padding: "0 20px" }}>
+      <div className="admin-container" style={{ maxWidth: 1200, margin: "20px auto", padding: "0 20px", background: "transparent" }}>
         <StatsCards
           className="stats-cards"
           categories={categories}
