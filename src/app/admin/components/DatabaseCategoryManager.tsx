@@ -352,7 +352,7 @@ export default function DatabaseCategoryManager() {
           className="category-manager-layout"
           style={{
             display: "grid",
-            gridTemplateColumns: "320px minmax(0, 1fr)",
+            gridTemplateColumns: "380px minmax(0, 1fr)",
             alignItems: "start",
             gap: "16px",
           }}
@@ -554,7 +554,7 @@ export default function DatabaseCategoryManager() {
                 {currentCategory.subcategories.length === 0 ? (
                   <p style={{ color: "#999", fontSize: "13px" }}>暂无子分类</p>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
                     {currentCategory.subcategories.map((subcategory) => {
                       const parentId = pendingParentBySubcategory[subcategory.id] || currentCategory.id;
                       const isDragging = draggingSubcategoryId === subcategory.id;
