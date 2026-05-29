@@ -185,6 +185,56 @@
     -webkit-backdrop-filter: none !important;
     background: rgba(255, 255, 255, 0.95) !important;
   }
+
+  /* 分类管理移动端 */
+  .category-manager-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+  .category-manager-layout > div:first-child {
+    min-width: 0 !important;
+  }
+  .cat-list-item {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 链接管理移动端 */
+  .site-links-filter {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .site-links-filter button {
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+  }
+  .site-links-form {
+    padding: 12px !important;
+  }
+  .site-links-form-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .site-links-form-row > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .site-links-select {
+    width: 100% !important;
+  }
+  .site-links-form-row button {
+    width: 100% !important;
+    padding: 8px !important;
+    font-size: 13px !important;
+  }
+  .site-links-msg {
+    font-size: 12px !important;
+    text-align: center !important;
+  }
+  .site-links-table {
+    min-width: 700px;
+  }
 }
 
 /* 超小屏幕（480px以下）：表格强制卡片化 */
