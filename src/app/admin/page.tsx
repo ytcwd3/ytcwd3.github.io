@@ -14,12 +14,7 @@ import GameTable from "./components/GameTable";
 import EditModal from "./components/EditModal";
 import ImportModal from "./components/ImportModal";
 import ConfirmModal from "./components/ConfirmModal";
-import ImageMatchModal from "./components/ImageMatchModal";
-import {
-  DbCategory,
-  fetchDbCategories,
-  fetchDbCategoryOptions,
-} from "@/lib/categories";
+import { DbCategory, fetchDbCategories } from "@/lib/categories";
 
 function invalidateAdminMetaCache() {
   localStorage.removeItem("admin_game_meta");
@@ -45,41 +40,6 @@ function getPinPriority(
   return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
 }
 
-async function fetchAdminGamesPageFast(params: {
-  categoryId: number | null;
-  subcategoryId: number | "all";
-  keyword: string;
-  sort: "default" | "name" | "updatedate_desc" | "updatedate_asc";
-  page: number;
-  pageSize: number;
-}) {
-  const args = {
-    p_category_id: params.categoryId,
-    p_subcategory_id: params.subcategoryId === "all" ? null : params.subcategoryId,
-    p_keyword: params.keyword || null,
-    p_page: params.page,
-    p_page_size: params.pageSize,
-  };
-
-  const sortedArgs = {
-    ...args,
-    p_sort: params.sort,
-  };
-
-  const sortedResult = await supabase.rpc("get_admin_games_page_sorted_fast", sortedArgs);
-  const { data, error } =
-    sortedResult.error && params.sort === "default"
-      ? await supabase.rpc("get_admin_games_page_fast", args)
-      : sortedResult;
-
-  if (error || !data || typeof data !== "object") return null;
-  const payload = data as any;
-  return {
-    data: Array.isArray(payload.data) ? (payload.data as Game[]) : [],
-    total: Number(payload.total || 0),
-  };
-}
-
 export default function AdminDashboard() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,7 +56,6 @@ export default function AdminDashboard() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showImageMatchModal, setShowImageMatchModal] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
 
   // 删除确认
@@ -137,7 +96,6 @@ export default function AdminDashboard() {
     setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
     const dbCategories = await loadCategories();
     applyFilters(1, dbCategories[0]?.id ?? null, "all");
-    refreshCategoryCounts();
 
     // 监听置顶切换刷新事件
     const handleRefresh = () => applyFilters(currentPage);
@@ -146,28 +104,19 @@ export default function AdminDashboard() {
   }
 
   async function loadCategories() {
-    const dbCategories = await fetchDbCategoryOptions();
-    setCategories(dbCategories);
-    if (!selectedCategoryId && dbCategories.length > 0) {
-      setSelectedCategoryId(dbCategories[0].id);
+    const countedCategories = await fetchDbCategories();
+    setCategories(countedCategories);
+    if (!selectedCategoryId && countedCategories.length > 0) {
+      setSelectedCategoryId(countedCategories[0].id);
       setSelectedSubcategoryId("all");
     } else if (selectedCategoryId) {
-      const exists = dbCategories.some((category) => category.id === selectedCategoryId);
-      if (!exists && dbCategories.length > 0) {
-        setSelectedCategoryId(dbCategories[0].id);
+      const exists = countedCategories.some((category) => category.id === selectedCategoryId);
+      if (!exists && countedCategories.length > 0) {
+        setSelectedCategoryId(countedCategories[0].id);
         setSelectedSubcategoryId("all");
       }
     }
-    return dbCategories;
-  }
-
-  async function refreshCategoryCounts() {
-    try {
-      const countedCategories = await fetchDbCategories();
-      setCategories(countedCategories);
-    } catch {
-      // 数量加载失败不阻塞数据管理。
-    }
+    return countedCategories;
   }
 
   async function applyFilters(
@@ -201,83 +150,38 @@ export default function AdminDashboard() {
         return query;
       }
 
-      const fastPage = await fetchAdminGamesPageFast({
-        categoryId: curCat || null,
-        subcategoryId: curSub,
-        keyword: curKeyword,
-        sort: curSort,
-        page,
-        pageSize: PAGE_SIZE,
-      });
+      const pinPriorityMap = await fetchPinPriorityMap();
       if ((window as any).__reqId !== reqId) return;
-      if (fastPage) {
-        setFilteredGames(fastPage.data);
-        setTotalCount(fastPage.total);
-        setCurrentPage(page);
-        return;
-      }
 
       if (curSort === "default") {
-        const pinPriorityMap = await fetchPinPriorityMap();
-        if ((window as any).__reqId !== reqId) return;
-
-        const pinnedQuery = applyGameFilters(
-          supabase.from("games").select("*", { count: "planned" }).eq("pinned", true),
+        const gamesQuery = applyGameFilters(
+          supabase.from("games").select("*", { count: "planned" }),
         );
-        const { data: pinnedRaw, error: pinnedError, count: pinnedCountRaw } =
-          await pinnedQuery.order("id", { ascending: true });
+        const { data, error, count } = await gamesQuery
+          .order("pinned", { ascending: false, nullsFirst: false })
+          .order("id", { ascending: true })
+          .range(from, to);
         if ((window as any).__reqId !== reqId) return;
-        if (pinnedError) throw pinnedError;
+        if (error) throw error;
 
-        const pinnedGames = ((pinnedRaw || []) as Game[])
-          .sort((a, b) => {
-            const pinOrderDiff =
-              getPinPriority(a, pinPriorityMap) - getPinPriority(b, pinPriorityMap);
-            if (pinOrderDiff !== 0) return pinOrderDiff;
-            return a.id - b.id;
-          })
-          .map((game) => ({
-            ...game,
-            pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null,
-          }));
-
-        const pinnedCount = pinnedCountRaw || pinnedGames.length;
-        const visiblePinned = pinnedGames.slice(from, to + 1);
-        const remainingSlots = PAGE_SIZE - visiblePinned.length;
-        const nonPinnedOffset = Math.max(0, from - pinnedCount);
-
-        let nonPinnedGames: Game[] = [];
-        let nonPinnedCount = 0;
-        if (remainingSlots > 0) {
-          const nonPinnedQuery = applyGameFilters(
-            supabase.from("games").select("*", { count: "planned" }).eq("pinned", false),
-          );
-          const {
-            data: nonPinnedRaw,
-            error: nonPinnedError,
-            count: nonPinnedCountRaw,
-          } = await nonPinnedQuery
-            .order("id", { ascending: true })
-            .range(nonPinnedOffset, nonPinnedOffset + remainingSlots - 1);
-          if ((window as any).__reqId !== reqId) return;
-          if (nonPinnedError) throw nonPinnedError;
-          nonPinnedGames = ((nonPinnedRaw || []) as Game[]).map((game) => ({
-            ...game,
-            pinPriority: null,
-          }));
-          nonPinnedCount = nonPinnedCountRaw || 0;
-        } else {
-          const nonPinnedCountQuery = applyGameFilters(
-            supabase.from("games").select("id", { count: "planned", head: true }).eq("pinned", false),
-          );
-          const { count, error } = await nonPinnedCountQuery;
-          if ((window as any).__reqId !== reqId) return;
-          if (error) throw error;
-          nonPinnedCount = count || 0;
-        }
-
-        setFilteredGames([...visiblePinned, ...nonPinnedGames]);
-        setTotalCount(pinnedCount + nonPinnedCount);
+        setFilteredGames(
+          ((data || []) as Game[])
+            .sort((a, b) => {
+              if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+              if (a.pinned && b.pinned) {
+                const pinOrderDiff =
+                  getPinPriority(a, pinPriorityMap) -
+                  getPinPriority(b, pinPriorityMap);
+                if (pinOrderDiff !== 0) return pinOrderDiff;
+              }
+              return a.id - b.id;
+            })
+            .map((game) => ({
+              ...game,
+              pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null,
+            })),
+        );
+        setTotalCount(count || 0);
         setCurrentPage(page);
         return;
       }
@@ -314,9 +218,6 @@ export default function AdminDashboard() {
         if (data.length < META_BATCH) break;
         metaPage++;
       }
-
-      const pinPriorityMap = await fetchPinPriorityMap();
-      if ((window as any).__reqId !== reqId) return;
 
       const sortedMeta = [...metaData].sort((a, b) => {
         if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
@@ -445,7 +346,7 @@ export default function AdminDashboard() {
       "封面图片",
       "视频链接",
     ];
-    const dbCategories = categories.length > 0 ? categories : await fetchDbCategoryOptions();
+    const dbCategories = categories.length > 0 ? categories : await fetchDbCategories();
     const wb = XLSX.utils.book_new();
 
     dbCategories.forEach((category) => {
@@ -568,7 +469,6 @@ export default function AdminDashboard() {
           onOpenAdd={openAddModal}
           onDownloadTemplate={downloadTemplate}
           onRefresh={handleRefresh}
-          onOpenImageMatch={() => setShowImageMatchModal(true)}
         />
 
         <GameTable
@@ -603,18 +503,6 @@ export default function AdminDashboard() {
           onClose={() => setShowImportModal(false)}
           onImported={() => {
             setShowImportModal(false);
-            invalidateAdminMetaCache();
-            loadCategories();
-            applyFilters(currentPage);
-          }}
-        />
-      )}
-
-      {showImageMatchModal && (
-        <ImageMatchModal
-          onClose={() => setShowImageMatchModal(false)}
-          onDone={() => {
-            setShowImageMatchModal(false);
             invalidateAdminMetaCache();
             loadCategories();
             applyFilters(currentPage);

@@ -1,6 +1,5 @@
 import { supabase } from "./supabase";
 import {
-  fetchGameCategoryCountsFast,
   fetchGameCategoryRows,
   updateGameRows,
 } from "./games";
@@ -44,6 +43,8 @@ function replaceValue(
 ) {
   return uniq((values || []).map((value) => (value === oldValue ? newValue : value)));
 }
+
+let dbCategoriesPending: Promise<DbCategory[]> | null = null;
 
 // 读取 categories 和 subcategories，用于首页分类导航展示。
 export async function fetchHomeCategories(): Promise<HomeCategory[]> {
@@ -125,42 +126,67 @@ export async function fetchDbCategoryOptions(): Promise<DbCategory[]> {
 
 // 读取分类树，并结合 games 统计每个父分类和子分类下的游戏数量。
 export async function fetchDbCategories(): Promise<DbCategory[]> {
-  const [categoriesRaw, subcategoriesRaw, games] = await Promise.all([
-    fetchCategoriesRaw(),
-    fetchSubcategoriesRaw(),
-    fetchGameCategoryCountsFast(),
-  ]);
-
-  const categories = buildDbCategoryTree(categoriesRaw, subcategoriesRaw);
-  const categoryCounts = new Map<number, number>();
-  const subcategoryCounts = new Map<number, number>();
-
-  for (const game of games) {
-    if (game.category_id) {
-      categoryCounts.set(
-        game.category_id,
-        (categoryCounts.get(game.category_id) || 0) + 1,
-      );
-    }
-    if (game.subcategory_id) {
-      subcategoryCounts.set(
-        game.subcategory_id,
-        (subcategoryCounts.get(game.subcategory_id) || 0) + 1,
-      );
-    }
+  if (dbCategoriesPending) {
+    return dbCategoriesPending.then((data) =>
+      data.map((category) => ({
+        ...category,
+        subcategories: category.subcategories.map((subcategory) => ({ ...subcategory })),
+      })),
+    );
   }
 
-  for (const category of categories) {
-    category.gameCount = categoryCounts.get(category.id) || 0;
-    category.subcategories = category.subcategories
-      .map((subcategory) => ({
-        ...subcategory,
-        gameCount: subcategoryCounts.get(subcategory.id) || 0,
-      }))
-      .sort((a, b) => a.id - b.id);
-  }
+  dbCategoriesPending = (async () => {
+    const [categoriesRaw, subcategoriesRaw, countsResult] = await Promise.all([
+      fetchCategoriesRaw(),
+      fetchSubcategoriesRaw(),
+      supabase.rpc("get_admin_category_counts"),
+    ]);
 
-  return categories;
+    if (countsResult.error) {
+      console.warn("分类数量统计加载失败，不阻塞分类管理:", countsResult.error);
+    }
+
+    const categories = buildDbCategoryTree(categoriesRaw, subcategoriesRaw);
+    const categoryCounts = new Map<number, number>();
+    const subcategoryCounts = new Map<number, number>();
+    const counts = countsResult.error ? [] : (countsResult.data || []) as Array<{
+      category_id: number | null;
+      subcategory_id: number | null;
+      category_game_count: number | null;
+      subcategory_game_count: number | null;
+    }>;
+
+    for (const row of counts) {
+      if (row.category_id) {
+        categoryCounts.set(row.category_id, row.category_game_count || 0);
+      }
+      if (row.subcategory_id) {
+        subcategoryCounts.set(row.subcategory_id, row.subcategory_game_count || 0);
+      }
+    }
+
+    for (const category of categories) {
+      category.gameCount = categoryCounts.get(category.id) || 0;
+      category.subcategories = category.subcategories
+        .map((subcategory) => ({
+          ...subcategory,
+          gameCount: subcategoryCounts.get(subcategory.id) || 0,
+        }))
+        .sort((a, b) => a.id - b.id);
+    }
+
+    return categories;
+  })();
+
+  try {
+    const data = await dbCategoriesPending;
+    return data.map((category) => ({
+      ...category,
+      subcategories: category.subcategories.map((subcategory) => ({ ...subcategory })),
+    }));
+  } finally {
+    dbCategoriesPending = null;
+  }
 }
 
 // 获取 categories 下一条排序值。

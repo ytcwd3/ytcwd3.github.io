@@ -15,7 +15,6 @@ interface ToolbarProps {
   onOpenAdd: () => void;
   onDownloadTemplate: () => void;
   onRefresh: () => void;
-  onOpenImageMatch: () => void;
   className?: string;
 }
 
@@ -30,7 +29,6 @@ export default function Toolbar({
   onOpenAdd,
   onDownloadTemplate,
   onRefresh,
-  onOpenImageMatch,
   className,
 }: ToolbarProps) {
   return (
@@ -148,26 +146,6 @@ export default function Toolbar({
         }}
       >
         📥 导入Excel
-      </button>
-
-      <button
-        className="toolbar-btn"
-        onClick={onOpenImageMatch}
-        style={{
-          padding: "7px 16px",
-          background: "linear-gradient(90deg, #2563eb, #7c3aed)",
-          color: "white",
-          border: "none",
-          borderRadius: "var(--radius-sm)",
-          cursor: "pointer",
-          fontSize: "13px",
-          fontWeight: 600,
-          boxShadow: "0 3px 8px rgba(37,99,235,0.25)",
-          transition: "all 0.2s",
-          whiteSpace: "nowrap",
-        }}
-      >
-        🎨 匹配图片
       </button>
 
       <button

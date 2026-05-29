@@ -389,18 +389,23 @@ export default function GameTable({
                         <button
                           onClick={async (e) => {
                             e.stopPropagation();
-                            const newPinned = !(game as any).pinned;
-                            await supabase
-                              .from("games")
-                              .update({ pinned: newPinned })
-                              .eq("id", game.id);
-                            await savePinPriority(
-                              game.id,
-                              newPinned,
-                              getPinPriority(game) ?? 0,
-                            );
-                            // Trigger parent refresh by dispatching a custom event
-                            window.dispatchEvent(new CustomEvent("adminRefreshGames"));
+                            try {
+                              const newPinned = !(game as any).pinned;
+                              const { error } = await supabase
+                                .from("games")
+                                .update({ pinned: newPinned })
+                                .eq("id", game.id);
+                              if (error) throw error;
+                              await savePinPriority(
+                                game.id,
+                                newPinned,
+                                getPinPriority(game) ?? 0,
+                              );
+                              // Trigger parent refresh by dispatching a custom event
+                              window.dispatchEvent(new CustomEvent("adminRefreshGames"));
+                            } catch (error: any) {
+                              alert("置顶操作失败: " + (error?.message || String(error)));
+                            }
                           }}
                           title={game.pinned ? "取消置顶" : "设为置顶"}
                           style={{

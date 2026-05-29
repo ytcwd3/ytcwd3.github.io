@@ -20,7 +20,7 @@ export interface DbSubcategory {
 }
 
 // 子分类迁移时的进度信息。
-export interface CategoryMoveProgress {
+interface CategoryMoveProgress {
   total: number;
   done: number;
   current?: number;

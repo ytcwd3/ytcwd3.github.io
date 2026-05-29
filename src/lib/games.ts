@@ -25,16 +25,10 @@ export interface Game {
   hot?: number;
 }
 
-export type GameCategoryRow = {
+type GameCategoryRow = {
   id: number;
   category: string[] | null;
   subcategory: string[] | null;
-  category_id?: number | null;
-  subcategory_id?: number | null;
-};
-
-export type GameCategoryCountRow = {
-  id: number;
   category_id?: number | null;
   subcategory_id?: number | null;
 };
@@ -62,15 +56,6 @@ export async function fetchGameCategoryRows() {
   }
 
   return rows;
-}
-
-// 读取 games 的分类统计字段，用于统计每个父分类/子分类下的游戏数量。
-export async function fetchGameCategoryCountsFast() {
-  const { data, error } = await supabase
-    .from("games")
-    .select("id, category_id, subcategory_id");
-  if (error) throw error;
-  return (data || []) as GameCategoryCountRow[];
 }
 
 // 批量更新 games 中符合条件的分类字段。
@@ -106,5 +91,3 @@ export async function updateGameRows(
     if (error) throw error;
   }
 }
-
-export { trackDownload, type DownloadEvent } from "./download_events";

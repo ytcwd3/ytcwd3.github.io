@@ -21,5 +21,7 @@ export async function logCategoryOperation(params: {
     after_data: params.afterData ?? null,
     actor: OPERATOR_NAME,
   });
-  if (error) throw error;
+  if (error) {
+    console.warn("分类操作日志写入失败，不阻塞主操作:", error);
+  }
 }

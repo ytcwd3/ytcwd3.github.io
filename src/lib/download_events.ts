@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 
 // download_events 下载统计
 // 每次点击下载按钮时写入一条记录，用于统计游戏在不同平台的下载行为。
-export interface DownloadEvent {
+interface DownloadEvent {
   id: number;
   game_id: number;
   platform: string;

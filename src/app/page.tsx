@@ -25,49 +25,9 @@ function parseUpdateDate(value: string) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function getPinPriority(game: Game, pinPriorityMap: Record<number, number>) {
-  if (!game.pinned) return Number.MAX_SAFE_INTEGER;
-  const raw = pinPriorityMap[game.id];
-  return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
-}
-
-function sortGames(
-  games: Game[],
-  sortBy: "updatedate" | "hot",
-  pinPriorityMap: Record<number, number>,
-) {
-  return [...games].sort((a, b) => {
-    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
-    if (a.pinned && b.pinned) {
-      const pinOrderDiff =
-        getPinPriority(a, pinPriorityMap) - getPinPriority(b, pinPriorityMap);
-      if (pinOrderDiff !== 0) return pinOrderDiff;
-    }
-
-    if (sortBy === "hot") {
-      const hotDiff = (b.hot || 0) - (a.hot || 0);
-      if (hotDiff !== 0) return hotDiff;
-      return b.id - a.id;
-    }
-
-    const dateA = parseUpdateDate(a.updatedate);
-    const dateB = parseUpdateDate(b.updatedate);
-    if (!dateA && !dateB) return b.id - a.id;
-    if (!dateA) return 1;
-    if (!dateB) return -1;
-    if (dateA.getTime() !== dateB.getTime()) {
-      return dateB.getTime() - dateA.getTime();
-    }
-    return b.id - a.id;
-  });
-}
-
-function buildGameQuery(tagValue?: string, keyword?: string, pinned?: boolean) {
+function buildGameQuery(tagValue?: string, keyword?: string) {
   let query = supabase.from("games").select("*", { count: "exact" });
 
-  if (typeof pinned === "boolean") {
-    query = query.eq("pinned", pinned);
-  }
   if (tagValue) {
     query = query.contains("subcategory", [tagValue]);
   }
@@ -78,11 +38,7 @@ function buildGameQuery(tagValue?: string, keyword?: string, pinned?: boolean) {
   return query;
 }
 
-function buildGameCountQuery(
-  tagValue?: string,
-  keyword?: string,
-  pinned?: boolean,
-) {
+function buildGameCountQuery(tagValue?: string, keyword?: string, pinned?: boolean) {
   let query = supabase
     .from("games")
     .select("id", { count: "exact", head: true });
@@ -100,6 +56,35 @@ function buildGameCountQuery(
   return query;
 }
 
+function getPinPriority(
+  game: { id: number; pinned?: boolean },
+  pinPriorityMap: Record<number, number>,
+) {
+  if (!game.pinned) return Number.MAX_SAFE_INTEGER;
+  const raw = pinPriorityMap[game.id];
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+}
+
+function sortRegularGames(games: Game[], sort: "updatedate" | "hot") {
+  return [...games].sort((a, b) => {
+    if (sort === "hot") {
+      const hotDiff = (b.hot || 0) - (a.hot || 0);
+      if (hotDiff !== 0) return hotDiff;
+      return b.id - a.id;
+    }
+
+    const dateA = parseUpdateDate(a.updatedate);
+    const dateB = parseUpdateDate(b.updatedate);
+    if (!dateA && !dateB) return b.id - a.id;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    if (dateA.getTime() !== dateB.getTime()) {
+      return dateB.getTime() - dateA.getTime();
+    }
+    return b.id - a.id;
+  });
+}
+
 export default function HomePage() {
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -115,9 +100,6 @@ export default function HomePage() {
   const [qrModalSrc, setQrModalSrc] = useState("");
   const [qrModalTitle, setQrModalTitle] = useState("");
   const [showPopups, setShowPopups] = useState<Record<string, boolean>>({});
-  const [pinPriorityMap, setPinPriorityMap] = useState<Record<number, number>>(
-    {},
-  );
   const [homeCategories, setHomeCategories] = useState<HomeCategory[]>([]);
 
   // 分页相关
@@ -135,18 +117,12 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    fetchPinPriorityMap()
-      .then(setPinPriorityMap)
-      .catch(() => setPinPriorityMap({}));
-  }, []);
-
-  useEffect(() => {
     fetchHomeCategories()
       .then(setHomeCategories)
       .catch(() => setHomeCategories([]));
   }, []);
 
-  async function fetchGamesWithLocalSort(
+  async function fetchGamesPage(
     page: number,
     sort: "updatedate" | "hot",
     tagValue?: string,
@@ -155,66 +131,75 @@ export default function HomePage() {
     const safePage = Math.max(1, page);
     const pageStart = (safePage - 1) * PAGE_SIZE;
     const pageEnd = pageStart + PAGE_SIZE;
+    const pinPriorityMap = await fetchPinPriorityMap();
 
-    const pinnedRes = await buildGameQuery(tagValue, keyword, true);
     const {
       data: pinnedData,
       error: pinnedError,
       count: pinnedCountRaw,
-    } = await pinnedRes;
+    } = await buildGameQuery(tagValue, keyword).eq("pinned", true);
     if (pinnedError) throw pinnedError;
 
-    const sortedPinned = sortGames(
-      (pinnedData || []) as Game[],
-      sort,
-      pinPriorityMap,
-    ).map((game) => ({
-      ...game,
-      pinPriority: game.pinned ? (pinPriorityMap[game.id] ?? 0) : null,
-    }));
+    const pinnedGames = ((pinnedData || []) as Game[])
+      .sort((a, b) => {
+        const pinOrderDiff =
+          getPinPriority(a, pinPriorityMap) - getPinPriority(b, pinPriorityMap);
+        if (pinOrderDiff !== 0) return pinOrderDiff;
+        return a.id - b.id;
+      })
+      .map((game) => ({
+        ...game,
+        pinPriority: pinPriorityMap[game.id] ?? 0,
+      }));
 
-    const pinnedCount = sortedPinned.length;
-    const visiblePinned = sortedPinned.slice(pageStart, pageEnd);
+    const pinnedCount = pinnedCountRaw ?? pinnedGames.length;
+    const visiblePinned = pinnedGames.slice(pageStart, pageEnd);
     const remainingSlots = PAGE_SIZE - visiblePinned.length;
-    const nonPinnedOffset = Math.max(0, pageStart - pinnedCount);
+    const regularOffset = Math.max(0, pageStart - pinnedCount);
 
-    let nonPinnedGames: Game[] = [];
-    let nonPinnedCount = 0;
+    let regularGames: Game[] = [];
+    let regularCount = 0;
 
     if (remainingSlots > 0) {
-      let nonPinnedQuery = buildGameQuery(tagValue, keyword, false);
-      nonPinnedQuery =
+      let regularQuery = buildGameQuery(tagValue, keyword).eq("pinned", false);
+      regularQuery =
         sort === "hot"
-          ? nonPinnedQuery
+          ? regularQuery
               .order("hot", { ascending: false, nullsFirst: false })
               .order("id", { ascending: false })
-          : nonPinnedQuery
+          : regularQuery
               .order("updatedate", { ascending: false })
               .order("id", { ascending: false });
 
       const {
-        data: nonPinnedData,
-        error: nonPinnedError,
-        count: nonPinnedCountRaw,
-      } = await nonPinnedQuery.range(
-        nonPinnedOffset,
-        nonPinnedOffset + remainingSlots - 1,
+        data: regularData,
+        error: regularError,
+        count: regularCountRaw,
+      } = await regularQuery.range(
+        regularOffset,
+        regularOffset + remainingSlots - 1,
       );
-
-      if (nonPinnedError) throw nonPinnedError;
-      nonPinnedGames = ((nonPinnedData || []) as Game[]).map((game) => ({
-        ...game,
-        pinPriority: null,
-      }));
-      nonPinnedCount = nonPinnedCountRaw ?? 0;
+      if (regularError) throw regularError;
+      regularGames = sortRegularGames((regularData || []) as Game[], sort).map(
+        (game) => ({
+          ...game,
+          pinPriority: null,
+        }),
+      );
+      regularCount = regularCountRaw ?? 0;
     } else {
-      const { count } = await buildGameCountQuery(tagValue, keyword, false);
-      nonPinnedCount = count ?? 0;
+      const { count, error } = await buildGameCountQuery(
+        tagValue,
+        keyword,
+        false,
+      );
+      if (error) throw error;
+      regularCount = count ?? 0;
     }
 
     return {
-      data: [...visiblePinned, ...nonPinnedGames],
-      count: pinnedCount + nonPinnedCount,
+      data: [...visiblePinned, ...regularGames],
+      count: pinnedCount + regularCount,
     };
   }
 
@@ -230,7 +215,7 @@ export default function HomePage() {
     const keyword = (options?.keyword ?? searchKeyword).trim();
     const activeSort = options?.sort ?? sortBy;
 
-    return fetchGamesWithLocalSort(page, activeSort, tagValue, keyword);
+    return fetchGamesPage(page, activeSort, tagValue, keyword);
   }
 
   function handleSearch() {
@@ -429,7 +414,7 @@ export default function HomePage() {
                 </button>
               </span>
             ) : (
-              <span id="selectedTagText">无</span>
+              <span>暂无</span>
             )}
           </div>
         </div>

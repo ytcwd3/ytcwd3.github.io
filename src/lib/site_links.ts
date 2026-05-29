@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 
 const PIN_PRIORITY_PREFIX = "__pin_order__:";
+let pinPriorityCache: Record<number, number> | null = null;
 
 // site_links 链接管理
 // 存放站点可配置链接、工具入口和帮助入口。
@@ -21,7 +22,7 @@ type PinPriorityRow = {
 };
 
 // 用游戏 ID 生成 site_links.name 的存储键。
-export function getPinPriorityName(gameId: number) {
+function getPinPriorityName(gameId: number) {
   return `${PIN_PRIORITY_PREFIX}${gameId}`;
 }
 
@@ -37,6 +38,8 @@ export function parsePinPriority(value: string | number | null | undefined) {
 
 // 从 site_links 读取所有置顶优先级。
 export async function fetchPinPriorityMap() {
+  if (pinPriorityCache) return pinPriorityCache;
+
   const { data, error } = await supabase
     .from("site_links")
     .select("name, url")
@@ -53,6 +56,7 @@ export async function fetchPinPriorityMap() {
     if (!Number.isInteger(id) || id <= 0) continue;
     map[id] = parsePinPriority(row.url);
   }
+  pinPriorityCache = map;
   return map;
 }
 
@@ -63,6 +67,7 @@ export async function savePinPriority(
   priority: number,
 ) {
   const name = getPinPriorityName(gameId);
+  pinPriorityCache = null;
 
   if (!pinned) {
     const { error } = await supabase

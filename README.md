@@ -34,7 +34,6 @@ ytcwd3.github.io/
 │   │   │       ├── ImportModal.tsx    # Excel 导入弹窗
 │   │   │       ├── DatabaseCategoryManager.tsx # 数据库分类管理
 │   │   │       ├── SiteLinksManager.tsx # 站点链接管理
-│   │   │       ├── ImageMatchModal.tsx # 图片匹配弹窗
 │   │   │       └── ConfirmModal.tsx    # 确认弹窗
 │   │   └── components/
 │   │       ├── AuthGuard.tsx           # 路由守卫
@@ -62,7 +61,6 @@ ytcwd3.github.io/
 │       ├── guestbook.ts               # guestbook 评论表
 │       └── site_links.ts              # site_links 链接管理
 │   └── api/
-│       ├── match-images/route.ts      # 图片匹配 API
 │       └── track-download/route.ts    # 下载追踪 API
 ├── 自己分.xlsx                         # 游戏数据源文件
 ├── package.json                       # npm 依赖
@@ -112,7 +110,6 @@ ytcwd3.github.io/
 | `src/app/admin/components/ImportModal.tsx`              | Excel 导入弹窗                             |
 | `src/app/admin/components/DatabaseCategoryManager.tsx`  | 数据库分类管理（categories/subcategories） |
 | `src/app/admin/components/SiteLinksManager.tsx`         | 站点链接管理                               |
-| `src/app/admin/components/ImageMatchModal.tsx`          | 图片匹配弹窗                               |
 | `src/app/admin/components/ConfirmModal.tsx`             | 确认弹窗                                   |
 
 ### 基础设施
@@ -135,7 +132,6 @@ ytcwd3.github.io/
 
 | 文件                          | 说明           |
 | ----------------------------- | -------------- |
-| `src/app/api/match-images/`   | 图片匹配接口   |
 | `src/app/api/track-download/` | 下载追踪接口   |
 
 ## 管理后台使用方法
