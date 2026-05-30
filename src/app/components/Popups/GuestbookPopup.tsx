@@ -52,6 +52,7 @@ export default function GuestbookPopup({
   const [success, setSuccess] = useState(false);
   const [guestbooks, setGuestbooks] = useState<Guestbook[]>([]);
   const [loading, setLoading] = useState(!embedded);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
@@ -105,7 +106,11 @@ export default function GuestbookPopup({
   }, [embedded]);
 
   async function loadGuestbooks(page = 1, append = false) {
-    setLoading(true);
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const from = (page - 1) * PAGE_SIZE;
       const to = page * PAGE_SIZE - 1;
@@ -159,11 +164,12 @@ export default function GuestbookPopup({
       // ignore
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }
 
   function loadMore() {
-    if (loading || !hasMore) return;
+    if (loadingMore || loading || !hasMore) return;
     loadGuestbooks(currentPage + 1, true);
   }
 
@@ -874,7 +880,7 @@ export default function GuestbookPopup({
                   <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
                     <button
                       onClick={loadMore}
-                      disabled={loading}
+                      disabled={loadingMore || loading}
                       style={{
                         padding: "8px 28px",
                         fontSize: "13px",
@@ -882,13 +888,13 @@ export default function GuestbookPopup({
                         color: "var(--accent-color)",
                         border: "1px solid rgba(216, 87, 232, 0.2)",
                         borderRadius: "var(--radius-sm)",
-                        cursor: loading ? "not-allowed" : "pointer",
+                        cursor: loadingMore || loading ? "not-allowed" : "pointer",
                         fontWeight: 600,
-                        opacity: loading ? 0.5 : 1,
+                        opacity: loadingMore || loading ? 0.5 : 1,
                         transition: "all 0.2s",
                       }}
                     >
-                      {loading ? "加载中..." : "加载更多"}
+                      {loadingMore ? "加载中..." : "加载更多"}
                     </button>
                   </div>
                 )}
