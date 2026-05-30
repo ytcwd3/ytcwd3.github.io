@@ -40,6 +40,10 @@ export default function DatabaseCategoryManager() {
   const [moveProgress, setMoveProgress] = useState<any>(null);
   const [msg, setMsg] = useState("");
 
+  // Operation queue lock — prevents concurrent mutations
+  const pendingOpsRef = useRef<number>(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Drag state
   const [draggingCategoryId, setDraggingCategoryId] = useState<number | null>(null);
   const [draggingSubcategoryId, setDraggingSubcategoryId] = useState<number | null>(null);
@@ -50,6 +54,10 @@ export default function DatabaseCategoryManager() {
 
   useEffect(() => {
     loadCategories();
+    return () => {
+      // Cleanup: abort any pending requests on unmount/page change
+      abortControllerRef.current?.abort();
+    };
   }, []);
 
   const selectedCategory = useMemo(
@@ -59,31 +67,44 @@ export default function DatabaseCategoryManager() {
 
   const isMoving = saving === "move-subcategory";
 
-  function guardMoving() {
-    if (!isMoving) return false;
-    alert("迁移中暂时无法操作其它的");
-    return true;
+  function isPending() {
+    return pendingOpsRef.current > 0;
+  }
+
+  function guardPending() {
+    if (isPending()) {
+      alert("有操作正在进行中，请等待完成后再进行其他操作");
+      return true;
+    }
+    return false;
   }
 
   async function loadCategories() {
-    if (guardMoving()) return;
+    if (guardPending()) return;
+    // Abort any previous in-flight request
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+    pendingOpsRef.current++;
     setLoading(true);
     try {
-      const data = await fetchDbCategories();
+      const data = await fetchDbCategories(abortControllerRef.current.signal);
       setCategories(data);
       setSelectedId((current) => {
         if (current && data.some((category) => category.id === current)) return current;
         return data[0]?.id ?? null;
       });
     } catch (error: any) {
+      if (error.name === "AbortError") return; // Ignore aborted requests
       setMsg("加载失败: " + error.message);
     } finally {
+      pendingOpsRef.current--;
       setLoading(false);
     }
   }
 
   async function run(actionName: string, action: () => Promise<void>) {
-    if (guardMoving()) return;
+    if (guardPending()) return;
+    pendingOpsRef.current++;
     setSaving(actionName);
     setMsg("");
     try {
@@ -91,20 +112,22 @@ export default function DatabaseCategoryManager() {
       setMsg("操作成功");
       await loadCategories();
     } catch (error: any) {
+      if (error.name === "AbortError") return;
       setMsg("操作失败: " + error.message);
     } finally {
+      pendingOpsRef.current--;
       setSaving("");
     }
   }
 
   function confirmAndRun(message: string, actionName: string, action: () => Promise<void>) {
-    if (guardMoving()) return;
+    if (guardPending()) return;
     if (!confirm(message)) return;
     run(actionName, action);
   }
 
   function handleMoveSubcategory(subcategoryId: number, fromCategory: DbCategory, toCategory: DbCategory) {
-    if (guardMoving()) return;
+    if (guardPending()) return;
     if (fromCategory.id === toCategory.id) return;
 
     const subcategory = fromCategory.subcategories.find((item) => item.id === subcategoryId);
@@ -118,6 +141,7 @@ export default function DatabaseCategoryManager() {
       return;
     }
 
+    pendingOpsRef.current++;
     setSaving("move-subcategory");
     setMoveProgress({
       total: 0,
@@ -155,16 +179,17 @@ export default function DatabaseCategoryManager() {
         });
       })
       .catch((error: any) => {
+        if (error.name === "AbortError") return;
         setMsg("迁移失败: " + error.message);
       })
       .finally(() => {
+        pendingOpsRef.current--;
         setSaving("");
-        setLoading(false);
       });
   }
 
   function moveCategory(categoryId: number, direction: -1 | 1) {
-    if (guardMoving()) return;
+    if (guardPending()) return;
     const idx = categories.findIndex((c) => c.id === categoryId);
     if (idx < 0) return;
     const nextIdx = idx + direction;
@@ -176,7 +201,7 @@ export default function DatabaseCategoryManager() {
   }
 
   function moveSubcategory(subcategoryId: number, direction: -1 | 1) {
-    if (guardMoving()) return;
+    if (guardPending()) return;
     if (!selectedCategory) return;
     const idx = selectedCategory.subcategories.findIndex((s) => s.id === subcategoryId);
     if (idx < 0) return;
@@ -451,7 +476,7 @@ export default function DatabaseCategoryManager() {
                     data-category-id={category.id}
                     draggable={!saving && !isMoving}
                     onClick={() => {
-                      if (guardMoving()) return;
+                      if (guardPending()) return;
                       setSelectedId(category.id);
                     }}
                     onDragStart={() => handleCategoryDragStart(category.id)}
@@ -558,7 +583,7 @@ export default function DatabaseCategoryManager() {
                 <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
                   <button
                     onClick={() => {
-                      if (guardMoving()) return;
+                      if (guardPending()) return;
                       const next = prompt("新的主分类名称", currentCategory.name)?.trim();
                       if (!next || next === currentCategory.name) return;
                       confirmAndRun(
@@ -573,7 +598,7 @@ export default function DatabaseCategoryManager() {
                   </button>
                   <button
                     onClick={() => {
-                      if (guardMoving()) return;
+                      if (guardPending()) return;
                       if (confirm(`确认删除主分类「${currentCategory.name}」？相关游戏会移除这个分类值。`)) {
                         run("delete-category", () => deleteDbCategory(currentCategory.id, currentCategory.name));
                       }
@@ -701,13 +726,13 @@ export default function DatabaseCategoryManager() {
                               {isMoving ? "迁移中" : "迁移"}
                             </button>
                             <button
-                              onClick={() => { if (guardMoving()) return; const next = prompt("新的子分类名称", subcategory.name)?.trim(); if (!next || next === subcategory.name) return; confirmAndRun(`确认把子分类「${subcategory.name}」改成「${next}」？这会批量更新相关游戏数据。`, "rename-subcategory", () => renameDbSubcategory(currentCategory.id, subcategory.id, subcategory.name, next)); }}
+                              onClick={() => { if (guardPending()) return; const next = prompt("新的子分类名称", subcategory.name)?.trim(); if (!next || next === subcategory.name) return; confirmAndRun(`确认把子分类「${subcategory.name}」改成「${next}」？这会批量更新相关游戏数据。`, "rename-subcategory", () => renameDbSubcategory(currentCategory.id, subcategory.id, subcategory.name, next)); }}
                               style={{ border: "none", background: "transparent", color: "#999", cursor: "pointer", padding: "2px 4px", borderRadius: "4px", fontSize: "11px", flexShrink: 0 }}
                             >
                               改名
                             </button>
                             <button
-                              onClick={() => { if (guardMoving()) return; if (confirm(`确认删除子分类「${subcategory.name}」？相关游戏会移除这个子分类值。`)) { run("delete-subcategory", () => deleteDbSubcategory(subcategory.id, currentCategory.name, subcategory.name)); } }}
+                              onClick={() => { if (guardPending()) return; if (confirm(`确认删除子分类「${subcategory.name}」？相关游戏会移除这个子分类值。`)) { run("delete-subcategory", () => deleteDbSubcategory(subcategory.id, currentCategory.name, subcategory.name)); } }}
                               style={{ border: "none", background: "transparent", color: "#dc2626", cursor: "pointer", padding: "2px 4px", borderRadius: "4px", fontSize: "11px", flexShrink: 0 }}
                             >
                               删除

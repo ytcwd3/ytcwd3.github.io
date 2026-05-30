@@ -94,16 +94,12 @@ export default function GuestbookPopup({
     } = supabase.auth.onAuthStateChange(() => {
       void checkAdminStatus();
     });
-    const intervalId = setInterval(() => {
-      void checkAdminStatus();
-    }, 1000);
     if (!embedded) {
       loadGuestbooks(1, false);
     }
     return () => {
       window.removeEventListener("storage", handleStorage);
       subscription.unsubscribe();
-      clearInterval(intervalId);
     };
   }, [embedded]);
 
@@ -226,17 +222,40 @@ export default function GuestbookPopup({
     if (!name.trim() || !message.trim()) return;
     setSubmitting(true);
     try {
+      // 应用层防重复检查
+      const { data: existing, error: checkError } = await supabase
+        .from("guestbook")
+        .select("id")
+        .eq("name", name.trim())
+        .eq("message", message.trim())
+        .is("parent_id", null)
+        .limit(1);
+      if (checkError) throw checkError;
+      if (existing && existing.length > 0) {
+        alert("请勿重复提交相同的留言");
+        setSubmitting(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("guestbook")
         .insert([{ name: name.trim(), message: message.trim() }]);
-      if (error) throw error;
+      if (error) {
+        if (error.code === "23505") {
+          alert("请勿重复提交相同的留言");
+          setSubmitting(false);
+          return;
+        }
+        throw error;
+      }
       setSuccess(true);
       setName("");
       setMessage("");
       setHistoryVisible(true);
       loadGuestbooks(1, false);
       setTimeout(() => setSuccess(false), 3000);
-    } catch {
+    } catch (err: any) {
+      if (err?.message === "AbortError") return;
       alert("提交失败，请重试");
     } finally {
       setSubmitting(false);

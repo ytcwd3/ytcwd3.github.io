@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { fetchGameCategoryRows, updateGameRows } from "./games";
 import { logCategoryOperation } from "./category_operation_logs";
+import { clearDbCategoriesPending } from "./categories";
 
 // subcategories 子分类
 // 保存父分类下面的二级分类，并通过 category_id 归属到 categories。
@@ -132,6 +133,9 @@ export async function addDbSubcategory(
   });
   if (error) throw error;
 
+  clearSubcategoriesCache();
+  clearDbCategoriesPending();
+
   await logCategoryOperation({
     action: "create_subcategory",
     targetType: "subcategory",
@@ -170,6 +174,9 @@ export async function renameDbSubcategory(
     .update({ name: cleanName })
     .eq("id", subcategoryId);
   if (updateSubcategoryError) throw updateSubcategoryError;
+
+  clearSubcategoriesCache();
+  clearDbCategoriesPending();
 
   const { error: rpcError } = await supabase.rpc(
     "sync_games_after_subcategory_rename",
@@ -353,16 +360,23 @@ export async function moveDbSubcategoryToCategory(
   });
 }
 
-// 更新子分类排序。
+// 更新子分类排序（批量原子更新，防止中途失败导致数据不一致）。
 export async function updateSubcategorySortOrder(
   subcategories: DbSubcategory[],
 ): Promise<void> {
-  for (const [index, subcategory] of subcategories.entries()) {
-    const { error } = await supabase
-      .from("subcategories")
-      .update({ sort_order: index })
-      .eq("id", subcategory.id);
-    if (error) throw error;
+  if (subcategories.length === 0) return;
+
+  const whenClauses = subcategories
+    .map(({ id }, index) => `WHEN ${id} THEN ${index}`)
+    .join(" ");
+  const inClause = subcategories.map((c) => c.id).join(",");
+
+  const { error } = await supabase.rpc("execute_sql", {
+    sql: `UPDATE subcategories SET sort_order = CASE id ${whenClauses} END WHERE id IN (${inClause})`,
+  });
+
+  if (error) {
+    throw new Error(`排序更新失败（数据库原子更新不可用），请刷新后重试`);
   }
 }
 
@@ -395,6 +409,9 @@ export async function deleteDbSubcategory(
 
   const { error } = await supabase.from("subcategories").delete().eq("id", subcategoryId);
   if (error) throw error;
+
+  clearSubcategoriesCache();
+  clearDbCategoriesPending();
 
   await logCategoryOperation({
     action: "delete_subcategory",

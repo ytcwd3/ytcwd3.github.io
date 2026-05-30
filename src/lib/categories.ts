@@ -182,8 +182,12 @@ export async function fetchDbCategoryOptions(): Promise<DbCategory[]> {
   return buildDbCategoryTree(categoriesRaw, subcategoriesRaw);
 }
 
+export function clearDbCategoriesPending() {
+  dbCategoriesPending = null;
+}
+
 // 读取分类树，并结合 games 统计每个父分类和子分类下的游戏数量。
-export async function fetchDbCategories(): Promise<DbCategory[]> {
+export async function fetchDbCategories(signal?: AbortSignal): Promise<DbCategory[]> {
   if (dbCategoriesPending) {
     return dbCategoriesPending.then((data) =>
       data.map((category) => ({
@@ -200,6 +204,7 @@ export async function fetchDbCategories(): Promise<DbCategory[]> {
       supabase.rpc("get_admin_category_counts"),
     ]);
 
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     if (countsResult.error) {
       console.warn("分类数量统计加载失败，不阻塞分类管理:", countsResult.error);
     }
@@ -291,6 +296,9 @@ export async function addDbCategory(name: string): Promise<void> {
   });
   if (error) throw error;
 
+  clearDbCategoriesPending();
+  clearHomeCategoriesCache();
+
   await logCategoryOperation({
     action: "create_category",
     targetType: "category",
@@ -327,6 +335,9 @@ export async function renameDbCategory(
     .eq("id", categoryId);
   if (updateCategoryError) throw updateCategoryError;
 
+  clearDbCategoriesPending();
+  clearHomeCategoriesCache();
+
   const { error: rpcError } = await supabase.rpc(
     "sync_games_after_category_rename",
     {
@@ -360,16 +371,23 @@ export async function renameDbCategory(
   });
 }
 
-// 更新父分类排序。
+// 更新父分类排序（单条 CASE WHEN SQL，原子操作）。
 export async function updateCategorySortOrder(
   categories: DbCategory[],
 ): Promise<void> {
-  for (const [index, category] of categories.entries()) {
-    const { error } = await supabase
-      .from("categories")
-      .update({ sort_order: index })
-      .eq("id", category.id);
-    if (error) throw error;
+  if (categories.length === 0) return;
+
+  const whenClauses = categories
+    .map(({ id }, index) => `WHEN ${id} THEN ${index}`)
+    .join(" ");
+  const inClause = categories.map((c) => c.id).join(",");
+
+  const { error } = await supabase.rpc("execute_sql", {
+    sql: `UPDATE categories SET sort_order = CASE id ${whenClauses} END WHERE id IN (${inClause})`,
+  });
+
+  if (error) {
+    throw new Error(`排序更新失败（数据库原子更新不可用），请刷新后重试`);
   }
 }
 
@@ -399,6 +417,9 @@ export async function deleteDbCategory(
 
   const { error } = await supabase.from("categories").delete().eq("id", categoryId);
   if (error) throw error;
+
+  clearDbCategoriesPending();
+  clearHomeCategoriesCache();
 
   await logCategoryOperation({
     action: "delete_category",
