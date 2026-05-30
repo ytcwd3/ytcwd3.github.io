@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { Game } from "@/lib/games";
 import { HomeCategory, fetchHomeCategories } from "@/lib/categories";
 import { fetchPinPriorityMap } from "@/lib/site_links";
+import { decryptData } from "@/lib/encrypt";
 import SearchResults from "./components/SearchResults";
 import GuestbookPopup from "./components/Popups/GuestbookPopup";
 import EmulatorPopup from "./components/Popups/EmulatorPopup";
@@ -15,77 +15,16 @@ import ToolPatchPopup from "./components/Popups/ToolPatchPopup";
 import HelpCenterPopup from "./components/Popups/HelpCenterPopup";
 import QrCodeModal from "./components/QrCode/QrCodeModal";
 
-function parseUpdateDate(value: string) {
-  if (!value) return null;
-  const normalized = value.trim().replace(/\./g, "-").replace(/\//g, "-");
-  const parts = normalized.split("-").map((part) => Number(part));
-  if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) return null;
-  const [year, month, day] = parts;
-  const parsed = new Date(year, month - 1, day);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function buildGameQuery(tagValue?: string, keyword?: string) {
-  let query = supabase.from("games").select("*", { count: "exact" });
-
-  if (tagValue) {
-    query = query.contains("subcategory", [tagValue]);
-  }
-  if (keyword) {
-    query = query.ilike("name", `%${keyword}%`);
-  }
-
-  return query;
-}
-
-function buildGameCountQuery(tagValue?: string, keyword?: string, pinned?: boolean) {
-  let query = supabase
-    .from("games")
-    .select("id", { count: "exact", head: true });
-
-  if (typeof pinned === "boolean") {
-    query = query.eq("pinned", pinned);
-  }
-  if (tagValue) {
-    query = query.contains("subcategory", [tagValue]);
-  }
-  if (keyword) {
-    query = query.ilike("name", `%${keyword}%`);
-  }
-
-  return query;
-}
-
-function getPinPriority(
-  game: { id: number; pinned?: boolean },
-  pinPriorityMap: Record<number, number>,
-) {
-  if (!game.pinned) return Number.MAX_SAFE_INTEGER;
-  const raw = pinPriorityMap[game.id];
-  return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
-}
-
-function sortRegularGames(games: Game[], sort: "updatedate" | "hot") {
-  return [...games].sort((a, b) => {
-    if (sort === "hot") {
-      const hotDiff = (b.hot || 0) - (a.hot || 0);
-      if (hotDiff !== 0) return hotDiff;
-      return b.id - a.id;
-    }
-
-    const dateA = parseUpdateDate(a.updatedate);
-    const dateB = parseUpdateDate(b.updatedate);
-    if (!dateA && !dateB) return b.id - a.id;
-    if (!dateA) return 1;
-    if (!dateB) return -1;
-    if (dateA.getTime() !== dateB.getTime()) {
-      return dateB.getTime() - dateA.getTime();
-    }
-    return b.id - a.id;
-  });
-}
-
 export default function HomePage() {
+  function getPinPriority(
+    game: { id: number; pinned?: boolean },
+    pinPriorityMap: Record<number, number>,
+  ) {
+    if (!game.pinned) return Number.MAX_SAFE_INTEGER;
+    const raw = pinPriorityMap[game.id];
+    return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+  }
+
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<{
@@ -128,78 +67,44 @@ export default function HomePage() {
     tagValue?: string,
     keyword?: string,
   ) {
-    const safePage = Math.max(1, page);
-    const pageStart = (safePage - 1) * PAGE_SIZE;
-    const pageEnd = pageStart + PAGE_SIZE;
-    const pinPriorityMap = await fetchPinPriorityMap();
+    // Use encrypted API route instead of direct Supabase query
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("sort", sort);
+    if (tagValue) params.set("tag", tagValue);
+    if (keyword) params.set("keyword", keyword);
+    params.set("pageSize", String(PAGE_SIZE));
 
-    const {
-      data: pinnedData,
-      error: pinnedError,
-      count: pinnedCountRaw,
-    } = await buildGameQuery(tagValue, keyword).eq("pinned", true);
-    if (pinnedError) throw pinnedError;
+    const response = await fetch(`/api/games?${params.toString()}`);
+    const encrypted = await response.text();
+    const result = decryptData(encrypted);
 
-    const pinnedGames = ((pinnedData || []) as Game[])
-      .sort((a, b) => {
-        const pinOrderDiff =
-          getPinPriority(a, pinPriorityMap) - getPinPriority(b, pinPriorityMap);
-        if (pinOrderDiff !== 0) return pinOrderDiff;
-        return a.id - b.id;
-      })
-      .map((game) => ({
-        ...game,
-        pinPriority: pinPriorityMap[game.id] ?? 0,
-      }));
-
-    const pinnedCount = pinnedCountRaw ?? pinnedGames.length;
-    const visiblePinned = pinnedGames.slice(pageStart, pageEnd);
-    const remainingSlots = PAGE_SIZE - visiblePinned.length;
-    const regularOffset = Math.max(0, pageStart - pinnedCount);
-
-    let regularGames: Game[] = [];
-    let regularCount = 0;
-
-    if (remainingSlots > 0) {
-      let regularQuery = buildGameQuery(tagValue, keyword).eq("pinned", false);
-      regularQuery =
-        sort === "hot"
-          ? regularQuery
-              .order("hot", { ascending: false, nullsFirst: false })
-              .order("id", { ascending: false })
-          : regularQuery
-              .order("updatedate", { ascending: false })
-              .order("id", { ascending: false });
-
-      const {
-        data: regularData,
-        error: regularError,
-        count: regularCountRaw,
-      } = await regularQuery.range(
-        regularOffset,
-        regularOffset + remainingSlots - 1,
-      );
-      if (regularError) throw regularError;
-      regularGames = sortRegularGames((regularData || []) as Game[], sort).map(
-        (game) => ({
-          ...game,
-          pinPriority: null,
-        }),
-      );
-      regularCount = regularCountRaw ?? 0;
-    } else {
-      const { count, error } = await buildGameCountQuery(
-        tagValue,
-        keyword,
-        false,
-      );
-      if (error) throw error;
-      regularCount = count ?? 0;
+    if (!result || !result.data) {
+      return { data: [], count: 0 };
     }
 
+    const pinPriorityMap = await fetchPinPriorityMap();
+
+    // Separate pinned and regular games
+    const pinnedGames = (result.data as Game[])
+      .filter((g) => g.pinned)
+      .sort((a, b) => {
+        if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+        if (a.pinned && b.pinned) {
+          const pinOrderDiff = getPinPriority(a, pinPriorityMap) - getPinPriority(b, pinPriorityMap);
+          if (pinOrderDiff !== 0) return pinOrderDiff;
+        }
+        return a.id - b.id;
+      })
+      .map((game) => ({ ...game, pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null }));
+
+    const regularGames = (result.data as Game[])
+      .filter((g) => !g.pinned)
+      .map((game) => ({ ...game, pinPriority: null }));
+
     return {
-      data: [...visiblePinned, ...regularGames],
-      count: pinnedCount + regularCount,
+      data: [...pinnedGames, ...regularGames],
+      count: result.count || 0,
     };
   }
 
