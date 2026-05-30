@@ -76,6 +76,12 @@ export default function HomePage() {
     params.set("pageSize", String(PAGE_SIZE));
 
     const response = await fetch(`/api/games?${params.toString()}`);
+
+    if (!response.ok) {
+      console.error("API error:", response.status);
+      return { data: [], count: 0 };
+    }
+
     const encrypted = await response.text();
     const result = decryptData(encrypted);
 

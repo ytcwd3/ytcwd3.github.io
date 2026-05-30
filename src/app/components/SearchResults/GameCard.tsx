@@ -147,9 +147,9 @@ export default function GameCard({
             loading="lazy"
             onError={(e) => {
               const el = e.target as HTMLImageElement;
-              el.style.display = "none";
-              const ph = el.parentElement?.querySelector(".thumb-ph") as HTMLElement | null;
-              if (ph) ph.style.display = "flex";
+              // 立即显示默认占位图，不等待超时
+              el.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23e0e0e0' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='40' text-anchor='middle' dy='.3em' fill='%23999'%3E${encodeURIComponent(game.name?.charAt(0) || '?')}%3C/text%3E%3C/svg%3E`;
+              el.onerror = null; // 防止循环
             }}
           />
         ) : null}
