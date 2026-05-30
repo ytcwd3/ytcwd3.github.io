@@ -154,10 +154,16 @@ export default function AdminDashboard() {
       if ((window as any).__reqId !== reqId) return;
 
       if (curSort === "default") {
-        const gamesQuery = applyGameFilters(
-          supabase.from("games").select("*", { count: "planned" }),
+        // Get total count first, then get page data
+        const countQuery = applyGameFilters(
+          supabase.from("games").select("id", { count: "exact" }),
         );
-        const { data, error, count } = await gamesQuery
+        const { count: totalCount } = await countQuery;
+
+        const gamesQuery = applyGameFilters(
+          supabase.from("games").select("*"),
+        );
+        const { data, error } = await gamesQuery
           .order("pinned", { ascending: false, nullsFirst: false })
           .order("id", { ascending: true })
           .range(from, to);
@@ -181,7 +187,7 @@ export default function AdminDashboard() {
               pinPriority: game.pinned ? pinPriorityMap[game.id] ?? 0 : null,
             })),
         );
-        setTotalCount(count || 0);
+        setTotalCount(totalCount || 0);
         setCurrentPage(page);
         return;
       }
