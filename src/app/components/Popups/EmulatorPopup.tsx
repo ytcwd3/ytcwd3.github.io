@@ -10,7 +10,7 @@ export default function EmulatorPopup({ onClose }: EmulatorPopupProps) {
       </span>
       <h3 className="popup-title">模拟器大全</h3>
       <div className="popup-text">
-        <p>1. 优先使用平台标签下的模拟器链接，更新更快
+        <p>1. 这里的模拟器会较长时间不更新，优先使用对应平台标签下的模拟器词条链接！！！更新更快
          夸克：https://pan.quark.cn/s/37749fb7d441</p>
         <p>
           2. 百度：https://pan.baidu.com/s/1sXOTOkot8gR78h4Aj7NCDg?pwd=aty3/
