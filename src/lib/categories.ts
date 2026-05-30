@@ -47,8 +47,33 @@ function replaceValue(
 
 let dbCategoriesPending: Promise<DbCategory[]> | null = null;
 
+// Simple in-memory + sessionStorage cache for home categories
+let homeCategoriesCache: { data: HomeCategory[]; timestamp: number } | null = null;
+const HOME_CACHE_DURATION = 30 * 1000; // 30 seconds only
+
 // 读取 categories 和 subcategories，用于首页分类导航展示。
 export async function fetchHomeCategories(): Promise<HomeCategory[]> {
+  const now = Date.now();
+
+  // Check memory cache first (only if within cache duration)
+  if (homeCategoriesCache && now - homeCategoriesCache.timestamp < HOME_CACHE_DURATION) {
+    return homeCategoriesCache.data;
+  }
+
+  // Check sessionStorage cache
+  try {
+    const cached = sessionStorage.getItem("homeCategories");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (now - parsed.timestamp < HOME_CACHE_DURATION) {
+        homeCategoriesCache = parsed;
+        return parsed.data;
+      }
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+
   const { data: categoriesData, error: categoriesError } = await supabase
     .from("categories")
     .select("id, name, sort_order")
@@ -61,13 +86,33 @@ export async function fetchHomeCategories(): Promise<HomeCategory[]> {
   const subcategories = await fetchSubcategoriesRaw();
   const categories = categoriesData as Category[];
 
-  return categories.map((category) => ({
+  const result: HomeCategory[] = categories.map((category) => ({
     name: String(category.name || ""),
     tags: subcategories
       .filter((sub) => sub.category_id === category.id)
       .sort((a, b) => (a.sort_order ?? a.id) - (b.sort_order ?? b.id))
       .map((sub) => String(sub.name || "")),
   }));
+
+  // Cache in memory and sessionStorage
+  homeCategoriesCache = { data: result, timestamp: now };
+  try {
+    sessionStorage.setItem("homeCategories", JSON.stringify(homeCategoriesCache));
+  } catch (e) {
+    // Ignore storage errors
+  }
+
+  return result;
+}
+
+// Clear home categories cache (call after category updates)
+export function clearHomeCategoriesCache() {
+  homeCategoriesCache = null;
+  try {
+    sessionStorage.removeItem("homeCategories");
+  } catch (e) {
+    // Ignore storage errors
+  }
 }
 
 // 读取 categories 原始数据。

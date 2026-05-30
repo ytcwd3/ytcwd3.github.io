@@ -42,8 +42,31 @@ function replaceValue(
   return uniq((values || []).map((value) => (value === oldValue ? newValue : value)));
 }
 
+// Simple cache for subcategories
+let subcategoriesCache: { data: Subcategory[]; timestamp: number } | null = null;
+const CACHE_DURATION = 30 * 1000; // 30 seconds only
+
 // 读取 subcategories 原始数据。
 export async function fetchSubcategoriesRaw(): Promise<Subcategory[]> {
+  const now = Date.now();
+
+  // Check memory cache first
+  if (subcategoriesCache && now - subcategoriesCache.timestamp < CACHE_DURATION) {
+    return subcategoriesCache.data;
+  }
+
+  // Check sessionStorage cache
+  try {
+    const cached = sessionStorage.getItem("subcategories");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (now - parsed.timestamp < CACHE_DURATION) {
+        subcategoriesCache = parsed;
+        return parsed.data;
+      }
+    }
+  } catch (e) {}
+
   const { data, error } = await supabase
     .from("subcategories")
     .select("id, category_id, name, sort_order")
@@ -51,7 +74,21 @@ export async function fetchSubcategoriesRaw(): Promise<Subcategory[]> {
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   if (error) throw error;
+
+  subcategoriesCache = { data: data || [], timestamp: now };
+  try {
+    sessionStorage.setItem("subcategories", JSON.stringify(subcategoriesCache));
+  } catch (e) {}
+
   return (data || []) as Subcategory[];
+}
+
+// Clear subcategories cache
+export function clearSubcategoriesCache() {
+  subcategoriesCache = null;
+  try {
+    sessionStorage.removeItem("subcategories");
+  } catch (e) {}
 }
 
 // 获取某个父分类下 subcategories 的下一条排序值。
