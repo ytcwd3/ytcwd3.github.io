@@ -1,8 +1,29 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { encryptData } from "@/lib/encrypt";
+import {
+  validateRequest,
+  checkRateLimit,
+  getClientIP,
+} from "@/lib/anti-scraping";
 
 export async function GET(request: Request) {
+  // 1. Anti-scraping validation
+  const clientIP = getClientIP(request);
+
+  // Check rate limit
+  const rateLimitResult = checkRateLimit(clientIP);
+  if (!rateLimitResult.valid) {
+    return new NextResponse("Rate limit exceeded", { status: 429 });
+  }
+
+  // Validate request headers
+  const validation = validateRequest(request);
+  if (!validation.valid) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
+  // 2. Process query
   const { searchParams } = new URL(request.url);
   const tagValue = searchParams.get("tag");
   const keyword = searchParams.get("keyword");
@@ -33,7 +54,7 @@ export async function GET(request: Request) {
   const { data, count, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ data: [], count: 0, error: true });
   }
 
   // Encrypt the response data so it shows as garbled text in Network tab
@@ -42,6 +63,7 @@ export async function GET(request: Request) {
   return new NextResponse(encrypted, {
     headers: {
       "Content-Type": "text/plain",
+      "X-Protected": "1",
     },
   });
 }
