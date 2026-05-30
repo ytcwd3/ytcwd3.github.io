@@ -253,8 +253,7 @@ export default function GameTable({
                               style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
                               onError={(e) => {
                                 const el = e.target as HTMLImageElement;
-                                el.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23e0e0e0' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='40' text-anchor='middle' dy='.3em' fill='%23999'%3E${encodeURIComponent(game.name?.charAt(0) || '?')}%3C/text%3E%3C/svg%3E`;
-                                el.onerror = null;
+                                el.style.display = "none";
                               }}
                             />
                           ) : (
