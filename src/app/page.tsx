@@ -40,6 +40,7 @@ export default function HomePage() {
   const [qrModalTitle, setQrModalTitle] = useState("");
   const [showPopups, setShowPopups] = useState<Record<string, boolean>>({});
   const [homeCategories, setHomeCategories] = useState<HomeCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   // 分页相关
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,9 +55,11 @@ export default function HomePage() {
     // localStorage.clear(); // Disabled - breaks sessionStorage cache
     // sessionStorage.clear(); // Disabled - breaks categories cache
 
+    setCategoriesLoading(true);
     fetchHomeCategories()
       .then(setHomeCategories)
-      .catch(() => setHomeCategories([]));
+      .catch(() => setHomeCategories([]))
+      .finally(() => setCategoriesLoading(false));
   }, []);
 
   async function fetchGamesPage(
@@ -243,21 +246,38 @@ export default function HomePage() {
 
         {/* 母标签栏 */}
         <div className="tab-header">
-          {homeCategories.map((category) => (
-            <button
-              key={category.name}
-              className={`tab-btn ${selectedCategory === category.name ? "active" : ""}`}
-              data-category={category.name}
-              onClick={() => {
-                setSelectedCategory(category.name);
-                setShowPanel(
-                  showPanel === category.name ? null : category.name,
-                );
-              }}
-            >
-              {category.name}
-            </button>
-          ))}
+          {categoriesLoading ? (
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 60 + i * 10,
+                    height: 32,
+                    borderRadius: 8,
+                    background: "rgba(255,255,255,0.5)",
+                    animation: "pulse 1.5s infinite",
+                  }}
+                />
+              ))}
+            </>
+          ) : (
+            homeCategories.map((category) => (
+              <button
+                key={category.name}
+                className={`tab-btn ${selectedCategory === category.name ? "active" : ""}`}
+                data-category={category.name}
+                onClick={() => {
+                  setSelectedCategory(category.name);
+                  setShowPanel(
+                    showPanel === category.name ? null : category.name,
+                  );
+                }}
+              >
+                {category.name}
+              </button>
+            ))
+          )}
         </div>
 
         {/* 标签面板 */}
