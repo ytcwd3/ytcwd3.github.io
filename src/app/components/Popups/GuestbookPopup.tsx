@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Guestbook } from "@/lib/guestbook";
 
@@ -62,6 +62,8 @@ export default function GuestbookPopup({
   const [replyContent, setReplyContent] = useState("");
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(!embedded);
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const loadMoreFnRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     async function checkAdminStatus() {
@@ -104,6 +106,37 @@ export default function GuestbookPopup({
       clearInterval(intervalId);
     };
   }, [embedded]);
+
+  // Auto-load more when scrolling to bottom using Intersection Observer
+  useEffect(() => {
+    const container = listContainerRef.current;
+    if (!container) return;
+
+    // Create a sentinel element at the bottom
+    const sentinel = document.createElement("div");
+    sentinel.id = "guestbook-sentinel";
+    sentinel.style.height = "1px";
+    container.appendChild(sentinel);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && !loadingMore && !loading && hasMore) {
+          loadGuestbooks(currentPage + 1, true);
+        }
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+      if (sentinel.parentNode) {
+        sentinel.parentNode.removeChild(sentinel);
+      }
+    };
+  }, [hasMore, loadingMore, loading, currentPage]);
 
   async function loadGuestbooks(page = 1, append = false) {
     if (append) {
@@ -548,6 +581,7 @@ export default function GuestbookPopup({
               </div>
             ) : (
               <div
+                ref={listContainerRef}
                 style={{
                   flex: 1,
                   overflowY: embedded ? "visible" : "auto",
