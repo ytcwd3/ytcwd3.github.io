@@ -51,11 +51,9 @@ export default function HomePage() {
 
   // 加载数据 - 不再预加载所有数据
   useEffect(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  }, []);
+    // localStorage.clear(); // Disabled - breaks sessionStorage cache
+    // sessionStorage.clear(); // Disabled - breaks categories cache
 
-  useEffect(() => {
     fetchHomeCategories()
       .then(setHomeCategories)
       .catch(() => setHomeCategories([]));
