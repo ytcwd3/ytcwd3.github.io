@@ -14,6 +14,7 @@ import UpdateRecordPopup from "./components/Popups/UpdateRecordPopup";
 import ToolPatchPopup from "./components/Popups/ToolPatchPopup";
 import HelpCenterPopup from "./components/Popups/HelpCenterPopup";
 import QrCodeModal from "./components/QrCode/QrCodeModal";
+import Mascot from "./components/Mascot";
 
 export default function HomePage() {
   function getPinPriority(
@@ -241,7 +242,10 @@ export default function HomePage() {
   return (
     <>
       <div className="container">
-        <h1 className="title">单游仓鼠-主机掌机+PC一键检索</h1>
+        <div className="brand-title-wrap">
+          <img className="site-logo" src="/logo.png" alt="单游仓鼠 Logo" />
+          <h1 className="title">单游仓鼠-主机掌机+PC一键检索</h1>
+        </div>
         <p className="sub-title">缺游戏，资源有问题-B站，QQ群联系均可！</p>
 
         {/* 母标签栏 */}
@@ -420,6 +424,8 @@ export default function HomePage() {
             onSortChange={handleSortChange}
           />
         </div>
+
+        <Mascot />
 
         {/* 底部按钮 */}
         <div className="footer-popup-container">
