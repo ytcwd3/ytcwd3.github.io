@@ -44,7 +44,7 @@ export default function AdminHeader({ user, className }: HeaderProps) {
         style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}
       >
         <img
-          src="/logo.png"
+          src="https://cloudflarecnimg.scdn.io/i/6a1c314ee83c0_1780232526.webp"
           alt="单游仓鼠 Logo"
           style={{
             width: "58px",

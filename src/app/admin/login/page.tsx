@@ -93,7 +93,7 @@ export default function AdminLogin() {
         }}
       >
         <img
-          src="/logo.png"
+          src="https://cloudflarecnimg.scdn.io/i/6a1c314ee83c0_1780232526.webp"
           alt="单游仓鼠 Logo"
           style={{
             width: 112,

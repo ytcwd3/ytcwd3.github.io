@@ -243,7 +243,7 @@ export default function HomePage() {
     <>
       <div className="container">
         <div className="brand-title-wrap">
-          <img className="site-logo" src="/logo.png" alt="单游仓鼠 Logo" />
+          <img className="site-logo" src="https://cloudflarecnimg.scdn.io/i/6a1c314ee83c0_1780232526.webp" alt="单游仓鼠 Logo" />
           <h1 className="title">单游仓鼠-主机掌机+PC一键检索</h1>
         </div>
         <p className="sub-title">缺游戏，资源有问题-B站，QQ群联系均可！</p>

@@ -139,7 +139,7 @@ export default function Mascot() {
         }}
         aria-label="点击仓鼠说话"
       >
-        <img src="/cangshu.png" alt="仓鼠君" width={150} height={150} />
+        <img src="https://cloudflarecnimg.scdn.io/i/6a1c315025a12_1780232528.webp" alt="仓鼠君" width={150} height={150} />
       </button>
     </div>
   );
