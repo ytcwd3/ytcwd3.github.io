@@ -1,11 +1,6 @@
 /* 管理后台移动端适配 */
 
-/* 桌面端默认隐藏卡片列表（由移动端媒体查询控制显示） */
 .game-card-list {
-  display: none;
-}
-
-.site-links-card-list {
   display: none;
 }
 
@@ -13,6 +8,65 @@
 .admin-category-page,
 .admin-container {
   box-sizing: border-box;
+}
+
+.site-link-card-content {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.site-link-card-url {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  color: #7e22ce;
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: none;
+  background: #ffffff;
+  border: 1px solid #e4d5f0;
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.04);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.site-link-card-url span {
+  display: inline-flex;
+  justify-content: center;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(126, 34, 206, 0.09);
+  color: #6b21a8;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.site-link-card-url small {
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.site-link-card-text {
+  margin: 0;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.04);
 }
 
 @media (min-width: 769px) and (max-width: 1100px) {
@@ -440,91 +494,10 @@
   }
 }
 
-/* 超小屏幕（480px以下）：表格强制卡片化 */
+/* 超小屏幕（480px以下） */
 @media (max-width: 480px) {
-  /* 隐藏表格，显示卡片列表 */
   .game-table-wrapper table:not(.site-links-table) {
     display: none;
-  }
-  .site-links-table {
-    display: none !important;
-  }
-  .site-links-card-list {
-    display: flex !important;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .site-link-card {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    box-sizing: border-box;
-  }
-  .site-link-card-top {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    min-width: 0;
-  }
-  .site-link-card-top strong {
-    min-width: 0;
-    color: #333;
-    font-size: 14px;
-    overflow-wrap: anywhere;
-  }
-  .site-link-type {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    padding: 2px 9px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-  }
-  .site-link-type-tool {
-    background: rgba(245, 158, 11, 0.1);
-    color: #f59e0b;
-  }
-  .site-link-type-help {
-    background: rgba(33, 150, 243, 0.1);
-    color: #2196f3;
-  }
-  .site-link-card-url {
-    display: block;
-    color: #9333ea;
-    font-size: 12px;
-    line-height: 1.45;
-    text-decoration: none;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-  .site-link-card-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .site-link-card-actions button {
-    flex: 1;
-    min-height: 32px;
-    border-radius: 7px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .site-link-edit-btn {
-    border: 1px solid #9333ea;
-    background: rgba(147, 51, 234, 0.08);
-    color: #9333ea;
-  }
-  .site-link-delete-btn {
-    border: 1px solid #ef4444;
-    background: rgba(239, 68, 68, 0.08);
-    color: #ef4444;
   }
   .game-card-list {
     display: flex !important;
