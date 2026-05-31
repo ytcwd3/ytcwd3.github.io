@@ -1,21 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-
-const messages = [
-  "嗨~我是仓鼠君！有什么游戏找不到吗？",
-  "试试点击分类标签哦~ 游戏都在里面呢！",
-  "缺游戏？去B站或QQ群找我呀~",
-  "这个搜索超好用的，不信你试试？",
-  "嘿嘿，看我看我！我超可爱的！",
-  "模拟器、固件、金手指...都在置顶词条里！",
-  "找不到想要的？加群问问说不定有惊喜~",
-  "今天的你也玩游戏玩得很开心吧！",
-  "点我点我！我还可以说很多话哦~",
-  "有任何问题都可以问我...才怪，我是只仓鼠啦！",
-  "欢迎来到单游仓鼠！这里有你想要的游戏~",
-  "鼠标点点点~ 好玩的游戏在前面等着你！",
-];
+import { supabase } from "@/lib/supabase";
+import { DEFAULT_MASCOT_MESSAGES } from "@/lib/site_links";
 
 const welcomeMessage = "欢迎来到单游仓鼠！这里有你想要的游戏~";
 
@@ -36,10 +23,11 @@ export default function Mascot() {
   const [isHovered, setIsHovered] = useState(false);
   const [bubbleVersion, setBubbleVersion] = useState(0);
   const currentMessageRef = useRef(welcomeMessage);
+  const messagePoolRef = useRef(DEFAULT_MASCOT_MESSAGES);
   const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoTalkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const pickRandomMessage = useCallback((pool = messages, previous = currentMessageRef.current) => {
+  const pickRandomMessage = useCallback((pool = messagePoolRef.current, previous = currentMessageRef.current) => {
     if (pool.length <= 1) return pool[0] ?? welcomeMessage;
     let next = previous;
     while (next === previous) {
@@ -85,6 +73,27 @@ export default function Mascot() {
     // 页面加载后直接欢迎，避免用户看不到第一次发言。
     speak(getGreeting());
     scheduleAutoTalk();
+
+    supabase
+      .from("site_links")
+      .select("name, url")
+      .eq("type", "mascot")
+      .not("name", "like", "__pin_order__:%")
+      .order("id", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("加载仓鼠话失败:", error);
+          return;
+        }
+        const configuredMessages = (data || [])
+          .map((row) => String(row.url || row.name || "").trim())
+          .filter(Boolean);
+        if (configuredMessages.length > 0) {
+          messagePoolRef.current = configuredMessages;
+        } else {
+          messagePoolRef.current = DEFAULT_MASCOT_MESSAGES;
+        }
+      });
 
     return () => {
       if (autoTalkTimerRef.current) {

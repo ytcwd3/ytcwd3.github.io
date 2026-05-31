@@ -2,19 +2,69 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { SiteLink } from "@/lib/site_links";
+import { SiteLink, ensureDefaultMascotMessages } from "@/lib/site_links";
+
+type SiteLinkType = SiteLink["type"];
+
+const linkTypes: { value: "all" | SiteLinkType; label: string }[] = [
+  { value: "all", label: "全部" },
+  { value: "tool", label: "工具补丁" },
+  { value: "help", label: "帮助中心" },
+  { value: "mascot", label: "仓鼠话" },
+];
+
+const typeStyles: Record<SiteLinkType, { background: string; color: string }> = {
+  tool: { background: "rgba(245,158,11,0.1)", color: "#f59e0b" },
+  help: { background: "rgba(33,150,243,0.1)", color: "#2196f3" },
+  mascot: { background: "rgba(216,87,232,0.12)", color: "#d857e8" },
+};
+
+function getTypeLabel(type: SiteLinkType) {
+  return linkTypes.find((item) => item.value === type)?.label || type;
+}
+
+function splitLinkContent(value: string) {
+  const parts = value
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : [value];
+}
+
+function getDriveLabel(url: string) {
+  if (url.includes("pan.quark.cn")) return "夸克";
+  if (url.includes("baidu.com")) return "百度";
+  if (url.includes("xunlei.com")) return "迅雷";
+  if (/^https?:\/\//i.test(url)) return "链接";
+  return "说明";
+}
+
+function isUrl(value: string) {
+  return /^https?:\/\//i.test(value);
+}
 
 export default function SiteLinksManager() {
   const [links, setLinks] = useState<SiteLink[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<"all" | "tool" | "help">("all");
+  const [filterType, setFilterType] = useState<"all" | SiteLinkType>("all");
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", url: "", type: "tool" as "tool" | "help" });
+  const [form, setForm] = useState({ name: "", url: "", type: "tool" as SiteLinkType });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
+  function getDefaultFormType(type = filterType) {
+    return type === "all" ? "tool" : type;
+  }
+
+  function resetForm(type = filterType) {
+    setForm({ name: "", url: "", type: getDefaultFormType(type) });
+  }
+
   useEffect(() => {
-    loadLinks();
+    (async () => {
+      await ensureDefaultMascotMessages();
+      loadLinks();
+    })();
   }, []);
 
   function loadLinks() {
@@ -32,7 +82,7 @@ export default function SiteLinksManager() {
 
   async function handleSave() {
     if (!form.name.trim() || !form.url.trim()) {
-      setMsg("名称和链接不能为空");
+      setMsg(form.type === "mascot" ? "标题和话术内容不能为空" : "名称和链接不能为空");
       return;
     }
     setSaving(true);
@@ -43,20 +93,20 @@ export default function SiteLinksManager() {
         .update({ name: form.name.trim(), url: form.url.trim(), type: form.type })
         .eq("id", editingId);
       if (error) setMsg("更新失败: " + error.message);
-      else { setMsg("更新成功"); setEditingId(null); setForm({ name: "", url: "", type: "tool" }); }
+      else { setMsg("更新成功"); setEditingId(null); resetForm(); }
     } else {
       const { error } = await supabase
         .from("site_links")
         .insert({ name: form.name.trim(), url: form.url.trim(), type: form.type });
       if (error) setMsg("添加失败: " + error.message);
-      else { setMsg("添加成功"); setForm({ name: "", url: "", type: "tool" }); }
+      else { setMsg("添加成功"); resetForm(); }
     }
     setSaving(false);
     loadLinks();
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("确认删除这条链接？")) return;
+    if (!confirm("确认删除这条记录？")) return;
     await supabase.from("site_links").delete().eq("id", id);
     loadLinks();
   }
@@ -65,6 +115,15 @@ export default function SiteLinksManager() {
     setEditingId(link.id);
     setForm({ name: link.name, url: link.url, type: link.type });
     setMsg("");
+  }
+
+  function handleFilterChange(type: "all" | SiteLinkType) {
+    setFilterType(type);
+    if (type !== "all" && !editingId) {
+      setForm((prev) => ({ ...prev, type }));
+    } else if (type === "all" && !editingId) {
+      setForm((prev) => ({ ...prev, type: getDefaultFormType(type) }));
+    }
   }
 
   const filtered = filterType === "all" ? links : links.filter((l) => l.type === filterType);
@@ -82,14 +141,14 @@ export default function SiteLinksManager() {
           border: "1px solid rgba(255,255,255,0.72)",
         }}
       >
-        <h2 className="page-title" style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 12px" }}>工具补丁 & 帮助中心管理</h2>
+        <h2 className="page-title" style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 12px" }}>工具补丁 & 帮助中心 & 仓鼠话管理</h2>
 
         {/* 筛选 */}
         <div className="site-links-filter" style={{ display: "flex", gap: "8px" }}>
-          {(["all", "tool", "help"] as const).map((t) => (
+          {linkTypes.map((item) => (
             <button
-              key={t}
-              onClick={() => setFilterType(t)}
+              key={item.value}
+              onClick={() => handleFilterChange(item.value)}
               style={{
                 padding: "5px 14px",
                 borderRadius: "6px",
@@ -97,12 +156,12 @@ export default function SiteLinksManager() {
                 cursor: "pointer",
                 fontSize: "13px",
                 fontWeight: 600,
-                background: filterType === t ? "#9333ea" : "white",
-                color: filterType === t ? "white" : "#666",
-                borderColor: filterType === t ? "#9333ea" : "#ddd",
+                background: filterType === item.value ? "#9333ea" : "white",
+                color: filterType === item.value ? "white" : "#666",
+                borderColor: filterType === item.value ? "#9333ea" : "#ddd",
               }}
             >
-              {t === "all" ? "全部" : t === "tool" ? "工具补丁" : "帮助中心"}
+              {item.label}
             </button>
           ))}
         </div>
@@ -120,34 +179,46 @@ export default function SiteLinksManager() {
         }}
       >
         <h3 style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px", color: "#333" }}>
-          {editingId ? "编辑链接" : "添加链接"}
+          {editingId ? "编辑记录" : "添加记录"}
         </h3>
         <div className="site-links-form-row" style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
           <select
             value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value as "tool" | "help" })}
+            onChange={(e) => setForm({ ...form, type: e.target.value as SiteLinkType })}
             className="site-links-select"
             style={{ padding: "7px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px" }}
           >
             <option value="tool">工具补丁</option>
             <option value="help">帮助中心</option>
+            <option value="mascot">仓鼠话</option>
           </select>
           <input
             type="text"
-            placeholder="名称，如：WinRAR"
+            placeholder={form.type === "mascot" ? "标题，如：欢迎语" : "名称，如：WinRAR"}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="site-links-name-input"
             style={{ padding: "7px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", width: "160px" }}
           />
-          <input
-            type="url"
-            placeholder="链接，如：https://"
-            value={form.url}
-            onChange={(e) => setForm({ ...form, url: e.target.value })}
-            className="site-links-url-input"
-            style={{ padding: "7px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", flex: 1, minWidth: "200px" }}
-          />
+          {form.type === "mascot" ? (
+            <textarea
+              placeholder="仓鼠要说的话..."
+              value={form.url}
+              onChange={(e) => setForm({ ...form, url: e.target.value })}
+              className="site-links-url-input"
+              rows={2}
+              style={{ padding: "7px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", flex: 1, minWidth: "240px", resize: "vertical", lineHeight: 1.5 }}
+            />
+          ) : (
+            <input
+              type="url"
+              placeholder="链接，如：https://"
+              value={form.url}
+              onChange={(e) => setForm({ ...form, url: e.target.value })}
+              className="site-links-url-input"
+              style={{ padding: "7px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", flex: 1, minWidth: "200px" }}
+            />
+          )}
           <button
             onClick={handleSave}
             disabled={saving}
@@ -167,7 +238,7 @@ export default function SiteLinksManager() {
           </button>
           {editingId && (
             <button
-              onClick={() => { setEditingId(null); setForm({ name: "", url: "", type: "tool" }); setMsg(""); }}
+              onClick={() => { setEditingId(null); resetForm(); setMsg(""); }}
               style={{ padding: "7px 14px", borderRadius: "6px", background: "#f0f0f0", border: "1px solid #ddd", cursor: "pointer", fontSize: "13px" }}
             >
               取消
@@ -185,7 +256,7 @@ export default function SiteLinksManager() {
       {loading ? (
         <p style={{ color: "#888", textAlign: "center", padding: "40px" }}>加载中...</p>
       ) : filtered.length === 0 ? (
-        <p style={{ color: "#888", textAlign: "center", padding: "40px" }}>暂无链接</p>
+        <p style={{ color: "#888", textAlign: "center", padding: "40px" }}>暂无记录</p>
       ) : (
         <div className="game-table-wrapper">
           <table className="site-links-table" style={{ width: "100%", borderCollapse: "collapse", background: "white", borderRadius: "10px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
@@ -193,7 +264,7 @@ export default function SiteLinksManager() {
               <tr style={{ background: "#f5f5f5" }}>
                 <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>类型</th>
                 <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>名称</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>链接</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "#555" }}>链接 / 话术内容</th>
                 <th style={{ padding: "10px 14px", textAlign: "right", fontSize: "13px", fontWeight: 600, color: "#555" }}>操作</th>
               </tr>
             </thead>
@@ -207,17 +278,38 @@ export default function SiteLinksManager() {
                       borderRadius: "12px",
                       fontSize: "11px",
                       fontWeight: 600,
-                      background: link.type === "tool" ? "rgba(245,158,11,0.1)" : "rgba(33,150,243,0.1)",
-                      color: link.type === "tool" ? "#f59e0b" : "#2196f3",
+                      background: typeStyles[link.type].background,
+                      color: typeStyles[link.type].color,
                     }}>
-                      {link.type === "tool" ? "工具补丁" : "帮助中心"}
+                      {getTypeLabel(link.type)}
                     </span>
                   </td>
                   <td style={{ padding: "10px 14px", fontSize: "13px", color: "#333" }}>{link.name}</td>
                   <td style={{ padding: "10px 14px", fontSize: "12px" }}>
-                    <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ color: "#9333ea", textDecoration: "none", wordBreak: "break-all" }}>
-                      {link.url}
-                    </a>
+                    <div className="site-link-card-content">
+                      {link.type === "mascot" ? (
+                        <p className="site-link-card-text" style={{ margin: 0 }}>{link.url}</p>
+                      ) : (
+                        splitLinkContent(link.url).map((part, index) =>
+                          isUrl(part) ? (
+                            <a
+                              key={`${link.id}-${part}-${index}`}
+                              href={part}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="site-link-card-url"
+                            >
+                              <span>{getDriveLabel(part)}</span>
+                              <small>{part}</small>
+                            </a>
+                          ) : (
+                            <p key={`${link.id}-${part}-${index}`} className="site-link-card-text">
+                              {part}
+                            </p>
+                          ),
+                        )
+                      )}
+                    </div>
                   </td>
                   <td style={{ padding: "10px 14px", textAlign: "right" }}>
                     <button
@@ -237,35 +329,6 @@ export default function SiteLinksManager() {
               ))}
             </tbody>
           </table>
-          <div className="site-links-card-list">
-            {filtered.map((link) => (
-              <div className="site-link-card" key={link.id}>
-                <div className="site-link-card-top">
-                  <span className={`site-link-type site-link-type-${link.type}`}>
-                    {link.type === "tool" ? "工具补丁" : "帮助中心"}
-                  </span>
-                  <strong>{link.name}</strong>
-                </div>
-                <a href={link.url} target="_blank" rel="noopener noreferrer" className="site-link-card-url">
-                  {link.url}
-                </a>
-                <div className="site-link-card-actions">
-                  <button
-                    onClick={() => startEdit(link)}
-                    className="site-link-edit-btn"
-                  >
-                    编辑
-                  </button>
-                  <button
-                    onClick={() => handleDelete(link.id)}
-                    className="site-link-delete-btn"
-                  >
-                    删除
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
     </div>

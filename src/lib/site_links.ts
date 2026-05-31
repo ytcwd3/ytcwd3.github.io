@@ -3,11 +3,26 @@ import { supabase } from "./supabase";
 const PIN_PRIORITY_PREFIX = "__pin_order__:";
 let pinPriorityCache: Record<number, number> | null = null;
 
+export const DEFAULT_MASCOT_MESSAGES = [
+  "嗨~我是仓鼠君！有什么游戏找不到吗？",
+  "试试点击分类标签哦~ 游戏都在里面呢！",
+  "缺游戏？去B站或QQ群找我呀~",
+  "这个搜索超好用的，不信你试试？",
+  "嘿嘿，看我看我！我超可爱的！",
+  "模拟器、固件、金手指...都在置顶词条里！",
+  "找不到想要的？加群问问说不定有惊喜~",
+  "今天的你也玩游戏玩得很开心吧！",
+  "点我点我！我还可以说很多话哦~",
+  "有任何问题都可以问我...才怪，我是只仓鼠啦！",
+  "欢迎来到单游仓鼠！这里有你想要的游戏~",
+  "鼠标点点点~ 好玩的游戏在前面等着你！",
+];
+
 // site_links 链接管理
 // 存放站点可配置链接、工具入口和帮助入口。
 export interface SiteLink {
   id: number;
-  type: "tool" | "help";
+  type: "tool" | "help" | "mascot";
   name: string;
   url: string;
   created_at?: string;
@@ -18,7 +33,7 @@ type PinPriorityRow = {
   id?: number;
   name: string;
   url: string;
-  type?: "tool" | "help";
+  type?: "tool" | "help" | "mascot";
 };
 
 // 用游戏 ID 生成 site_links.name 的存储键。
@@ -102,4 +117,40 @@ export async function savePinPriority(
     type: "help",
   });
   if (insertError) throw insertError;
+}
+
+export async function ensureDefaultMascotMessages() {
+  const { data, error } = await supabase
+    .from("site_links")
+    .select("url")
+    .eq("type", "mascot")
+    .not("name", "like", `${PIN_PRIORITY_PREFIX}%`);
+
+  if (error) {
+    console.error("检查默认仓鼠话失败:", error);
+    return;
+  }
+
+  const existingMessages = new Set(
+    (data || [])
+      .map((row) => String(row.url || "").trim())
+      .filter(Boolean),
+  );
+  const missingMessages = DEFAULT_MASCOT_MESSAGES
+    .map((message, index) => ({ message, index }))
+    .filter(({ message }) => !existingMessages.has(message));
+
+  if (missingMessages.length === 0) return;
+
+  const { error: insertError } = await supabase.from("site_links").insert(
+    missingMessages.map(({ message, index }) => ({
+      name: `默认仓鼠话术 ${index + 1}`,
+      url: message,
+      type: "mascot" as const,
+    })),
+  );
+
+  if (insertError) {
+    console.error("初始化默认仓鼠话失败:", insertError);
+  }
 }
