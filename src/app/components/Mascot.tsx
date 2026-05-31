@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabase";
-import { DEFAULT_MASCOT_MESSAGES } from "@/lib/site_links";
+import { DEFAULT_MASCOT_MESSAGES, fetchSiteLinksByType } from "@/lib/site_links";
 
 const welcomeMessage = "欢迎来到单游仓鼠！这里有你想要的游戏~";
 
@@ -74,25 +73,17 @@ export default function Mascot() {
     speak(getGreeting());
     scheduleAutoTalk();
 
-    supabase
-      .from("site_links")
-      .select("name, url")
-      .eq("type", "mascot")
-      .not("name", "like", "__pin_order__:%")
-      .order("id", { ascending: true })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("加载仓鼠话失败:", error);
-          return;
-        }
+    fetchSiteLinksByType("mascot")
+      .then((data) => {
         const configuredMessages = (data || [])
           .map((row) => String(row.url || row.name || "").trim())
           .filter(Boolean);
-        if (configuredMessages.length > 0) {
-          messagePoolRef.current = configuredMessages;
-        } else {
-          messagePoolRef.current = DEFAULT_MASCOT_MESSAGES;
-        }
+        messagePoolRef.current =
+          configuredMessages.length > 0 ? configuredMessages : DEFAULT_MASCOT_MESSAGES;
+      })
+      .catch((error) => {
+        console.error("加载仓鼠话失败:", error);
+        messagePoolRef.current = DEFAULT_MASCOT_MESSAGES;
       });
 
     return () => {

@@ -134,21 +134,25 @@ export default function GuestbookPopup({
     };
   }, [hasMore, loadingMore, loading, currentPage]);
 
-  async function loadGuestbooks(page = 1, append = false) {
+  async function loadGuestbooks(page = 1, append = false, fresh = false) {
     if (append) {
       setLoadingMore(true);
     } else {
       setLoading(true);
     }
     try {
-      const from = (page - 1) * PAGE_SIZE;
-      const to = page * PAGE_SIZE - 1;
-      const { data, error, count } = await supabase
-        .from("guestbook")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false })
-        .range(from, to);
-      if (error) throw error;
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(PAGE_SIZE));
+      if (fresh) params.set("fresh", "1");
+      const response = await fetch(`/api/guestbook?${params.toString()}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`Guestbook API error: ${response.status}`);
+      const { data, hasMore: nextHasMore } = (await response.json()) as {
+        data: Guestbook[];
+        hasMore: boolean;
+      };
       if (append) {
         setGuestbooks((prev) => {
           const nextGuestbooks = [...prev, ...(data || [])];
@@ -185,9 +189,7 @@ export default function GuestbookPopup({
           ),
         );
       }
-      setHasMore(
-        (data?.length || 0) === PAGE_SIZE && (count || 0) > page * PAGE_SIZE,
-      );
+      setHasMore(nextHasMore);
       setCurrentPage(page);
     } catch {
       // ignore
@@ -222,37 +224,29 @@ export default function GuestbookPopup({
     if (!name.trim() || !message.trim()) return;
     setSubmitting(true);
     try {
-      // 应用层防重复检查
-      const { data: existing, error: checkError } = await supabase
-        .from("guestbook")
-        .select("id")
-        .eq("name", name.trim())
-        .eq("message", message.trim())
-        .is("parent_id", null)
-        .limit(1);
-      if (checkError) throw checkError;
-      if (existing && existing.length > 0) {
-        alert("请勿重复提交相同的留言");
-        setSubmitting(false);
-        return;
-      }
-
-      const { error } = await supabase
-        .from("guestbook")
-        .insert([{ name: name.trim(), message: message.trim() }]);
-      if (error) {
-        if (error.code === "23505") {
+      const response = await fetch("/api/guestbook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          message: message.trim(),
+        }),
+      });
+      if (!response.ok) {
+        if (response.status === 409) {
           alert("请勿重复提交相同的留言");
-          setSubmitting(false);
           return;
         }
-        throw error;
+        throw new Error(`Guestbook submit error: ${response.status}`);
       }
       setSuccess(true);
       setName("");
       setMessage("");
       setHistoryVisible(true);
-      loadGuestbooks(1, false);
+      loadGuestbooks(1, false, true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       if (err?.message === "AbortError") return;
@@ -286,7 +280,7 @@ export default function GuestbookPopup({
       setReplyContent("");
       setReplyingTo(null);
       setHistoryVisible(true);
-      loadGuestbooks(1, false);
+      loadGuestbooks(1, false, true);
     } catch {
       alert("回复失败，请重试");
     } finally {
@@ -300,7 +294,7 @@ export default function GuestbookPopup({
       const { error } = await supabase.from("guestbook").delete().eq("id", id);
       if (error) throw error;
       setHistoryVisible(true);
-      loadGuestbooks(1, false);
+      loadGuestbooks(1, false, true);
     } catch {
       alert("删除失败，请重试");
     }

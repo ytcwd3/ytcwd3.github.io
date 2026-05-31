@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Game } from "@/lib/games";
 import { HomeCategory, fetchHomeCategories } from "@/lib/categories";
-import { fetchPinPriorityMap } from "@/lib/site_links";
 import { decryptData } from "@/lib/encrypt";
 import SearchResults from "./components/SearchResults";
 import GuestbookPopup from "./components/Popups/GuestbookPopup";
@@ -91,7 +90,7 @@ export default function HomePage() {
       return { data: [], count: 0 };
     }
 
-    const pinPriorityMap = await fetchPinPriorityMap();
+    const pinPriorityMap = (result.pinPriorityMap || {}) as Record<number, number>;
 
     // Separate pinned and regular games
     const pinnedGames = (result.data as Game[])
@@ -243,7 +242,16 @@ export default function HomePage() {
     <>
       <div className="container">
         <div className="brand-title-wrap">
-          <img className="site-logo" src="https://cloudflarecnimg.scdn.io/i/6a1c314ee83c0_1780232526.webp" alt="单游仓鼠 Logo" />
+          <img
+            className="site-logo"
+            src="https://cloudflarecnimg.scdn.io/i/6a1c314ee83c0_1780232526.webp"
+            alt="单游仓鼠 Logo"
+            width={88}
+            height={58}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
           <h1 className="title">单游仓鼠-主机掌机+PC一键检索</h1>
         </div>
         <p className="sub-title">缺游戏，资源有问题-B站，QQ群联系均可！</p>

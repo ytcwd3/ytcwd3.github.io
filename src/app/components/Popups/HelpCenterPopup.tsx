@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import { SiteLink } from "@/lib/site_links";
+import { SiteLink, fetchSiteLinksByType } from "@/lib/site_links";
 
 interface HelpCenterPopupProps {
   onClose: () => void;
@@ -13,20 +12,10 @@ export default function HelpCenterPopup({ onClose }: HelpCenterPopupProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("site_links")
-      .select("*")
-      .eq("type", "help")
-      .not("name", "like", "__pin_order__:%")
-      .order("id", { ascending: true })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("加载帮助中心失败:", error);
-        } else {
-          setLinks(data || []);
-        }
-        setLoading(false);
-      });
+    fetchSiteLinksByType("help")
+      .then((data) => setLinks(data))
+      .catch((error) => console.error("加载帮助中心失败:", error))
+      .finally(() => setLoading(false));
   }, []);
 
   return (

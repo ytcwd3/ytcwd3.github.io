@@ -45,7 +45,7 @@ function replaceValue(
 
 // Simple cache for subcategories
 let subcategoriesCache: { data: Subcategory[]; timestamp: number } | null = null;
-const CACHE_DURATION = 30 * 1000; // 30 seconds only
+const CACHE_DURATION = 5 * 60 * 1000;
 
 // 读取 subcategories 原始数据。
 export async function fetchSubcategoriesRaw(): Promise<Subcategory[]> {

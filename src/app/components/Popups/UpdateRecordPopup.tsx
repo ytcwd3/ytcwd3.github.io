@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { decryptData } from "@/lib/encrypt";
 
 interface UpdateRecordPopupProps {
   onClose: () => void;
@@ -44,18 +44,20 @@ export default function UpdateRecordPopup({ onClose }: UpdateRecordPopupProps) {
     }
 
     try {
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      const { data, error } = await supabase
-        .from("games")
-        .select("id, name, updatedate, category, subcategory, image, video")
-        .order("updatedate", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, to);
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(PAGE_SIZE));
+      params.set("sort", "updatedate");
+      params.set("pins", "0");
 
-      if (error) throw error;
+      const response = await fetch(`/api/games?${params.toString()}`);
+      if (!response.ok) throw new Error(`Games API error: ${response.status}`);
 
-      const nextRecords = (data || []).map((item) => ({
+      const encrypted = await response.text();
+      const result = decryptData(encrypted);
+      const data = (result?.data || []) as GameRecord[];
+
+      const nextRecords = data.map((item) => ({
         id: item.id,
         name: item.name,
         updatedate: item.updatedate,

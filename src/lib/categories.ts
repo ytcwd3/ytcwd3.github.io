@@ -49,7 +49,7 @@ let dbCategoriesPending: Promise<DbCategory[]> | null = null;
 
 // Simple in-memory + sessionStorage cache for home categories
 let homeCategoriesCache: { data: HomeCategory[]; timestamp: number } | null = null;
-const HOME_CACHE_DURATION = 30 * 1000; // 30 seconds only
+const HOME_CACHE_DURATION = 5 * 60 * 1000;
 
 async function fetchHomeCategoriesFromSupabase(): Promise<HomeCategory[]> {
   const { data: categoriesData, error: categoriesError } = await supabase
