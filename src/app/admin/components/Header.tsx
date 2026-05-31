@@ -39,21 +39,37 @@ export default function AdminHeader({ user, className }: HeaderProps) {
         boxShadow: "0 4px 12px rgba(216,87,232,0.3)",
       }}
     >
-      <div>
-        <h1
-          className="admin-header-title"
+      <div
+        className="admin-brand"
+        style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}
+      >
+        <img
+          src="/logo.png"
+          alt="单游仓鼠 Logo"
           style={{
-            fontSize: "18px",
-            fontWeight: 700,
-            margin: 0,
-            letterSpacing: "0.5px",
+            width: "58px",
+            height: "38px",
+            objectFit: "contain",
+            filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.18))",
+            flexShrink: 0,
           }}
-        >
-          游戏数据库管理后台
-        </h1>
-        <p style={{ fontSize: "11px", margin: "1px 0 0", opacity: 0.85 }}>
-          单游仓鼠 · 游戏资源管理
-        </p>
+        />
+        <div style={{ minWidth: 0 }}>
+          <h1
+            className="admin-header-title"
+            style={{
+              fontSize: "18px",
+              fontWeight: 700,
+              margin: 0,
+              letterSpacing: "0.5px",
+            }}
+          >
+            游戏数据库管理后台
+          </h1>
+          <p style={{ fontSize: "11px", margin: "1px 0 0", opacity: 0.85 }}>
+            单游仓鼠 · 游戏资源管理
+          </p>
+        </div>
       </div>
       <div className="admin-header-user" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <span style={{ fontSize: "12px", opacity: 0.9 }}>

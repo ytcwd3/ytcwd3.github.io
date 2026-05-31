@@ -71,6 +71,10 @@
     padding: 10px 12px !important;
     align-items: stretch !important;
   }
+  .admin-brand {
+    width: 100% !important;
+    justify-content: center !important;
+  }
   .admin-header h1 {
     font-size: 15px !important;
     text-align: center !important;

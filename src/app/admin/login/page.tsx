@@ -92,6 +92,17 @@ export default function AdminLogin() {
           width: "90%",
         }}
       >
+        <img
+          src="/logo.png"
+          alt="单游仓鼠 Logo"
+          style={{
+            width: 112,
+            height: 72,
+            objectFit: "contain",
+            marginBottom: 16,
+            filter: "drop-shadow(0 10px 20px rgba(216,87,232,0.24))",
+          }}
+        />
         <h1 style={{ color: "#333", marginBottom: 10, fontSize: 24 }}>
           游戏数据库管理系统
         </h1>

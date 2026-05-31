@@ -4,8 +4,26 @@ import AuthGuard from "./components/AuthGuard";
 import ImageHoverPreview from "./components/ImageHoverPreview";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ytcwd3.github.io"),
   title: "单游仓鼠搜索站",
   description: "单游仓鼠搜索站",
+  applicationName: "单游仓鼠搜索站",
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png", sizes: "512x512" }],
+    shortcut: ["/favicon.png"],
+    apple: [{ url: "/favicon.png", type: "image/png", sizes: "512x512" }],
+  },
+  openGraph: {
+    title: "单游仓鼠搜索站",
+    description: "单游仓鼠搜索站",
+    images: [{ url: "/logo.png", width: 865, height: 551 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "单游仓鼠搜索站",
+    description: "单游仓鼠搜索站",
+    images: ["/logo.png"],
+  },
 };
 
 export const viewport: Viewport = {
@@ -37,6 +55,9 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="512x512" />
+        <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         <script dangerouslySetInnerHTML={{ __html: polyfillScript }} />
         <script dangerouslySetInnerHTML={{ __html: disableDevToolsScript }} />
       </head>
