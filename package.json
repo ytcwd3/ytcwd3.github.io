@@ -10,19 +10,19 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "npm install --include=dev && next build",
+    "build": "npm install --include=dev --legacy-peer-deps && next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.10.0",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.106.2",
     "core-js": "^3.49.0",
-    "next": "^15.5.14",
+    "next": "^16.2.6",
     "qrcode": "^1.5.4",
     "qrcode.react": "^3.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "regenerator-runtime": "^0.14.1",
     "xlsx": "^0.18.5"
   },
