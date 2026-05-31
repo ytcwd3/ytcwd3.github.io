@@ -55,6 +55,19 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
+        <link rel="preconnect" href="https://cloudflarecnimg.scdn.io" crossOrigin="" />
+        <link rel="dns-prefetch" href="//cloudflarecnimg.scdn.io" />
+        <link
+          rel="preload"
+          as="image"
+          href="https://cloudflarecnimg.scdn.io/i/6a17f00cb1ad8_1779953676.webp"
+        />
+        <link
+          rel="preload"
+          as="image"
+          href="https://cloudflarecnimg.scdn.io/i/6a1c314ee83c0_1780232526.webp"
+        />
+        <link rel="preload" as="fetch" href="/api/categories" crossOrigin="anonymous" />
         <link rel="icon" href="https://cloudflarecnimg.scdn.io/i/6a1c3148be2dc_1780232520.webp" type="image/png" sizes="512x512" />
         <link rel="shortcut icon" href="https://cloudflarecnimg.scdn.io/i/6a1c3148be2dc_1780232520.webp" type="image/png" />
         <link rel="apple-touch-icon" href="https://cloudflarecnimg.scdn.io/i/6a1c3148be2dc_1780232520.webp" />
