@@ -51,6 +51,28 @@ let dbCategoriesPending: Promise<DbCategory[]> | null = null;
 let homeCategoriesCache: { data: HomeCategory[]; timestamp: number } | null = null;
 const HOME_CACHE_DURATION = 30 * 1000; // 30 seconds only
 
+async function fetchHomeCategoriesFromSupabase(): Promise<HomeCategory[]> {
+  const { data: categoriesData, error: categoriesError } = await supabase
+    .from("categories")
+    .select("id, name, sort_order")
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("id", { ascending: true });
+
+  if (categoriesError) throw categoriesError;
+  if (!categoriesData || categoriesData.length === 0) return [];
+
+  const subcategories = await fetchSubcategoriesRaw();
+  const categories = categoriesData as Category[];
+
+  return categories.map((category) => ({
+    name: String(category.name || ""),
+    tags: subcategories
+      .filter((sub) => sub.category_id === category.id)
+      .sort((a, b) => (a.sort_order ?? a.id) - (b.sort_order ?? b.id))
+      .map((sub) => String(sub.name || "")),
+  }));
+}
+
 // 读取 categories 和 subcategories，用于首页分类导航展示。
 export async function fetchHomeCategories(): Promise<HomeCategory[]> {
   const now = Date.now();
@@ -74,25 +96,19 @@ export async function fetchHomeCategories(): Promise<HomeCategory[]> {
     // Ignore storage errors
   }
 
-  const { data: categoriesData, error: categoriesError } = await supabase
-    .from("categories")
-    .select("id, name, sort_order")
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("id", { ascending: true });
-
-  if (categoriesError) throw categoriesError;
-  if (!categoriesData || categoriesData.length === 0) return [];
-
-  const subcategories = await fetchSubcategoriesRaw();
-  const categories = categoriesData as Category[];
-
-  const result: HomeCategory[] = categories.map((category) => ({
-    name: String(category.name || ""),
-    tags: subcategories
-      .filter((sub) => sub.category_id === category.id)
-      .sort((a, b) => (a.sort_order ?? a.id) - (b.sort_order ?? b.id))
-      .map((sub) => String(sub.name || "")),
-  }));
+  let result: HomeCategory[];
+  try {
+    const response = await fetch("/api/categories", {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) throw new Error(`Categories API error: ${response.status}`);
+    result = await response.json();
+  } catch (error) {
+    console.warn("首页分类接口加载失败，回退到 Supabase 直连:", error);
+    result = await fetchHomeCategoriesFromSupabase();
+  }
 
   // Cache in memory and sessionStorage
   homeCategoriesCache = { data: result, timestamp: now };
