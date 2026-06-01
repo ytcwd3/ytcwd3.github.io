@@ -217,15 +217,17 @@
     margin-bottom: 12px !important;
   }
   .subcat-filter .filter-scroll {
-    overflow-x: auto !important;
-    flex-wrap: nowrap !important;
+    overflow-x: visible !important;
+    flex-wrap: wrap !important;
     -webkit-overflow-scrolling: touch !important;
     padding-bottom: 4px !important;
   }
   .subcat-filter button {
-    flex-shrink: 0 !important;
+    flex: 0 1 auto !important;
     padding: 3px 8px !important;
     font-size: 11px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
   }
 
   /* 表格 -> 卡片列表（移动端核心改造） */
