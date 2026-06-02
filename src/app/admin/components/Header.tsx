@@ -80,6 +80,7 @@ export default function AdminHeader({ user, className }: HeaderProps) {
             key={item.href}
             href={item.href}
             prefetch={false}
+            className="admin-nav-link"
             style={{
               background: item.active ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.15)",
               border: "1px solid rgba(255,255,255,0.3)",
@@ -97,6 +98,7 @@ export default function AdminHeader({ user, className }: HeaderProps) {
         ))}
         <button
           onClick={handleLogout}
+          className="admin-logout-btn"
           style={{
             background: "rgba(255,255,255,0.2)",
             border: "1px solid rgba(255,255,255,0.3)",
