@@ -281,7 +281,7 @@ export default function GameTable({
                           </strong>
                         </div>
                       </td>
-                      <td style={{ padding: "11px 14px" }}>
+                      <td style={{ padding: "11px 14px", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-block",
@@ -289,6 +289,7 @@ export default function GameTable({
                             borderRadius: "var(--radius-sm)",
                             fontSize: "12px",
                             fontWeight: 600,
+                            whiteSpace: "nowrap",
                             background: `rgba(${CAT_RGBA[catKey]}, 0.12)`,
                             color: `rgba(${CAT_RGBA[catKey]}, 0.9)`,
                             border: `1px solid rgba(${CAT_RGBA[catKey]}, 0.25)`,
@@ -297,12 +298,13 @@ export default function GameTable({
                           {dbCat || "未分类"}
                         </span>
                       </td>
-                      <td style={{ padding: "11px 14px" }}>
+                      <td style={{ padding: "11px 14px", whiteSpace: "nowrap" }}>
                         <div
                           style={{
                             display: "flex",
-                            flexWrap: "wrap",
+                            flexWrap: "nowrap",
                             gap: "3px",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {(game.subcategory || []).map((s) => (
@@ -313,6 +315,7 @@ export default function GameTable({
                                 padding: "2px 8px",
                                 borderRadius: "4px",
                                 fontSize: "11px",
+                                whiteSpace: "nowrap",
                                 background: `rgba(${CAT_RGBA[catKey]}, 0.08)`,
                                 color: `rgba(${CAT_RGBA[catKey]}, 0.8)`,
                                 border: `1px solid rgba(${CAT_RGBA[catKey]}, 0.15)`,
@@ -323,7 +326,13 @@ export default function GameTable({
                           ))}
                         </div>
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: "12px" }}>
+                      <td
+                        style={{
+                          padding: "11px 14px",
+                          fontSize: "12px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {game.quarkpan ? (
                           <a
                             href={game.quarkpan}
