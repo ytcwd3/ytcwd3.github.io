@@ -1,9 +1,5 @@
 import { supabase } from "./supabase";
-import {
-  fetchGameCategoryRows,
-  updateGameRows,
-} from "./games";
-import { logCategoryOperation } from "./category_operation_logs";
+import { runAdminCategoryAction } from "./admin_categories";
 import {
   clearSubcategoriesCache,
   fetchSubcategoriesRaw,
@@ -279,49 +275,15 @@ export async function fetchDbCategories(signal?: AbortSignal): Promise<DbCategor
   }
 }
 
-// 获取 categories 下一条排序值。
-async function getNextCategorySortOrder(): Promise<number> {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("sort_order")
-    .order("sort_order", { ascending: false, nullsFirst: false })
-    .limit(1);
-  if (error) throw error;
-  const current = data?.[0]?.sort_order;
-  return typeof current === "number" ? current + 1 : 0;
-}
-
 // 新增父分类。
 export async function addDbCategory(name: string): Promise<void> {
   const cleanName = name.trim();
   if (!cleanName) throw new Error("主分类名称不能为空");
 
-  const { data: existing, error: existingError } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("name", cleanName)
-    .limit(1);
-  if (existingError) throw existingError;
-  if (existing && existing.length > 0) {
-    throw new Error("主分类已存在");
-  }
-
-  const sortOrder = await getNextCategorySortOrder();
-  const { error } = await supabase.from("categories").insert({
-    name: cleanName,
-    sort_order: sortOrder,
-  });
-  if (error) throw error;
+  await runAdminCategoryAction("create-category", { name: cleanName });
 
   clearDbCategoriesPending();
   clearHomeCategoriesCache();
-
-  await logCategoryOperation({
-    action: "create_category",
-    targetType: "category",
-    targetName: cleanName,
-    afterData: { name: cleanName },
-  });
 }
 
 // 重命名父分类，并同步更新 games 中的冗余分类名称。
@@ -335,57 +297,14 @@ export async function renameDbCategory(
 
   if (cleanName === oldName) return;
 
-  const { data: existing, error: existingError } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("name", cleanName)
-    .neq("id", categoryId)
-    .limit(1);
-  if (existingError) throw existingError;
-  if (existing && existing.length > 0) {
-    throw new Error("主分类已存在");
-  }
-
-  const { error: updateCategoryError } = await supabase
-    .from("categories")
-    .update({ name: cleanName })
-    .eq("id", categoryId);
-  if (updateCategoryError) throw updateCategoryError;
+  await runAdminCategoryAction("rename-category", {
+    categoryId,
+    oldName,
+    newName: cleanName,
+  });
 
   clearDbCategoriesPending();
   clearHomeCategoriesCache();
-
-  const { error: rpcError } = await supabase.rpc(
-    "sync_games_after_category_rename",
-    {
-      p_category_id: categoryId,
-      p_old_name: oldName,
-      p_new_name: cleanName,
-    },
-  );
-  if (rpcError) {
-    const rows = (await fetchGameCategoryRows()).filter((row) =>
-      (row.category || []).includes(oldName),
-    );
-    for (const row of rows) {
-      const { error } = await supabase
-        .from("games")
-        .update({
-          category: replaceValue(row.category, oldName, cleanName),
-        })
-        .eq("id", row.id);
-      if (error) throw error;
-    }
-  }
-
-  await logCategoryOperation({
-    action: "rename_category",
-    targetType: "category",
-    targetId: categoryId,
-    targetName: cleanName,
-    beforeData: { name: oldName },
-    afterData: { name: cleanName },
-  });
 }
 
 // 更新父分类排序（单条 CASE WHEN SQL，原子操作）。
@@ -394,26 +313,9 @@ export async function updateCategorySortOrder(
 ): Promise<void> {
   if (categories.length === 0) return;
 
-  const whenClauses = categories
-    .map(({ id }, index) => `WHEN ${id} THEN ${index}`)
-    .join(" ");
-  const inClause = categories.map((c) => c.id).join(",");
-
-  const { error } = await supabase.rpc("execute_sql", {
-    sql: `UPDATE categories SET sort_order = CASE id ${whenClauses} END WHERE id IN (${inClause})`,
+  await runAdminCategoryAction("sort-categories", {
+    ids: categories.map((category) => category.id),
   });
-
-  if (error) {
-    for (const [index, category] of categories.entries()) {
-      const { error: updateError } = await supabase
-        .from("categories")
-        .update({ sort_order: index })
-        .eq("id", category.id);
-      if (updateError) {
-        throw new Error(`排序更新失败: ${updateError.message}`);
-      }
-    }
-  }
 
   clearDbCategoriesPending();
   clearHomeCategoriesCache();
@@ -424,37 +326,9 @@ export async function deleteDbCategory(
   categoryId: number,
   categoryName: string,
 ): Promise<void> {
-  const { error: rpcError } = await supabase.rpc(
-    "clear_games_for_category_delete",
-    {
-      p_category_id: categoryId,
-      p_category_name: categoryName,
-    },
-  );
-  if (rpcError) {
-    await updateGameRows(
-      (row) =>
-        (row.category || []).includes(categoryName) ||
-        row.category_id === categoryId,
-      () => ({
-        category: [],
-        category_id: null,
-      }),
-    );
-  }
-
-  const { error } = await supabase.from("categories").delete().eq("id", categoryId);
-  if (error) throw error;
+  await runAdminCategoryAction("delete-category", { categoryId, categoryName });
 
   clearSubcategoriesCache();
   clearDbCategoriesPending();
   clearHomeCategoriesCache();
-
-  await logCategoryOperation({
-    action: "delete_category",
-    targetType: "category",
-    targetId: categoryId,
-    targetName: categoryName,
-    beforeData: { name: categoryName },
-  });
 }
