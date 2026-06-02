@@ -522,6 +522,8 @@ export default function GuestbookPopup({
             <button
               onClick={showHistory}
               style={{
+                position: "relative",
+                zIndex: 1,
                 padding: "9px 24px",
                 fontSize: "13px",
                 background: "rgba(216, 87, 232, 0.08)",

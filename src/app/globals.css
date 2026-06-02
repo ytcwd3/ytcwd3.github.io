@@ -2210,7 +2210,7 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .mascot-bubble {
@@ -2293,7 +2293,7 @@ body::before {
 }
 
 .mascot-img-btn {
-  pointer-events: all;
+  pointer-events: auto;
   background: none;
   border: none;
   padding: 0;
@@ -2436,17 +2436,27 @@ body::before {
 
 @media (max-width: 768px) {
   .mascot-container {
-    bottom: 12px;
-    left: 12px;
+    bottom: 8px;
+    left: 8px;
   }
   .mascot-bubble {
-    width: min(260px, calc(100vw - 24px));
-    min-height: 74px;
-    padding: 10px 13px;
-    font-size: 14px;
+    width: min(220px, calc(100vw - 16px));
+    min-height: 62px;
+    padding: 8px 11px;
+    font-size: 13px;
+    margin-bottom: 6px;
   }
   .mascot-img-btn img {
-    width: 132px;
-    height: 142px;
+    width: 104px;
+    height: 112px;
+  }
+  .mascot-img-btn::after {
+    inset: 12px 14px 8px;
+  }
+  .mascot-img-btn::before {
+    top: 4px;
+    right: -4px;
+    padding: 2px 7px;
+    font-size: 11px;
   }
 }
