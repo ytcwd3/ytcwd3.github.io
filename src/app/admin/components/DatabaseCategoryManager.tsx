@@ -381,12 +381,12 @@ export default function DatabaseCategoryManager() {
             height: "34px",
             padding: "0 16px",
             borderRadius: "8px",
-            border: "1px solid #e2e2e2",
-            background: loading && !isMoving ? "#f5f5f5" : "#fff",
+            border: "none",
+            background: "rgba(147,51,234,0.1)",
+            color: "#7c22ce",
             cursor: loading && !isMoving ? "not-allowed" : "pointer",
             fontSize: "13px",
-            fontWeight: 500,
-            color: loading && !isMoving ? "#aaa" : "#555",
+            fontWeight: 600,
             transition: "all 0.2s",
             flexShrink: 0,
           }}
@@ -433,7 +433,7 @@ export default function DatabaseCategoryManager() {
             >
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <span style={{ fontSize: "13px", fontWeight: 600, color: "#333" }}>主分类</span>
-                <span style={{ fontSize: "11px", color: "#aaa", background: "#fff", padding: "2px 6px", borderRadius: "10px", border: "1px solid #e2e2e2" }}>{categories.length} 个</span>
+                <span style={{ fontSize: "11px", color: "#777", background: "#fff", padding: "2px 6px", borderRadius: "10px", border: "1px solid #e2e2e2" }}>{categories.length} 个</span>
               </div>
             </div>
 
@@ -583,7 +583,7 @@ export default function DatabaseCategoryManager() {
                     >
                       {currentCategory.name}
                     </h3>
-                    <span style={{ fontSize: "11px", color: "#fff", background: "rgba(147,51,234,0.1)", padding: "2px 8px", borderRadius: "10px", flexShrink: 0 }}>
+                    <span style={{ fontSize: "11px", color: "#7c22ce", background: "rgba(147,51,234,0.12)", padding: "2px 8px", borderRadius: "10px", flexShrink: 0 }}>
                       {currentCategory.subcategories.length} 子分类
                     </span>
                   </div>
@@ -603,7 +603,7 @@ export default function DatabaseCategoryManager() {
                         () => renameDbCategory(currentCategory.id, currentCategory.name, next),
                       );
                     }}
-                    style={{ padding: "5px 12px", borderRadius: "8px", border: "1px solid #e2e2e2", background: "#fff", cursor: "pointer", fontSize: "12px", color: "#666", fontWeight: 500 }}
+                    style={{ padding: "5px 12px", borderRadius: "8px", border: "none", background: "rgba(147,51,234,0.1)", color: "#7c22ce", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}
                   >
                     ✏️ 改名
                   </button>
@@ -647,7 +647,7 @@ export default function DatabaseCategoryManager() {
                     borderRadius: "8px",
                     border: "none",
                     background: "rgba(147,51,234,0.1)",
-                    color: "#fff",
+                    color: "#7c22ce",
                     cursor: saving ? "not-allowed" : "pointer",
                     fontSize: "13px",
                     fontWeight: 600,
@@ -732,19 +732,19 @@ export default function DatabaseCategoryManager() {
                             <button
                               onClick={() => { const target = categories.find((item) => item.id === parentId); if (!target) return; handleMoveSubcategory(subcategory.id, currentCategory, target); }}
                               disabled={!!saving || parentId === currentCategory.id}
-                              style={{ border: "none", background: "rgba(147,51,234,0.1)", color: parentId === currentCategory.id ? "#ccc" : "#b87dd8", cursor: saving || parentId === currentCategory.id ? "not-allowed" : "pointer", padding: "2px 6px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, flexShrink: 0 }}
+                              style={{ border: "none", background: "rgba(147,51,234,0.1)", color: parentId === currentCategory.id ? "#ccc" : "#7c22ce", cursor: saving || parentId === currentCategory.id ? "not-allowed" : "pointer", padding: "2px 6px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, flexShrink: 0 }}
                             >
                               {isMoving ? "迁移中" : "迁移"}
                             </button>
                             <button
                               onClick={() => { if (guardPending()) return; const next = prompt("新的子分类名称", subcategory.name)?.trim(); if (!next || next === subcategory.name) return; confirmAndRun(`确认把子分类「${subcategory.name}」改成「${next}」？这会批量更新相关游戏数据。`, "rename-subcategory", () => renameDbSubcategory(currentCategory.id, subcategory.id, subcategory.name, next)); }}
-                              style={{ border: "none", background: "transparent", color: "#999", cursor: "pointer", padding: "2px 4px", borderRadius: "4px", fontSize: "11px", flexShrink: 0 }}
+                              style={{ border: "none", background: "rgba(147,51,234,0.1)", color: "#7c22ce", cursor: "pointer", padding: "2px 6px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, flexShrink: 0 }}
                             >
                               改名
                             </button>
                             <button
                               onClick={() => { if (guardPending()) return; if (confirm(`确认删除子分类「${subcategory.name}」？相关游戏会移除这个子分类值。`)) { run("delete-subcategory", () => deleteDbSubcategory(subcategory.id, currentCategory.name, subcategory.name)); } }}
-                              style={{ border: "none", background: "transparent", color: "#dc2626", cursor: "pointer", padding: "2px 4px", borderRadius: "4px", fontSize: "11px", flexShrink: 0 }}
+                              style={{ border: "none", background: "rgba(239,68,68,0.1)", color: "#dc2626", cursor: "pointer", padding: "2px 4px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, flexShrink: 0 }}
                             >
                               删除
                             </button>
