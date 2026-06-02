@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Game } from "@/lib/games";
+import { adminCreateGame, adminUpdateGame } from "@/lib/admin_games";
 import { DbCategory, fetchDbCategoryOptions } from "@/lib/categories";
 
 interface ImportModalProps {
@@ -381,28 +382,23 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
           throw new Error("缺少 category_id");
         }
         const subcategoryIds = item.new.subcategory_id ?? null;
-        const { error } = await supabase
-          .from("games")
-          .update({
-            category: normalizeArray(item.new.category),
-            subcategory: normalizeArray(item.new.subcategory),
-            category_id: item.new.category_id,
-            subcategory_id: subcategoryIds,
-            code: normalizeText(item.new.code),
-            unzipcode: normalizeText(item.new.unzipcode),
-            quarkpan: normalizeText(item.new.quarkpan),
-            quarkcode: normalizeText(item.new.quarkcode),
-            baidupan: normalizeText(item.new.baidupan),
-            baiducode: normalizeText(item.new.baiducode),
-            thunderpan: normalizeText(item.new.thunderpan),
-            thundercode: normalizeText(item.new.thundercode),
-            updatedate: normalizeText(item.new.updatedate),
-            image: normalizeText(item.new.image),
-            video: normalizeText(item.new.video),
-          })
-          .eq("name", item.new.name);
-
-        if (error) throw error;
+        await adminUpdateGame(item.old.id, {
+          category: normalizeArray(item.new.category),
+          subcategory: normalizeArray(item.new.subcategory),
+          category_id: item.new.category_id,
+          subcategory_id: subcategoryIds,
+          code: normalizeText(item.new.code),
+          unzipcode: normalizeText(item.new.unzipcode),
+          quarkpan: normalizeText(item.new.quarkpan),
+          quarkcode: normalizeText(item.new.quarkcode),
+          baidupan: normalizeText(item.new.baidupan),
+          baiducode: normalizeText(item.new.baiducode),
+          thunderpan: normalizeText(item.new.thunderpan),
+          thundercode: normalizeText(item.new.thundercode),
+          updatedate: normalizeText(item.new.updatedate),
+          image: normalizeText(item.new.image),
+          video: normalizeText(item.new.video),
+        });
         success++;
       } catch (error: any) {
         failed++;
@@ -415,28 +411,24 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
         if (!game.category_id) {
           throw new Error("缺少 category_id");
         }
-        const { error } = await supabase.from("games").insert([
-          {
-            name: normalizeText(game.name),
-            category: normalizeArray(game.category),
-            subcategory: normalizeArray(game.subcategory),
-            category_id: game.category_id,
-            subcategory_id: game.subcategory_id ?? null,
-            code: normalizeText(game.code),
-            unzipcode: normalizeText(game.unzipcode),
-            quarkpan: normalizeText(game.quarkpan),
-            quarkcode: normalizeText(game.quarkcode),
-            baidupan: normalizeText(game.baidupan),
-            baiducode: normalizeText(game.baiducode),
-            thunderpan: normalizeText(game.thunderpan),
-            thundercode: normalizeText(game.thundercode),
-            updatedate: normalizeText(game.updatedate),
-            image: normalizeText(game.image),
-            video: normalizeText(game.video),
-          },
-        ]);
-
-        if (error) throw error;
+        await adminCreateGame({
+          name: normalizeText(game.name),
+          category: normalizeArray(game.category),
+          subcategory: normalizeArray(game.subcategory),
+          category_id: game.category_id,
+          subcategory_id: game.subcategory_id ?? null,
+          code: normalizeText(game.code),
+          unzipcode: normalizeText(game.unzipcode),
+          quarkpan: normalizeText(game.quarkpan),
+          quarkcode: normalizeText(game.quarkcode),
+          baidupan: normalizeText(game.baidupan),
+          baiducode: normalizeText(game.baiducode),
+          thunderpan: normalizeText(game.thunderpan),
+          thundercode: normalizeText(game.thundercode),
+          updatedate: normalizeText(game.updatedate),
+          image: normalizeText(game.image),
+          video: normalizeText(game.video),
+        });
         success++;
       } catch (error: any) {
         failed++;

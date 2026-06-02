@@ -4,6 +4,7 @@ import "./admin.css";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Game } from "@/lib/games";
+import { adminDeleteGames } from "@/lib/admin_games";
 import { fetchPinPriorityMap } from "@/lib/site_links";
 import { PAGE_SIZE } from "./components/constants";
 import AdminHeader from "./components/Header";
@@ -400,8 +401,7 @@ export default function AdminDashboard() {
     if (id === null) return;
 
     try {
-      const { error } = await supabase.from("games").delete().eq("id", id);
-      if (error) throw error;
+      await adminDeleteGames([id]);
       invalidateAdminMetaCache();
       await loadCategories();
       // 如果当前页只有1条，删后回退到上一页
@@ -421,8 +421,7 @@ export default function AdminDashboard() {
     if (!ids || ids.length === 0) return;
 
     try {
-      const { error } = await supabase.from("games").delete().in("id", ids);
-      if (error) throw error;
+      await adminDeleteGames(ids);
       invalidateAdminMetaCache();
       await loadCategories();
       alert(`批量删除成功，共删除 ${ids.length} 条数据`);

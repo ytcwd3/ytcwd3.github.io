@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Game } from "@/lib/games";
-import { savePinPriority } from "@/lib/site_links";
+import { adminUpdateGame } from "@/lib/admin_games";
+import { saveAdminPinPriority } from "@/lib/admin_pin_priority";
 import {
   CAT_RGBA,
   CARD_STYLE,
@@ -391,12 +392,8 @@ export default function GameTable({
                             e.stopPropagation();
                             try {
                               const newPinned = !(game as any).pinned;
-                              const { error } = await supabase
-                                .from("games")
-                                .update({ pinned: newPinned })
-                                .eq("id", game.id);
-                              if (error) throw error;
-                              await savePinPriority(
+                              await adminUpdateGame(game.id, { pinned: newPinned });
+                              await saveAdminPinPriority(
                                 game.id,
                                 newPinned,
                                 getPinPriority(game) ?? 0,

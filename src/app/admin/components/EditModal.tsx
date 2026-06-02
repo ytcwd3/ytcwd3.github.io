@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Game } from "@/lib/games";
-import { parsePinPriority, savePinPriority } from "@/lib/site_links";
+import { adminCreateGame, adminUpdateGame } from "@/lib/admin_games";
+import { saveAdminPinPriority } from "@/lib/admin_pin_priority";
+import { parsePinPriority } from "@/lib/site_links";
 import { DbCategory, fetchDbCategoryOptions } from "@/lib/categories";
 import { INPUT_STYLE, LABEL_STYLE } from "./constants";
 import ConfirmModal from "./ConfirmModal";
@@ -185,18 +187,6 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
     }
   }, [isDirty, onClose]);
 
-  // ESC key
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        tryClose();
-      }
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [tryClose]);
-
   useEffect(() => {
     fetchDbCategoryOptions()
       .then((data) => {
@@ -354,21 +344,15 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
         subcategory_id: selectedSubcategory?.id ?? null,
       };
       if (game) {
-        const { error } = await supabase
-          .from("games")
-          .update(payload)
-          .eq("id", game.id);
-        if (error) throw error;
-        await savePinPriority(game.id, !!gameData.pinned, pinPriority);
+        await adminUpdateGame(game.id, payload);
+        if (gameData.pinned || game.pinned) {
+          await saveAdminPinPriority(game.id, !!gameData.pinned, pinPriority);
+        }
       } else {
-        const { data, error } = await supabase
-          .from("games")
-          .insert([payload])
-          .select("id");
-        if (error) throw error;
-        const insertedId = data?.[0]?.id;
-        if (insertedId) {
-          await savePinPriority(insertedId, !!gameData.pinned, pinPriority);
+        const { data } = await adminCreateGame(payload);
+        const insertedId = data?.id;
+        if (insertedId && gameData.pinned) {
+          await saveAdminPinPriority(insertedId, !!gameData.pinned, pinPriority);
         }
       }
       // 清除元数据缓存，下次加载会重新拉取
@@ -395,7 +379,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
 
   return (
     <>
-      <div className="popup-mask modal-overlay" style={{ display: "flex" }} onClick={tryClose}>
+      <div className="popup-mask modal-overlay" style={{ display: "flex" }}>
         <div
           className="popup-content modal-content"
           style={{ maxWidth: 620, maxHeight: "90vh", overflowY: "auto" }}
@@ -437,7 +421,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                   有未保存的更改
                 </span>
               )}
-              <button onClick={tryClose} className="close-btn">
+              <button type="button" onClick={tryClose} className="close-btn">
                 ×
               </button>
             </div>
@@ -735,24 +719,14 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                       normalizePinOrder(formData.pinOrder) ?? 0,
                     );
                     try {
-                      const { data, error } = await supabase
-                      .from("games")
-                      .insert([
-                        {
-                          ...gameData,
-                          category_id: selectedCategory.id,
-                          subcategory_id: selectedSubcategory?.id ?? null,
-                        },
-                      ])
-                      .select("id");
-                      if (error) {
-                        alert("操作失败: " + error.message);
-                        setSaving(false);
-                        return;
-                      }
-                      const insertedId = data?.[0]?.id;
-                      if (insertedId) {
-                        await savePinPriority(insertedId, !!gameData.pinned, pinPriority);
+                      const { data } = await adminCreateGame({
+                        ...gameData,
+                        category_id: selectedCategory.id,
+                        subcategory_id: selectedSubcategory?.id ?? null,
+                      });
+                      const insertedId = data?.id;
+                      if (insertedId && gameData.pinned) {
+                        await saveAdminPinPriority(insertedId, !!gameData.pinned, pinPriority);
                       }
                       invalidateAdminMetaCache();
                       // 重置表单，继续添加
@@ -827,7 +801,7 @@ export default function EditModal({ game, onClose, onSaved }: EditModalProps) {
                 margin: "8px 0 0",
               }}
             >
-              按 ESC 键关闭
+              使用取消或右上角关闭按钮退出
             </p>
           </form>
         </div>
