@@ -524,7 +524,7 @@ export default function HomePage() {
       {/* 更新记录弹窗 */}
       {showPopups["popup5"] && (
         <div
-          className="popup-mask"
+          className="popup-mask update-record-mask"
           style={{ display: "flex" }}
           onClick={() => togglePopup("popup5")}
         >
