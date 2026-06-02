@@ -5,6 +5,7 @@ import {
 } from "./games";
 import { logCategoryOperation } from "./category_operation_logs";
 import {
+  clearSubcategoriesCache,
   fetchSubcategoriesRaw,
   type DbSubcategory,
   type Subcategory,
@@ -403,8 +404,19 @@ export async function updateCategorySortOrder(
   });
 
   if (error) {
-    throw new Error(`排序更新失败（数据库原子更新不可用），请刷新后重试`);
+    for (const [index, category] of categories.entries()) {
+      const { error: updateError } = await supabase
+        .from("categories")
+        .update({ sort_order: index })
+        .eq("id", category.id);
+      if (updateError) {
+        throw new Error(`排序更新失败: ${updateError.message}`);
+      }
+    }
   }
+
+  clearDbCategoriesPending();
+  clearHomeCategoriesCache();
 }
 
 // 删除父分类，并清理 games 中关联的父分类字段。
@@ -434,6 +446,7 @@ export async function deleteDbCategory(
   const { error } = await supabase.from("categories").delete().eq("id", categoryId);
   if (error) throw error;
 
+  clearSubcategoriesCache();
   clearDbCategoriesPending();
   clearHomeCategoriesCache();
 

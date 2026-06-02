@@ -27,6 +27,16 @@ const inputStyle = {
   transition: "border-color 0.2s",
 };
 
+function getClosestNumberDataAttribute(
+  target: Element | null,
+  selector: string,
+  attribute: string,
+) {
+  const element = target?.closest(selector) as HTMLElement | null;
+  const value = element?.dataset?.[attribute];
+  return value ? Number(value) : null;
+}
+
 export default function DatabaseCategoryManager() {
   const [categories, setCategories] = useState<DbCategory[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -253,7 +263,7 @@ export default function DatabaseCategoryManager() {
   function handleCategoryTouchMove(e: TouchEvent<HTMLDivElement>) {
     if (!touchDragRef.current) return;
     const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-    const categoryId = (el as HTMLElement)?.dataset?.categoryId ? Number((el as HTMLElement).dataset?.categoryId) : null;
+    const categoryId = getClosestNumberDataAttribute(el, "[data-category-id]", "categoryId");
     if (categoryId && categoryId !== touchDragRef.current.categoryId) {
       setDragOverCategoryId(categoryId);
     }
@@ -315,7 +325,7 @@ export default function DatabaseCategoryManager() {
   function handleSubcategoryTouchMove(e: TouchEvent<HTMLDivElement>) {
     if (!touchDragStateRef.current) return;
     const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-    const subcategoryId = (el as HTMLElement)?.dataset?.subcategoryId ? Number((el as HTMLElement).dataset?.subcategoryId) : null;
+    const subcategoryId = getClosestNumberDataAttribute(el, "[data-subcategory-id]", "subcategoryId");
     if (subcategoryId && subcategoryId !== touchDragStateRef.current.subcategoryId) {
       setDragOverSubcategoryId(subcategoryId);
     }

@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 import { fetchGameCategoryRows, updateGameRows } from "./games";
 import { logCategoryOperation } from "./category_operation_logs";
-import { clearDbCategoriesPending } from "./categories";
+import { clearDbCategoriesPending, clearHomeCategoriesCache } from "./categories";
 
 // subcategories 子分类
 // 保存父分类下面的二级分类，并通过 category_id 归属到 categories。
@@ -135,6 +135,7 @@ export async function addDbSubcategory(
 
   clearSubcategoriesCache();
   clearDbCategoriesPending();
+  clearHomeCategoriesCache();
 
   await logCategoryOperation({
     action: "create_subcategory",
@@ -177,6 +178,7 @@ export async function renameDbSubcategory(
 
   clearSubcategoriesCache();
   clearDbCategoriesPending();
+  clearHomeCategoriesCache();
 
   const { error: rpcError } = await supabase.rpc(
     "sync_games_after_subcategory_rename",
@@ -274,6 +276,7 @@ export async function moveDbSubcategoryToCategory(
     });
     clearSubcategoriesCache();
     clearDbCategoriesPending();
+    clearHomeCategoriesCache();
     return;
   }
 
@@ -345,6 +348,7 @@ export async function moveDbSubcategoryToCategory(
     });
     clearSubcategoriesCache();
     clearDbCategoriesPending();
+    clearHomeCategoriesCache();
     return;
   }
 
@@ -364,6 +368,7 @@ export async function moveDbSubcategoryToCategory(
   });
   clearSubcategoriesCache();
   clearDbCategoriesPending();
+  clearHomeCategoriesCache();
 }
 
 // 更新子分类排序（批量原子更新，防止中途失败导致数据不一致）。
@@ -382,8 +387,20 @@ export async function updateSubcategorySortOrder(
   });
 
   if (error) {
-    throw new Error(`排序更新失败（数据库原子更新不可用），请刷新后重试`);
+    for (const [index, subcategory] of subcategories.entries()) {
+      const { error: updateError } = await supabase
+        .from("subcategories")
+        .update({ sort_order: index })
+        .eq("id", subcategory.id);
+      if (updateError) {
+        throw new Error(`排序更新失败: ${updateError.message}`);
+      }
+    }
   }
+
+  clearSubcategoriesCache();
+  clearDbCategoriesPending();
+  clearHomeCategoriesCache();
 }
 
 // 删除子分类，并清理 games 中关联的子分类字段。
@@ -418,6 +435,7 @@ export async function deleteDbSubcategory(
 
   clearSubcategoriesCache();
   clearDbCategoriesPending();
+  clearHomeCategoriesCache();
 
   await logCategoryOperation({
     action: "delete_subcategory",
