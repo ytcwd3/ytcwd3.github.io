@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { SiteLink, ensureDefaultMascotMessages } from "@/lib/site_links";
+import { SiteLink, clearSiteLinksCache, ensureDefaultMascotMessages } from "@/lib/site_links";
 
 type SiteLinkType = SiteLink["type"];
 
@@ -74,7 +74,13 @@ export default function SiteLinksManager() {
       .select("*")
       .order("type", { ascending: true })
       .order("id", { ascending: true })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          setMsg("加载失败: " + error.message);
+          setLinks([]);
+          setLoading(false);
+          return;
+        }
         setLinks((data || []).filter((link) => !link.name.startsWith("__")));
         setLoading(false);
       });
@@ -88,18 +94,24 @@ export default function SiteLinksManager() {
     setSaving(true);
     setMsg("");
     if (editingId) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("site_links")
         .update({ name: form.name.trim(), url: form.url.trim(), type: form.type })
-        .eq("id", editingId);
+        .eq("id", editingId)
+        .select("id")
+        .single();
       if (error) setMsg("更新失败: " + error.message);
-      else { setMsg("更新成功"); setEditingId(null); resetForm(); }
+      else if (!data) setMsg("更新失败: 未找到这条记录");
+      else { clearSiteLinksCache(); setMsg("更新成功"); setEditingId(null); resetForm(); }
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("site_links")
-        .insert({ name: form.name.trim(), url: form.url.trim(), type: form.type });
+        .insert({ name: form.name.trim(), url: form.url.trim(), type: form.type })
+        .select("id")
+        .single();
       if (error) setMsg("添加失败: " + error.message);
-      else { setMsg("添加成功"); resetForm(); }
+      else if (!data) setMsg("添加失败: 数据库没有返回新增记录");
+      else { clearSiteLinksCache(); setMsg("添加成功"); resetForm(); }
     }
     setSaving(false);
     loadLinks();
@@ -107,7 +119,22 @@ export default function SiteLinksManager() {
 
   async function handleDelete(id: number) {
     if (!confirm("确认删除这条记录？")) return;
-    await supabase.from("site_links").delete().eq("id", id);
+    setMsg("");
+    const { data, error } = await supabase
+      .from("site_links")
+      .delete()
+      .eq("id", id)
+      .select("id");
+    if (error) {
+      setMsg("删除失败: " + error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      setMsg("删除失败: 未找到这条记录，或当前账号没有删除权限");
+      return;
+    }
+    clearSiteLinksCache();
+    setMsg("删除成功");
     loadLinks();
   }
 

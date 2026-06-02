@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface SiteLinkRow {
   id: number;
@@ -12,33 +13,19 @@ interface SiteLinkRow {
 }
 
 const PIN_PRIORITY_PREFIX = "__pin_order__:";
-const MEMORY_CACHE_DURATION = 5 * 60 * 1000;
-
-let memoryCache = new Map<
-  string,
-  { data: SiteLinkRow[]; timestamp: number }
->();
-
-function cacheKey(type: string) {
-  return type || "all";
+function isInternalSiteLink(row: SiteLinkRow) {
+  return String(row.name || "").startsWith("__");
 }
 
 function cacheHeaders() {
   return {
-    "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
+    "Cache-Control": "no-store",
   };
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "all";
-  const key = cacheKey(type);
-  const now = Date.now();
-
-  const cached = memoryCache.get(key);
-  if (cached && now - cached.timestamp < MEMORY_CACHE_DURATION) {
-    return NextResponse.json(cached.data, { headers: cacheHeaders() });
-  }
 
   let query = supabase
     .from("site_links")
@@ -71,8 +58,10 @@ export async function GET(request: Request) {
     );
   }
 
-  const rows = (data || []) as SiteLinkRow[];
-  memoryCache.set(key, { data: rows, timestamp: now });
+  const rows =
+    type === "pin-priority"
+      ? ((data || []) as SiteLinkRow[])
+      : ((data || []) as SiteLinkRow[]).filter((row) => !isInternalSiteLink(row));
 
   return NextResponse.json(rows, { headers: cacheHeaders() });
 }

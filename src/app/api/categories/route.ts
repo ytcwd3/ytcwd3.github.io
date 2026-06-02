@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import type { HomeCategory } from "@/lib/categories";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface CategoryRow {
   id: number;
@@ -16,9 +17,6 @@ interface SubcategoryRow {
   name: string | null;
   sort_order: number | null;
 }
-
-let memoryCache: { data: HomeCategory[]; timestamp: number } | null = null;
-const MEMORY_CACHE_DURATION = 5 * 60 * 1000;
 
 function buildHomeCategories(
   categories: CategoryRow[],
@@ -45,16 +43,6 @@ function buildHomeCategories(
 }
 
 export async function GET() {
-  const now = Date.now();
-
-  if (memoryCache && now - memoryCache.timestamp < MEMORY_CACHE_DURATION) {
-    return NextResponse.json(memoryCache.data, {
-      headers: {
-        "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
-      },
-    });
-  }
-
   const [categoriesResult, subcategoriesResult] = await Promise.all([
     supabase
       .from("categories")
@@ -86,11 +74,9 @@ export async function GET() {
     (subcategoriesResult.data || []) as SubcategoryRow[],
   );
 
-  memoryCache = { data, timestamp: now };
-
   return NextResponse.json(data, {
     headers: {
-      "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
+      "Cache-Control": "no-store",
     },
   });
 }

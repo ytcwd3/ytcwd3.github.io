@@ -272,6 +272,8 @@ export async function moveDbSubcategoryToCategory(
         deleted: duplicate && duplicate.length > 0,
       },
     });
+    clearSubcategoriesCache();
+    clearDbCategoriesPending();
     return;
   }
 
@@ -341,6 +343,8 @@ export async function moveDbSubcategoryToCategory(
         deleted: true,
       },
     });
+    clearSubcategoriesCache();
+    clearDbCategoriesPending();
     return;
   }
 
@@ -358,6 +362,8 @@ export async function moveDbSubcategoryToCategory(
     beforeData: { fromCategoryId, fromCategoryName },
     afterData: { toCategoryId, toCategoryName },
   });
+  clearSubcategoriesCache();
+  clearDbCategoriesPending();
 }
 
 // 更新子分类排序（批量原子更新，防止中途失败导致数据不一致）。

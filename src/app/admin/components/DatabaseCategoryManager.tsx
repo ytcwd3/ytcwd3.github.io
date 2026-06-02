@@ -79,8 +79,8 @@ export default function DatabaseCategoryManager() {
     return false;
   }
 
-  async function loadCategories() {
-    if (guardPending()) return;
+  async function loadCategories(options?: { force?: boolean }) {
+    if (!options?.force && guardPending()) return;
     // Abort any previous in-flight request
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -110,7 +110,7 @@ export default function DatabaseCategoryManager() {
     try {
       await action();
       setMsg("操作成功");
-      await loadCategories();
+      await loadCategories({ force: true });
     } catch (error: any) {
       if (error.name === "AbortError") return;
       setMsg("操作失败: " + error.message);

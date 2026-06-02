@@ -43,6 +43,10 @@ function getPinPriorityName(gameId: number) {
   return `${PIN_PRIORITY_PREFIX}${gameId}`;
 }
 
+function isInternalSiteLink(row: Pick<SiteLink, "name">) {
+  return String(row.name || "").startsWith("__");
+}
+
 function getSiteLinksCacheKey(type: string) {
   return type || "all";
 }
@@ -74,6 +78,7 @@ export function clearSiteLinksCache() {
     sessionStorage.removeItem("siteLinks:help");
     sessionStorage.removeItem("siteLinks:mascot");
     sessionStorage.removeItem("siteLinks:pin-priority");
+    sessionStorage.removeItem("siteLinks:all");
   } catch {
     // Ignore storage failures.
   }
@@ -102,7 +107,9 @@ async function fetchSiteLinksFromApi(type: string): Promise<SiteLink[]> {
     throw new Error(`Site links API error: ${response.status}`);
   }
 
-  const data = (await response.json()) as SiteLink[];
+  const data = ((await response.json()) as SiteLink[]).filter(
+    (row) => !isInternalSiteLink(row),
+  );
   const entry = { data, timestamp: now };
   siteLinksCache.set(key, entry);
   writeSiteLinksSessionCache(key, entry);
@@ -165,7 +172,7 @@ export async function fetchSiteLinksByType(type: SiteLink["type"]) {
       console.error(`回退加载 ${type} 链接失败:`, fallbackError);
       return [] as SiteLink[];
     }
-    return (data || []) as SiteLink[];
+    return ((data || []) as SiteLink[]).filter((row) => !isInternalSiteLink(row));
   }
 }
 
