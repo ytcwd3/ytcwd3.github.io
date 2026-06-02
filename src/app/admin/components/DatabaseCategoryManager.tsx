@@ -510,10 +510,10 @@ export default function DatabaseCategoryManager() {
                   >
                     <span style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: active ? "#b87dd8" : "#ccc", fontSize: "14px", flexShrink: 0 }}>⋮⋮</span>
                     <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, gap: "2px" }}>
-                      <span style={{ fontWeight: 600, fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{category.name}</span>
-                      <span style={{ fontSize: "11px", color: active ? "#b87dd8" : "#aaa" }}>{category.subcategories.length} 子类 · {category.gameCount} 游戏</span>
+                      <span className="cat-name" style={{ fontWeight: 600, fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{category.name}</span>
+                      <span className="cat-count" style={{ fontSize: "11px", color: active ? "#b87dd8" : "#aaa" }}>{category.subcategories.length} 子类 · {category.gameCount} 游戏</span>
                     </div>
-                    <div style={{ display: "flex", gap: "3px", flexShrink: 0 }}>
+                    <div className="cat-list-item-btns" style={{ display: "flex", gap: "3px", flexShrink: 0 }}>
                       <button
                         onClick={(e) => { e.stopPropagation(); moveCategory(category.id, -1); }}
                         disabled={!!saving || categories[0]?.id === category.id}
@@ -547,6 +547,7 @@ export default function DatabaseCategoryManager() {
             >
               {/* Panel Header */}
               <div
+                className="subcat-panel-header"
                 style={{
                   display: "flex",
                   alignItems: "flex-start",
@@ -656,7 +657,7 @@ export default function DatabaseCategoryManager() {
                     <p style={{ fontSize: "13px", color: "#bbb" }}>暂无子分类，点击上方添加</p>
                   </div>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                  <div className="subcat-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
                     {currentCategory.subcategories.map((subcategory) => {
                       const parentId = pendingParentBySubcategory[subcategory.id] || currentCategory.id;
                       const isDragging = draggingSubcategoryId === subcategory.id;
@@ -693,13 +694,13 @@ export default function DatabaseCategoryManager() {
                             transition: "all 0.15s ease",
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                          <div className="subcat-info" style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
                             <span style={{ cursor: saving || isMoving ? "not-allowed" : "grab", color: "#ccc", fontSize: "13px", flexShrink: 0 }}>⋮⋮</span>
-                            <div style={{ fontWeight: 600, fontSize: "13px", color: "#333", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subcategory.name}</div>
+                            <div className="subcat-name" style={{ fontWeight: 600, fontSize: "13px", color: "#333", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subcategory.name}</div>
                             <div style={{ fontSize: "12px", color: "#aaa", flexShrink: 0 }}>{subcategory.gameCount}游戏</div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "3px", flexShrink: 0 }}>
-                            <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
+                          <div className="subcat-actions" style={{ display: "flex", alignItems: "center", gap: "3px", flexShrink: 0 }}>
+                            <div className="subcat-move-btns" style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
                               <button onClick={() => moveSubcategory(subcategory.id, -1)} disabled={!!saving || currentCategory.subcategories[0]?.id === subcategory.id} style={{ padding: "2px 5px", borderRadius: "4px", border: "1px solid #e2e2e2", background: "#fff", cursor: saving || currentCategory.subcategories[0]?.id === subcategory.id ? "not-allowed" : "pointer", fontSize: "11px", color: currentCategory.subcategories[0]?.id === subcategory.id ? "#e0e0e0" : "#999" }}>↑</button>
                               <button onClick={() => moveSubcategory(subcategory.id, 1)} disabled={!!saving || currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id} style={{ padding: "2px 5px", borderRadius: "4px", border: "1px solid #e2e2e2", background: "#fff", cursor: saving || currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id ? "not-allowed" : "pointer", fontSize: "11px", color: currentCategory.subcategories[currentCategory.subcategories.length - 1]?.id === subcategory.id ? "#e0e0e0" : "#999" }}>↓</button>
                             </div>

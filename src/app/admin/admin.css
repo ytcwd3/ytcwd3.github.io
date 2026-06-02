@@ -372,6 +372,9 @@
     padding: 10px !important;
     border-radius: 12px !important;
   }
+  .subcat-grid {
+    grid-template-columns: 1fr !important;
+  }
   .subcat-panel-header {
     align-items: stretch !important;
     flex-direction: column !important;
@@ -386,18 +389,19 @@
   .cat-list-item {
     width: 100% !important;
     box-sizing: border-box !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
+    flex-direction: row !important;
+    align-items: center !important;
     gap: 8px !important;
   }
   .cat-list-item .cat-name {
-    white-space: normal !important;
-    word-break: break-word !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
   }
   .cat-list-item .cat-count {
     white-space: nowrap !important;
   }
   .cat-list-item-btns {
+    flex-shrink: 0 !important;
     justify-content: flex-end !important;
   }
   .cat-list-input,
