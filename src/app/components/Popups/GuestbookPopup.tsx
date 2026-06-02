@@ -3,16 +3,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Guestbook } from "@/lib/guestbook";
+import {
+  ALLOWED_GITHUB_USERS,
+  getStoredAdminUser,
+  isAdminLoginExpired,
+  validateAdminSession,
+} from "@/lib/admin_auth";
 
 interface GuestbookPopupProps {
   onClose?: () => void;
   embedded?: boolean;
 }
 
-const ADMIN_GITHUB_USERS = ["anyebojue", "ytcwd3"];
-
 function isAllowedAdminId(adminId?: string) {
-  return !!adminId && ADMIN_GITHUB_USERS.includes(adminId);
+  return !!adminId && ALLOWED_GITHUB_USERS.includes(adminId);
 }
 
 function getAdminDisplayName(adminId?: string) {
@@ -20,26 +24,8 @@ function getAdminDisplayName(adminId?: string) {
 }
 
 async function getCurrentAdminUser() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session || session.user.app_metadata?.provider !== "github") {
-    return null;
-  }
-
-  const githubUsername =
-    session.user.user_metadata?.user_name ||
-    session.user.user_metadata?.preferred_username;
-
-  if (!isAllowedAdminId(githubUsername)) {
-    return null;
-  }
-
-  return {
-    email: session.user.email,
-    github: githubUsername,
-  };
+  const result = await validateAdminSession({ redirectToLogin: false });
+  return result.ok ? result.user : null;
 }
 
 export default function GuestbookPopup({
@@ -68,16 +54,14 @@ export default function GuestbookPopup({
   useEffect(() => {
     async function checkAdminStatus() {
       const cachedLoggedIn = localStorage.getItem("admin_logged_in") === "true";
-      const cachedUser = JSON.parse(localStorage.getItem("admin_user") || "{}");
-      if (cachedLoggedIn && isAllowedAdminId(cachedUser.github)) {
+      const cachedUser = getStoredAdminUser();
+      if (cachedLoggedIn && !isAdminLoginExpired() && isAllowedAdminId(cachedUser?.github)) {
         setIsAdmin(true);
         return;
       }
 
-      const adminUser = await getCurrentAdminUser();
-      if (adminUser?.github) {
-        localStorage.setItem("admin_logged_in", "true");
-        localStorage.setItem("admin_user", JSON.stringify(adminUser));
+      const result = await validateAdminSession({ redirectToLogin: false });
+      if (result.ok && result.user.github) {
         setIsAdmin(true);
         return;
       }
@@ -261,7 +245,7 @@ export default function GuestbookPopup({
     if (!isAdmin) return;
     setReplySubmitting(true);
     try {
-      const adminUser = JSON.parse(localStorage.getItem("admin_user") || "{}");
+      const adminUser = getStoredAdminUser() || {};
       const liveAdminUser = (await getCurrentAdminUser()) || adminUser;
       const adminId = liveAdminUser.github || liveAdminUser.email;
       if (!isAllowedAdminId(adminId)) {
