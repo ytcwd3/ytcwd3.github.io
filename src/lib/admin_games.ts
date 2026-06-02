@@ -1,11 +1,7 @@
-import { supabase } from "./supabase";
+import { getAdminAccessToken } from "./admin_auth";
 
 async function getAdminHeaders() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) throw new Error("未登录或登录已过期");
+  const token = await getAdminAccessToken();
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
