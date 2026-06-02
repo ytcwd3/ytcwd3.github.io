@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SiteLink, clearSiteLinksCache, ensureDefaultMascotMessages } from "@/lib/site_links";
+import { SiteLink, clearSiteLinksCache } from "@/lib/site_links";
 import {
   adminCreateSiteLink,
   adminDeleteSiteLink,
@@ -72,10 +72,7 @@ export default function SiteLinksManager() {
   }
 
   useEffect(() => {
-    (async () => {
-      await ensureDefaultMascotMessages();
-      loadLinks();
-    })();
+    loadLinks();
   }, []);
 
   function loadLinks() {
