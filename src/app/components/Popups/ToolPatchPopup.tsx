@@ -20,7 +20,10 @@ export default function ToolPatchPopup({ onClose }: ToolPatchPopupProps) {
   }, []);
 
   return (
-    <div className="popup-content link-popup-content" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="popup-content link-popup-content tool-patch-popup-content"
+      onClick={(e) => e.stopPropagation()}
+    >
       <span className="close-btn" onClick={onClose}>
         &times;
       </span>

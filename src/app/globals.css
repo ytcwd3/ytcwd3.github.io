@@ -1880,6 +1880,28 @@ body::before {
   .popup-link-content {
     overflow-wrap: normal;
   }
+  .tool-patch-popup-content .popup-text {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tool-patch-popup-content .popup-link-list {
+    width: max-content;
+    max-width: none;
+    min-width: 100%;
+  }
+  .tool-patch-popup-content .popup-link-row {
+    width: max-content;
+    max-width: none;
+    min-width: 100%;
+  }
+  .tool-patch-popup-content .popup-link-content {
+    overflow: visible;
+  }
+  .tool-patch-popup-content .popup-link-content > span {
+    overflow: visible;
+    text-overflow: clip;
+  }
 
   /* 二维码基础样式适配 */
   .qrcode-area {
