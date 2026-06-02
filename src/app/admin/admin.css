@@ -4,6 +4,10 @@
   display: none;
 }
 
+.site-links-card-list {
+  display: none;
+}
+
 .admin-login-page,
 .admin-category-page,
 .admin-container {
@@ -430,6 +434,12 @@
     flex-wrap: wrap !important;
     gap: 6px !important;
   }
+  .site-links-toolbar {
+    align-items: stretch !important;
+  }
+  .site-links-toolbar > button {
+    width: 100% !important;
+  }
   .site-links-header {
     padding: 12px !important;
     border-radius: 12px !important;
@@ -442,11 +452,7 @@
     padding: 5px 12px !important;
     font-size: 12px !important;
   }
-  .site-links-form {
-    padding: 12px !important;
-  }
   .site-links-form-row {
-    flex-direction: column !important;
     gap: 8px !important;
   }
   .site-links-form-row > * {
@@ -469,7 +475,70 @@
     min-width: 700px;
   }
   .site-links-card-list {
+    display: grid;
+    gap: 10px;
+  }
+  .site-links-table {
     display: none;
+  }
+  .site-links-card {
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  .site-links-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .site-links-card-header strong {
+    min-width: 0;
+    flex: 1;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .site-links-card-type {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .site-links-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .site-links-card-actions button {
+    min-height: 34px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid;
+  }
+  .site-links-card-edit {
+    background: rgba(147, 51, 234, 0.08);
+    border-color: #9333ea;
+    color: #9333ea;
+  }
+  .site-links-card-delete {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+  .site-links-card .site-link-card-content {
+    margin-top: 0;
   }
 }
 
@@ -493,6 +562,16 @@
 
   .subcat-actions select {
     grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .site-links-card-list {
+    display: grid !important;
+    gap: 10px;
+  }
+  .site-links-table {
+    display: none !important;
   }
 }
 

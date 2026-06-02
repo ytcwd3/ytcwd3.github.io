@@ -1,4 +1,5 @@
 "use client";
+import "../admin.css";
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
