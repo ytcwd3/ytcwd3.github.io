@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Game } from "@/lib/games";
 import { adminDeleteGames } from "@/lib/admin_games";
+import { validateAdminSession } from "@/lib/admin_auth";
 import { fetchPinPriorityMap } from "@/lib/site_links";
 import { PAGE_SIZE } from "./components/constants";
 import AdminHeader from "./components/Header";
@@ -66,43 +67,29 @@ export default function AdminDashboard() {
   );
 
   useEffect(() => {
-    validateSession();
+    let mounted = true;
+    let cleanup = () => {};
+
+    async function initAdmin() {
+      const result = await validateAdminSession();
+      if (!result.ok || !mounted) return;
+
+      setUser(result.user);
+      const dbCategories = await loadCategories();
+      if (!mounted) return;
+      applyFilters(1, dbCategories[0]?.id ?? null, "all");
+
+      const handleRefresh = () => applyFilters(currentPage);
+      window.addEventListener("adminRefreshGames", handleRefresh);
+      cleanup = () => window.removeEventListener("adminRefreshGames", handleRefresh);
+    }
+
+    initAdmin();
+    return () => {
+      mounted = false;
+      cleanup();
+    };
   }, []);
-
-  async function validateSession() {
-    const loggedIn = localStorage.getItem("admin_logged_in");
-    if (!loggedIn) {
-      window.location.href = "/admin/login";
-      return;
-    }
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.href = "/admin/login";
-      return;
-    }
-    const githubUsername =
-      session.user.user_metadata?.user_name ||
-      session.user.user_metadata?.preferred_username;
-    if (!["anyebojue", "ytcwd3"].includes(githubUsername)) {
-      localStorage.clear();
-      sessionStorage.clear();
-      await supabase.auth.signOut();
-      window.location.href = "/admin/login";
-      return;
-    }
-    setUser(JSON.parse(localStorage.getItem("admin_user") || "{}"));
-    const dbCategories = await loadCategories();
-    applyFilters(1, dbCategories[0]?.id ?? null, "all");
-
-    // 监听置顶切换刷新事件
-    const handleRefresh = () => applyFilters(currentPage);
-    window.addEventListener("adminRefreshGames", handleRefresh);
-    return () => window.removeEventListener("adminRefreshGames", handleRefresh);
-  }
 
   async function loadCategories() {
     const countedCategories = await fetchDbCategories();

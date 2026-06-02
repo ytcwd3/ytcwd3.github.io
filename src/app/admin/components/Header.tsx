@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { clearAdminSession } from "@/lib/admin_auth";
 
 interface HeaderProps {
   user: { github?: string; email?: string } | null;
@@ -20,9 +20,7 @@ export default function AdminHeader({ user, className }: HeaderProps) {
   ];
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    localStorage.removeItem("admin_logged_in");
-    localStorage.removeItem("admin_user");
+    await clearAdminSession();
     window.location.href = "/admin/login";
   }
 

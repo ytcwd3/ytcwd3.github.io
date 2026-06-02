@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-
-const ALLOWED_GITHUB_USERS = ["anyebojue", "ytcwd3"];
+import {
+  clearAdminSession,
+  clearAdminSessionStorage,
+  persistValidatedAdminUser,
+} from "@/lib/admin_auth";
 
 export default function AdminCallback() {
   const [status, setStatus] = useState("验证中...");
@@ -19,72 +22,21 @@ export default function AdminCallback() {
         error,
       } = await supabase.auth.getSession();
 
-      console.log("Callback执行中...");
-      console.log("Session:", session);
-      console.log("Error:", error);
-
       if (error) throw error;
 
       if (session) {
-        const user = session.user;
-        console.log("User:", user);
-        console.log("Provider:", user.app_metadata?.provider);
-
-        if (user.app_metadata?.provider === "github") {
-          const githubUsername =
-            user.user_metadata?.user_name ||
-            user.user_metadata?.preferred_username;
-          console.log("GitHub Username:", githubUsername);
-          console.log("Allowed Users:", ALLOWED_GITHUB_USERS);
-          console.log(
-            "Is Allowed:",
-            ALLOWED_GITHUB_USERS.includes(githubUsername),
-          );
-
-          if (ALLOWED_GITHUB_USERS.includes(githubUsername)) {
-            localStorage.setItem("admin_logged_in", "true");
-            localStorage.setItem(
-              "admin_user",
-              JSON.stringify({
-                email: user.email,
-                github: githubUsername,
-              }),
-            );
-
-            setStatus("登录成功！正在跳转...");
-            console.log("准备跳转到 /admin");
-            setTimeout(() => {
-              window.location.href = "/admin";
-            }, 1000);
-          } else {
-            localStorage.clear();
-            sessionStorage.clear();
-            await supabase.auth.signOut();
-            setStatus("您没有权限访问管理后台");
-            console.log("用户没有权限");
-            setTimeout(() => {
-              window.location.href = "/admin/login";
-            }, 2000);
-          }
-        } else {
-          localStorage.clear();
-          sessionStorage.clear();
-          setStatus("请使用 GitHub 账号登录");
-          console.log("不是GitHub登录");
-          setTimeout(() => {
-            window.location.href = "/admin/login";
-          }, 2000);
-        }
+        await persistValidatedAdminUser(session.user);
+        setStatus("登录成功！正在跳转...");
+        setTimeout(() => {
+          window.location.href = "/admin";
+        }, 1000);
       } else {
-        console.log("没有session，跳转回登录页");
-        localStorage.clear();
-        sessionStorage.clear();
+        clearAdminSessionStorage();
         window.location.href = "/admin/login";
       }
     } catch (err: any) {
-      console.error("Callback错误:", err);
-      localStorage.clear();
-      sessionStorage.clear();
+      clearAdminSessionStorage();
+      await clearAdminSession();
       setStatus("验证失败: " + err.message);
       setTimeout(() => {
         window.location.href = "/admin/login";

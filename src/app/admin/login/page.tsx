@@ -2,17 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-
-const ALLOWED_GITHUB_USERS = ["anyebojue", "ytcwd3"];
+import {
+  ALLOWED_GITHUB_USERS,
+  clearAdminSession,
+  clearAdminSessionStorage,
+  persistValidatedAdminUser,
+} from "@/lib/admin_auth";
 
 export default function AdminLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // 清除所有存储，确保干净登录
-    localStorage.clear();
-    sessionStorage.clear();
     checkSession();
   }, []);
 
@@ -26,30 +27,13 @@ export default function AdminLogin() {
   }
 
   async function validateUser(user: any) {
-    if (user.app_metadata?.provider === "github") {
-      const githubUsername =
-        user.user_metadata?.user_name || user.user_metadata?.preferred_username;
-
-      if (ALLOWED_GITHUB_USERS.includes(githubUsername)) {
-        localStorage.setItem("admin_logged_in", "true");
-        localStorage.setItem(
-          "admin_user",
-          JSON.stringify({
-            email: user.email,
-            github: githubUsername,
-          }),
-        );
-        window.location.href = "/admin";
-      } else {
-        setError("您没有权限访问管理后台");
-        localStorage.clear();
-        sessionStorage.clear();
-        await supabase.auth.signOut();
-      }
-    } else {
-      setError("请使用 GitHub 账号登录");
-      localStorage.clear();
-      sessionStorage.clear();
+    try {
+      await persistValidatedAdminUser(user);
+      window.location.href = "/admin";
+    } catch (error: any) {
+      setError(error?.message || "登录验证失败");
+      clearAdminSessionStorage();
+      await clearAdminSession();
     }
   }
 
