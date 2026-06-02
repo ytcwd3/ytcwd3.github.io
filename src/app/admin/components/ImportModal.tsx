@@ -111,14 +111,42 @@ function resolveImportCategoryIds(
   };
 }
 
-function normalizeUpdateDate(value: string) {
-  const normalized = value.trim().replace(/\./g, "-").replace(/\//g, "-");
+function formatDateParts(year: number, month: number, day: number) {
+  return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
+}
+
+function normalizeUpdateDate(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const parsed = new Date(Math.round((value - 25569) * 86400 * 1000));
+    if (!Number.isNaN(parsed.getTime())) {
+      return formatDateParts(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth() + 1,
+        parsed.getUTCDate(),
+      );
+    }
+  }
+
+  const text = String(value ?? "").trim();
+  if (/^\d{5,}$/.test(text)) {
+    const serial = Number(text);
+    const parsed = new Date(Math.round((serial - 25569) * 86400 * 1000));
+    if (!Number.isNaN(parsed.getTime())) {
+      return formatDateParts(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth() + 1,
+        parsed.getUTCDate(),
+      );
+    }
+  }
+
+  const normalized = text.replace(/\./g, "-").replace(/\//g, "-");
   const parts = normalized.split("-").map((part) => Number(part));
   if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) {
-    return value.trim();
+    return text;
   }
   const [year, month, day] = parts;
-  return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
+  return formatDateParts(year, month, day);
 }
 
 function normalizeText(value: unknown) {
@@ -194,6 +222,7 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
         const allGames: any[] = [];
         const nextWarnings: string[] = [];
         const skippedPreviewRows: ImportPreviewRow[] = [];
+        const seenImportNames = new Set<string>();
         const dbCategories = await fetchDbCategoryOptions();
 
         workbook.SheetNames.forEach((sheetName: string) => {
@@ -210,6 +239,9 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
 
             const p1 = String(row[1] || "").trim();
             const s1 = String(row[2] || "").trim();
+            const quarkpan = String(row[4] || "").trim();
+            const baidupan = String(row[6] || "").trim();
+            const thunderpan = String(row[8] || "").trim();
             const resolved = resolveImportCategoryIds(dbCategories, sheetName, p1, s1);
             if (!resolved.ids) {
               nextWarnings.push(`${sheetName} 第 ${i + 1} 行「${name}」跳过：${resolved.reason}`);
@@ -223,14 +255,61 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
                 subcategoryName: s1,
                 categoryId: null,
                 subcategoryId: null,
-                updatedate: normalizeUpdateDate(String(row[10] || "").trim()),
-                quarkpan: String(row[4] || "").trim(),
-                baidupan: String(row[6] || "").trim(),
-                thunderpan: String(row[8] || "").trim(),
+                updatedate: normalizeUpdateDate(row[10]),
+                quarkpan,
+                baidupan,
+                thunderpan,
                 reason: resolved.reason,
               });
               continue;
             }
+
+            const normalizedName = normalizeText(name);
+            if (seenImportNames.has(normalizedName)) {
+              const reason = "Excel 内部存在重复游戏名，已跳过重复行";
+              nextWarnings.push(`${sheetName} 第 ${i + 1} 行「${name}」跳过：${reason}`);
+              skippedPreviewRows.push({
+                key: `${sheetName}-${i + 1}-${name}-duplicate`,
+                status: "跳过",
+                sheetName,
+                rowNumber: i + 1,
+                name,
+                categoryName: resolved.categoryName,
+                subcategoryName: s1,
+                categoryId: resolved.ids.categoryId,
+                subcategoryId: resolved.ids.subcategoryId,
+                updatedate: normalizeUpdateDate(row[10]),
+                quarkpan,
+                baidupan,
+                thunderpan,
+                reason,
+              });
+              continue;
+            }
+
+            if (!quarkpan && !baidupan && !thunderpan) {
+              const reason = "至少需要填写一个网盘链接";
+              nextWarnings.push(`${sheetName} 第 ${i + 1} 行「${name}」跳过：${reason}`);
+              skippedPreviewRows.push({
+                key: `${sheetName}-${i + 1}-${name}-missing-link`,
+                status: "跳过",
+                sheetName,
+                rowNumber: i + 1,
+                name,
+                categoryName: resolved.categoryName,
+                subcategoryName: s1,
+                categoryId: resolved.ids.categoryId,
+                subcategoryId: resolved.ids.subcategoryId,
+                updatedate: normalizeUpdateDate(row[10]),
+                quarkpan,
+                baidupan,
+                thunderpan,
+                reason,
+              });
+              continue;
+            }
+
+            seenImportNames.add(normalizedName);
             const category: string[] = [resolved.categoryName];
             const subcategory: string[] = s1 ? [s1] : [];
 
@@ -242,13 +321,13 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
               subcategory_id: resolved.ids.subcategoryId,
               code: "",
               unzipcode: String(row[3] || "").trim(),
-              quarkpan: String(row[4] || "").trim(),
+              quarkpan,
               quarkcode: String(row[5] || "").trim(),
-              baidupan: String(row[6] || "").trim(),
+              baidupan,
               baiducode: String(row[7] || "").trim(),
-              thunderpan: String(row[8] || "").trim(),
+              thunderpan,
               thundercode: String(row[9] || "").trim(),
-              updatedate: normalizeUpdateDate(String(row[10] || "").trim()),
+              updatedate: normalizeUpdateDate(row[10]),
               image: String(row[11] || "").trim(),
               video: String(row[12] || "").trim(),
               __sheetName: sheetName,
@@ -283,7 +362,10 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
         .order("id", { ascending: true })
         .range(from, to);
 
-      if (error || !data || data.length === 0) break;
+      if (error) {
+        throw new Error(`读取现有游戏失败：${error.message}`);
+      }
+      if (!data || data.length === 0) break;
       allExisting.push(...(data as Game[]));
       if (data.length < PAGE_SIZE_FETCH) break;
       page++;
