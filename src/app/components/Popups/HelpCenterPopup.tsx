@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { SiteLink, fetchSiteLinksByType } from "@/lib/site_links";
+import PopupLinkList from "./PopupLinkList";
 
 interface HelpCenterPopupProps {
   onClose: () => void;
@@ -19,7 +20,7 @@ export default function HelpCenterPopup({ onClose }: HelpCenterPopupProps) {
   }, []);
 
   return (
-    <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+    <div className="popup-content link-popup-content" onClick={(e) => e.stopPropagation()}>
       <span className="close-btn" onClick={onClose}>
         &times;
       </span>
@@ -30,11 +31,7 @@ export default function HelpCenterPopup({ onClose }: HelpCenterPopupProps) {
         ) : links.length === 0 ? (
           <p>暂无帮助文档</p>
         ) : (
-          links.map((link, i) => (
-            <p key={link.id}>
-              {i + 1}. {link.name}：{link.url}
-            </p>
-          ))
+          <PopupLinkList links={links} />
         )}
       </div>
     </div>

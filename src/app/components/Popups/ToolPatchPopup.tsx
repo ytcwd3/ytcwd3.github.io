@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { SiteLink, fetchSiteLinksByType } from "@/lib/site_links";
+import PopupLinkList from "./PopupLinkList";
 
 interface ToolPatchPopupProps {
   onClose: () => void;
@@ -19,7 +20,7 @@ export default function ToolPatchPopup({ onClose }: ToolPatchPopupProps) {
   }, []);
 
   return (
-    <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+    <div className="popup-content link-popup-content" onClick={(e) => e.stopPropagation()}>
       <span className="close-btn" onClick={onClose}>
         &times;
       </span>
@@ -30,11 +31,7 @@ export default function ToolPatchPopup({ onClose }: ToolPatchPopupProps) {
         ) : links.length === 0 ? (
           <p>暂无工具补丁</p>
         ) : (
-          links.map((link, i) => (
-            <p key={link.id}>
-              {i + 1}. {link.name}：{link.url}
-            </p>
-          ))
+          <PopupLinkList links={links} />
         )}
       </div>
     </div>
