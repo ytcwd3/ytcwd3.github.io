@@ -2,7 +2,7 @@ interface FanGroupPopupProps {
   onClose: () => void;
 }
 
-const QQ_GROUP = "745804936";
+const QQ_GROUP = "1092295162";
 const QQ_GROUP_LINK = `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=${QQ_GROUP}&card_type=group&source=qrcode`;
 
 export default function FanGroupPopup({ onClose }: FanGroupPopupProps) {
